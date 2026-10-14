@@ -121,7 +121,7 @@ pre-change snapshot instead.
 Python must provide `pdfplumber`, Pillow and NumPy; Node must provide `sharp`
 (or set `SHARP_MODULE` to its installation). Set `PYTHON` to select the interpreter.
 The PDF and generated images stay local under ignored `output/app6a-audit/` and
-`dist/studio/audit/`. Open `/audit/symbols/` on the local studio server.
+`dist/studio/audit/`. Open `/audit/symbols/index.html` on the local studio server.
 
 The audit extracts actual Annex D pixels, preserving PDF page/crop coordinates,
 and compares them to independently rendered SVGs. It covers **676 illustrated S
