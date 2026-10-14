@@ -15,15 +15,31 @@ if "--resume" in sys.argv and (OUT/"references.json").exists():
     for previous in json.loads((OUT/"references.json").read_text()):
         if previous.get("cases"): rows[previous["hierarchy"]]=previous
 missing_frame_mark={"S-P-T-----","S-A-MFUL--","S-G-UCDMLA","S-G-UUACRW","S-G-UUACRS","S-G-UUABR-","S-G-UUMRSS"}
-categories={"S-G-EW----","S-G-EX----","S-G-IM----","S-S-X-----","S-U-N-----"}
+categories={"S-G-EW----","S-G-EX----","S-G-IM----","S-S-X-----","S-U-N-----","S-S-E-----","S-S-Z-----"}
 # These final rows continue across pages. Coordinates are publication points,
 # reviewed against the PDF, not inferred from the implementation under test.
 continuations={
+    "S-A-WMSA--": [(146,True,578.82,631)],
     "S-G-EXN---": [(260,True,587.3,642),(261,False,143.7,196.5)],
     "S-G-EXML--": [(261,True,658.3,712),(262,False,143.7,196.5)],
     "S-G-IME---": [(265,True,640,700)],
     "S-G-IMC---": [(266,True,639.1,700)],
 }
+source_conflicts={
+    "S-A-WM----": {"N":"Neutral missile cell depicts a blue H aircraft instead of a green missile."},
+    "S-A-WMA---": {"F":"Friend cell depicts a green L aircraft; inconsistent with this missile row and its affiliation."},
+    "S-A-WMAS--": {"U":"Unknown cell depicts a red M aircraft, not this missile.","F":"Friend cell depicts a green M aircraft, not this missile."},
+    "S-A-WMAA--": {"N":"Neutral cell depicts a yellow spacecraft, not this missile."},
+    "S-F-A-----": {"H":"Hostile aviation cell depicts an unknown NC ship."},
+    "S-F-AFU---": {"F":"Friend fixed-wing utility cell depicts a neutral submarine."},
+    "S-U-WMOD--": {"U":"Unknown cell depicts an HZ merchant vessel instead of a neutralized mine."},
+    "S-U-NM----": {"H":"Hostile cell depicts an HZ merchant vessel instead of marine life."},
+    "S-G-EWMAT-": {"*":"Annex B defines EWMAT as theatre; Annex D uses its hierarchy/code for short range without T. Annex B semantics retained pending authoritative resolution."},
+    "S-G-EWMAS-": {"*":"Annex B defines EWMAS as short range; Annex D uses its hierarchy/code for theatre with T. Annex B semantics retained pending authoritative resolution."},
+    "S-G-EWMAL-": {"*":"Annex B defines EWMAL as long range; Annex D labels the same code/hierarchy intermediate range."},
+    "S-G-EWMAI-": {"*":"Annex B defines EWMAI as intermediate range; Annex D labels the same code/hierarchy long range."},
+}
+printed_pages={}
 
 def clustered(values):
     result=[]
@@ -35,6 +51,8 @@ def clustered(values):
 with pdfplumber.open(sys.argv[1]) as pdf:
     for page_index in range(135,268):
         page=pdf.pages[page_index]; words=page.extract_words()
+        footer=next((w for w in words if w["text"].isdigit() and 280<w["x0"]<320 and w["top"]>690),None)
+        if footer: printed_pages[page_index+1]=int(footer["text"])
         if "TABLE D-" not in " ".join(w["text"] for w in words[:35]): continue
         for word in words:
             if re.fullmatch(r"1\.X(?:\.\d+)+\.",word["text"]):
@@ -95,6 +113,16 @@ with pdfplumber.open(sys.argv[1]) as pdf:
                 cases.append({"key":key,"affiliation":affiliation,"frame":framed,"pdfPage":page_number,"crop":box,"sourceImage":key+"-source.png"})
         row.pop("extractionError",None)
         row.update({"cases":cases,"framePrescription":"FO" if len(cases)==8 else "F","cropNote":"Reviewed page-continuation cells; each image retains its actual PDF page and crop coordinates."})
+    for row in rows.values():
+        if row["id"] in categories:
+            row.pop("cases",None)
+            row["sourceOnlyCategory"]=True
+            row["extractionError"]="Publication taxonomy heading: gray cells, no symbol illustration. No visual conformance claim is possible."
+        for case in row.get("cases",[]):
+            case["printedPage"]=printed_pages.get(case["pdfPage"])
+            conflicts=source_conflicts.get(row["id"],{})
+            conflict=conflicts.get(case["affiliation"],conflicts.get("*"))
+            if conflict: case["sourceConflict"]=conflict
 result=list(rows.values())
 (OUT/"references.json").write_text(json.dumps(result,indent=2))
 print(f"Source: {sum(bool(r.get('cases')) for r in result)}/{len(result)} S symbols; {sum(len(r.get('cases',[])) for r in result)} image cells")

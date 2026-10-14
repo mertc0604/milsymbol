@@ -162,15 +162,19 @@ export default function (
   icn["SE.IC.NAVY TASK ORGANIZATION UNIT"] = [
     {
       type: "path",
-      d: "m 110,80 15,15 0,25 M 90,80 75,95 l 0,25",
+      d: app6a
+        ? "M 82,60 62,80 62,124 M 118,60 138,80 138,124"
+        : "m 110,80 15,15 0,25 M 90,80 75,95 l 0,25",
       fill: false,
     },
   ];
-  //if (STD2525)
-  //  icn["SE.IC.NAVY TASK ORGANIZATION UNIT"].push({
-  //    type: "path",
-  //    d: "m 100,80 -15,15 0,25 30,0 0,-25 -15,-15"
-  //  });
+  if (app6a) {
+    icn["SE.IC.NAVY TASK ORGANIZATION UNIT"].push({
+      type: "path",
+      d: "M 100,60 75,85 75,124 125,124 125,85 Z",
+      stroke: false,
+    });
+  }
   icn["SE.IC.NAVY TASK FORCE"] = [
     icn["SE.IC.NAVY TASK ORGANIZATION UNIT"],
     {
@@ -178,7 +182,7 @@ export default function (
       alignmentBaseline: "middle",
       stroke: false,
       x: 100,
-      y: /*STD2525 ? 150 :*/ 110,
+      y: app6a ? 140 : 110,
       fontsize: 30,
       text: "TF",
     },
@@ -190,7 +194,7 @@ export default function (
       alignmentBaseline: "middle",
       stroke: false,
       x: 100,
-      y: /*STD2525 ? 150 :*/ 110,
+      y: app6a ? 140 : 110,
       fontsize: 30,
       text: "TG",
     },
@@ -202,7 +206,7 @@ export default function (
       alignmentBaseline: "middle",
       stroke: false,
       x: 100,
-      y: /*STD2525 ? 150 :*/ 110,
+      y: app6a ? 140 : 110,
       fontsize: 30,
       text: "TU",
     },
@@ -214,7 +218,7 @@ export default function (
       alignmentBaseline: "middle",
       stroke: false,
       x: 100,
-      y: /*STD2525 ? 150 :*/ 110,
+      y: app6a ? 140 : 110,
       fontsize: 30,
       text: "TE",
     },
@@ -249,7 +253,10 @@ export default function (
   icn["SE.IC.MERCHANT SHIP, GENERAL"] = {
     type: "path",
     fill: STD2525 || app6a ? iconFillColor : !frame ? iconFillColor : false,
-    d: "m 75,100 0,-35 50,0 0,35 20,0 -15,35 -60,0 -15,-35 z",
+    // Annex D's APP-6A merchant hull is shallower than the later-edition glyph.
+    d: app6a
+      ? "m 80,94 0,-25 40,0 0,25 25,0 -15,36 -60,0 -15,-36 z"
+      : "m 75,100 0,-35 50,0 0,35 20,0 -15,35 -60,0 -15,-35 z",
   };
   icn["SE.IC.CARGO, GENERAL"] = [
     icn["SE.IC.MERCHANT SHIP, GENERAL"],
@@ -258,8 +265,8 @@ export default function (
       alignmentBaseline: "middle",
       stroke: false,
       x: 100,
-      y: 103,
-      fontsize: app6a ? 30 : 45,
+      y: app6a ? 107 : 103,
+      fontsize: app6a ? 24 : 45,
       text: app6a ? "CA" : "A",
     },
   ];
@@ -270,8 +277,8 @@ export default function (
       alignmentBaseline: "middle",
       stroke: false,
       x: 100,
-      y: 103,
-      fontsize: 45,
+      y: app6a ? 107 : 103,
+      fontsize: app6a ? 28 : 45,
       text: "C",
     },
   ];
@@ -282,8 +289,8 @@ export default function (
       alignmentBaseline: "middle",
       stroke: false,
       x: 100,
-      y: 103,
-      fontsize: 45,
+      y: app6a ? 107 : 103,
+      fontsize: app6a ? 28 : 45,
       text: "D",
     },
   ];
@@ -299,8 +306,8 @@ export default function (
       alignmentBaseline: "middle",
       stroke: false,
       x: 100,
-      y: 103,
-      fontsize: app6a ? 30 : "45",
+      y: app6a ? 107 : 103,
+      fontsize: app6a ? 24 : "45",
       text: app6a ? "RO" : "E",
     },
   ];
@@ -311,8 +318,8 @@ export default function (
       alignmentBaseline: "middle",
       stroke: false,
       x: 100,
-      y: 103,
-      fontsize: app6a ? 30 : 45,
+      y: app6a ? 107 : 103,
+      fontsize: app6a ? 24 : 45,
       text: app6a ? "FE" : "F",
     },
   ];
@@ -323,8 +330,8 @@ export default function (
       alignmentBaseline: "middle",
       stroke: false,
       x: 100,
-      y: 103,
-      fontsize: 45,
+      y: app6a ? 107 : 103,
+      fontsize: app6a ? 28 : 45,
       text: "H",
     },
   ];
@@ -341,8 +348,8 @@ export default function (
       alignmentBaseline: "middle",
       stroke: false,
       x: 100,
-      y: 103,
-      fontsize: 45,
+      y: app6a ? 107 : 103,
+      fontsize: app6a ? 28 : 45,
       text: "J",
     },
   ];
@@ -391,8 +398,8 @@ export default function (
       alignmentBaseline: "middle",
       stroke: false,
       x: 100,
-      y: 103,
-      fontsize: app6a ? 30 : 45,
+      y: app6a ? 107 : 103,
+      fontsize: app6a ? 24 : 45,
       text: app6a ? "OT" : "O",
     },
   ];
@@ -403,8 +410,8 @@ export default function (
       alignmentBaseline: "middle",
       stroke: false,
       x: 100,
-      y: 103,
-      fontsize: app6a ? 30 : 45,
+      y: app6a ? 107 : 103,
+      fontsize: app6a ? 24 : 45,
       text: app6a ? "PA" : "P",
     },
   ];
@@ -415,8 +422,8 @@ export default function (
       alignmentBaseline: "middle",
       stroke: false,
       x: 100,
-      y: 103,
-      fontsize: app6a ? 30 : 45,
+      y: app6a ? 107 : 103,
+      fontsize: app6a ? 24 : 45,
       text: app6a ? "TU" : "T",
     },
   ];
@@ -427,8 +434,8 @@ export default function (
       alignmentBaseline: "middle",
       stroke: false,
       x: 100,
-      y: 120,
-      fontsize: 35,
+      y: app6a ? 107 : 120,
+      fontsize: app6a ? 24 : 35,
       text: "TW",
     },
   ];
@@ -439,8 +446,8 @@ export default function (
       alignmentBaseline: "middle",
       stroke: false,
       x: 100,
-      y: 120,
-      fontsize: 35,
+      y: app6a ? 107 : 120,
+      fontsize: app6a ? 24 : 35,
       text: "HZ",
     },
   ];
@@ -599,7 +606,7 @@ export default function (
   icn["SE.IC.NAVIGATIONAL"] = {
     type: "path",
     fill: false,
-    stroke: monoColor ? iconColor : "red",
+    stroke: monoColor ? iconColor : app6a ? iconFillColor : "red",
     d: "m 75,90 -10,10 70,0 -10,10",
   };
   icn["SE.IC.ICEBERG"] = {

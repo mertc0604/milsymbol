@@ -14,6 +14,112 @@ const result = {
     JSON.stringify(app6aCatalog.map((row) => row.id))
   ]
 };
+function iconParts(symbol) {
+  function visit(parts) {
+    return parts.flatMap(part => Array.isArray(part)
+      ? visit(part)
+      : part ? [part, ...visit(part.draw || [])] : []);
+  }
+  return visit(symbol.drawInstructions).filter(part => part.icon);
+}
+function iconLabels(symbol) {
+  return iconParts(symbol).filter(part => part.type === "text").map(part => part.text);
+}
+
+// Independently read from APP-6A Annex D illustrations, PDF pp. 138–145.
+// Alternate profiles deliberately use their own, later role abbreviations.
+const airRoles = [
+  ["MFL---", ["L"], ["V"]],
+  ["MFRW--", ["W"], ["AEW"]],
+  ["MFRZ--", ["Z"], ["ESM"]],
+  ["MFRX--", ["X"], ["R", "P"]],
+  ["MFPN--", ["N"], ["ASUW"]],
+  ["MFY---", ["Y"], ["COM"]],
+  ["MFH---", ["H"], ["PRO"]],
+  ["MFD---", ["D"], ["ACP"]],
+  ["MFS---", ["S"], ["ASW"]],
+  ["MFM---", ["M"], ["SOF"]],
+  ["MHS---", ["S"], ["ASW"]],
+  ["MHH---", ["H"], ["CSAR"]],
+  ["MHM---", ["M"], ["SOF"]],
+  ["MHD---", ["D"], ["ACP"]]
+];
+for (const [code, expected, later] of airRoles) {
+  for (const affiliation of ["U", "F", "N", "H"]) {
+    for (const status of ["P", "A"]) {
+      for (const frame of [true, false]) {
+        const sidc = `S${affiliation}A${status}${code}-----`;
+        // Interleaved construction also catches cross-edition icon cache leaks.
+        for (const [standard, labels] of [["APP6A", expected], ["APP6", later], ["APP6A", expected]]) {
+          const symbol = new ms.Symbol(sidc, { standard, frame });
+          result[`Annex D labels ${sidc}/${standard}/${frame}`] = [iconLabels(symbol), labels];
+        }
+      }
+    }
+  }
+}
+for (const [sidc, labels] of [
+  ["SFGPUCVRUC-----", ["Y"]],
+  ["SFGPUCVV-------", ["VSTOL"]],
+  ["SFGPUCRV-------", ["CAV"]],
+  ["SFGPUCRX-------", ["LRS"]],
+  ["SFGPUUACRS-----", ["RS"]],
+  ["SFGPUUI--------", ["IW"]],
+  ["SFFPSNU--------", ["UDT"]],
+  ["SFFPAF---------", ["SOF"]],
+  ["SFFPAH---------", ["SOF"]]
+]) {
+  result[`Annex D ground/SOF label ${sidc}`] = [iconLabels(new ms.Symbol(sidc)), labels];
+}
+for (const affiliation of ["U", "F", "N", "H"]) {
+  const color = { U: "rgb(255,255,128)", F: "rgb(128,224,255)", N: "rgb(170,255,170)", H: "rgb(255,128,128)" }[affiliation];
+  const nav = iconParts(new ms.Symbol(`S${affiliation}SPZN---------`));
+  result[`navigation affiliation stroke ${affiliation}`] = [nav.some(p => p.type === "path" && p.stroke === color), true];
+  const bottom = iconParts(new ms.Symbol(`S${affiliation}UPNB---------`));
+  result[`bottom return is not empty ${affiliation}`] = [bottom.some(p => p.type === "path" && p.fill === "black"), true];
+  for (const code of ["G-----", "GT----", "GG----", "GU----"]) {
+    const parts = iconParts(new ms.Symbol(`S${affiliation}SP${code}-----`));
+    result[`navy group filled center ${affiliation}/${code}`] = [parts.some(p => p.type === "path" && p.fill === "black" && p.stroke === false), true];
+    result[`navy group label below center ${affiliation}/${code}`] = [parts.filter(p => p.type === "text").every(p => p.y === 140), true];
+  }
+  for (const code of ["WM----", "WMS---", "WMAA--", "WMU---"]) {
+    const parts = iconParts(new ms.Symbol(`S${affiliation}AP${code}-----`));
+    result[`missile yellow fill ${affiliation}/${code}`] = [parts.some(p => p.type === "path" && p.fill === "rgb(255,255,128)"), true];
+  }
+}
+result["APP6A land-mine triangle points down"] = [
+  iconParts(new ms.Symbol("SFGPEXM--------")).some(p => p.d === "m 135,70 -70,0 35,70 z"), true
+];
+result["later APP6 land-mine triangle unchanged"] = [
+  iconParts(new ms.Symbol("SFGPEXM--------", { standard: "APP6" })).some(p => p.d === "m 65,130 70,0 -35,-70 z"), true
+];
+for (const standard of ["APP6A", "APP6", "2525"]) {
+  const legacy = standard === "APP6A";
+  const civilian = iconParts(new ms.Symbol("SFGPEVC--------", { standard })).find(p => p.text === "CIV");
+  if (legacy) {
+    result["Annex D civilian vehicle solid text"] = [civilian.fill === "black" && civilian.stroke === false, true];
+  } else if (standard === "APP6") {
+    result["later NATO civilian vehicle hollow text retained"] = [civilian.fill, false];
+  }
+  const artillery = iconParts(new ms.Symbol("SFGPUCF--------", { standard })).find(p => p.type === "circle");
+  result[`artillery size ${standard}`] = [artillery.r, legacy ? 10 : 15];
+  const mortar = iconParts(new ms.Symbol("SFGPUCFM-------", { standard }));
+  result[`mortar circle position ${standard}`] = [mortar.find(p => p.type === "circle").cy, legacy ? 140 : 115];
+  result[`mortar solid arrowhead ${standard}`] = [mortar.some(p => p.d === "M100,54 96,64 104,64 Z"), legacy];
+  const launcher = iconParts(new ms.Symbol("SFGPEWMS-------", { standard }));
+  result[`surface missile launcher open base ${standard}`] = [launcher.some(p => p.d === "m 85,140 30,0"), !legacy];
+  const adGun = iconParts(new ms.Symbol("SFGPEWA--------", { standard }));
+  result[`air defense gun later arrow ${standard}`] = [adGun.some(p => p.d === "M 85,75 100,60 115,75"), standard === "APP6"];
+  const mi = iconParts(new ms.Symbol("SFGPUUMS-------", { standard }));
+  if (legacy) {
+    result["SIGINT MI below antenna"] = [mi.find(p => p.text === "MI").y, 132];
+    result["SIGINT no radio circle"] = [mi.some(p => p.d?.includes("5.9")), false];
+  }
+  for (const code of ["UUMRX-", "UUMMO-", "UUMO--", "UUMT--"]) {
+    const texts = iconParts(new ms.Symbol(`SFGP${code}-----`, { standard })).filter(p => p.type === "text");
+    result[`MI stack position ${standard}/${code}`] = [texts.find(p => p.text === "MI").y, legacy ? 132 : 103];
+  }
+}
 for (const row of app6aCatalog) {
   for (const affiliation of row.affiliation ? [row.affiliation] : ["F", "H", "N", "U"]) {
     for (const status of row.status ? [row.status] : ["P", "A"]) {
@@ -87,6 +193,15 @@ for (const affiliation of ["U", "F", "N", "H"]) {
     result[`cargo label ${affiliation}/${frame}`] = [parts.some(p=>p.icon && p.text === "CA"), true];
   }
 }
+const cargoParts = iconParts(new ms.Symbol("SFSPXMC--------", { frame: false }));
+result["APP6A merchant hull follows the shallower Annex D silhouette"] = [
+  cargoParts.some(part => part.type === "path" && part.d === "m 80,94 0,-25 40,0 0,25 25,0 -15,36 -60,0 -15,-36 z"),
+  true
+];
+result["APP6A merchant label sits within the hull"] = [
+  cargoParts.filter(part => part.type === "text" && part.text === "CA").map(part => [part.y, part.fontsize]),
+  [[107, 24]]
+];
 const civilianPatrol = new ms.Symbol("SFSPXL---------").asSVG();
 const civilianAirText = new ms.Symbol("SFAPC----------").drawInstructions.flat(Infinity).find(p=>p && p.icon && p.text === "CIV");
 result["APP6A CIV uses solid lettering"] = [civilianAirText.fill, "black"];

@@ -13,7 +13,12 @@ def normalize(image):
 def compare(expected,actual):
     if actual is None: actual=Image.new("RGB",expected.size,"white")
     a,b=np.array(expected),np.array(actual)
-    ma,mb=a.min(axis=2)<100,b.min(axis=2)<100
+    # Measure dark strokes separately from identity-colored frame fills.
+    # Unframed colored icons may contain NO black (notably blue/green).
+    # In that case compare foreground silhouettes, not two empty masks.
+    ma,mb=a.max(axis=2)<100,b.max(axis=2)<100
+    if not ma.any() or not mb.any():
+        ma,mb=a.min(axis=2)<215,b.min(axis=2)<215
     da=np.array(Image.fromarray(ma).filter(ImageFilter.MaxFilter(5)))
     db=np.array(Image.fromarray(mb).filter(ImageFilter.MaxFilter(5)))
     recall=float((ma&db).sum())/max(1,int(ma.sum()));precision=float((mb&da).sum())/max(1,int(mb.sum()))

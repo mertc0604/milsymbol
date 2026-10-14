@@ -6,11 +6,12 @@ import ms from "../index.js";
 const sharp=createRequire(import.meta.url)(process.env.SHARP_MODULE||"sharp");
 const out=path.resolve("output/app6a-audit/symbols");
 const rows=JSON.parse(fs.readFileSync(path.join(out,"references.json")));
-const baseline=new Map(JSON.parse(fs.readFileSync("output/app6a-audit/before.json")).rows.map(row=>[row.id,row]));
+const baselinePath=process.env.APP6A_BASELINE||"output/app6a-audit/before.json";
+const baseline=new Map(JSON.parse(fs.readFileSync(baselinePath)).rows.map(row=>[row.id,row]));
 for(const row of rows){
   for(const c of row.cases||[]){
     const sidc=`S${c.affiliation}${row.id[2]}P${row.id.slice(4)}${row.modifier.replaceAll('*','-')}---`;
-    c.sidc=sidc;c.variants=[];
+    c.sidc=sidc;c.variants=[];c.baseline=path.basename(baselinePath);
     for(const strokeWidth of [1,2,3,4]){
       const symbol=new ms.Symbol(sidc,{standard:"APP6A",size:160,frame:c.frame,fill:true,strokeWidth,infoFields:false});
       const name=`${c.key}-${strokeWidth}`;
@@ -22,7 +23,11 @@ for(const row of rows){
       c.variants.push({strokeWidth,image:name+".png",svg:name+".svg",valid:symbol.isValid()});
     }
     const before=baseline.get(row.id)?.cases.find(b=>b.affiliation===c.affiliation&&b.frame===c.frame);
-    if(before&&!fs.existsSync(path.join(out,c.key+"-baseline.png")))await sharp(Buffer.from(before.svg),{density:288}).flatten({background:"white"}).png().toFile(path.join(out,c.key+"-baseline.png"));
+    const baselineSvg=path.join(out,c.key+"-baseline.svg");
+    if(before&&(!fs.existsSync(baselineSvg)||fs.readFileSync(baselineSvg,"utf8")!==before.svg)){
+      fs.writeFileSync(baselineSvg,before.svg);
+      await sharp(Buffer.from(before.svg),{density:288}).flatten({background:"white"}).png().toFile(path.join(out,c.key+"-baseline.png"));
+    }
   }
 }
 fs.writeFileSync(path.join(out,"inputs.json"),JSON.stringify(rows,null,2));

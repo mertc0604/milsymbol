@@ -34,6 +34,8 @@ export default function (
   const affiliation = metadata.affiliation || "Friend";
   //const baseGeometry = metadata.baseGeometry;
   const numberSIDC = metadata.numberSIDC;
+  // APP-6A Annex D retains the original single-letter aircraft roles.
+  const legacyLetter = (STD2525 && !numberSIDC) || metadata.app6a;
   //const fillColor = colors.fillColor[affiliation];
   const iconColor = colors.iconColor[affiliation];
   const iconFillColor = colors.iconFillColor[affiliation];
@@ -196,25 +198,25 @@ export default function (
   icn["AR.I.2525 PHOTOGRAPHIC"] = text("X");
   icn["AR.I.TRAINER"] = text("T");
   icn["AR.I.UTILITY"] = text("U");
-  icn["AR.I.VSTOL"] = text(STD2525 && !numberSIDC ? "L" : "V");
+  icn["AR.I.VSTOL"] = text(legacyLetter ? "L" : "V");
   icn["AR.I.AIRBORNE COMMAND POST"] =
-    STD2525 && !numberSIDC ? text("D") : text("ACP");
+    legacyLetter ? text("D") : text("ACP");
   icn["AR.I.AIRBORNE EARLY WARNING"] =
-    STD2525 && !numberSIDC ? text("W") : text("AEW");
+    legacyLetter ? text("W") : text("AEW");
   icn["AR.I.ANTISURFACE WARFARE"] =
-    STD2525 && !numberSIDC ? text("N") : text("ASUW");
+    legacyLetter ? text("N") : text("ASUW");
   icn["AR.I.ANTISUBMARINE WARFARE"] =
-    STD2525 && !numberSIDC ? text("S") : text("ASW");
-  icn["AR.I.COMMUNICATIONS"] = STD2525 && !numberSIDC ? text("Y") : text("COM");
+    legacyLetter ? text("S") : text("ASW");
+  icn["AR.I.COMMUNICATIONS"] = legacyLetter ? text("Y") : text("COM");
   icn["AR.I.COMBAT SEARCH AND RESCUE"] = text("CSAR");
-  icn["AR.I.ELECTRONIC SUPPORT MEASURES"] = STD2525 ? text("Z") : text("ESM");
+  icn["AR.I.ELECTRONIC SUPPORT MEASURES"] = STD2525 || metadata.app6a ? text("Z") : text("ESM");
   icn["AR.I.GOVERNMENT"] = text("GOV");
   icn["AR.I.MINE COUNTERMEASURES"] = text("MCM");
-  icn["AR.I.PERSONNEL RECOVERY"] = STD2525 ? text("H") : text("PRO");
+  icn["AR.I.PERSONNEL RECOVERY"] = STD2525 || metadata.app6a ? text("H") : text("PRO");
   icn["AR.I.PASSENGER"] = text("PX");
   icn["AR.I.SEARCH AND RESCUE"] = text("SAR");
   icn["AR.I.SUPRESSION OF ENEMY AIR DEFENCE"] = text("SEAD");
-  icn["AR.I.SPECIAL OPERATIONS FORCES"] = text("SOF");
+  icn["AR.I.SPECIAL OPERATIONS FORCES"] = text(metadata.app6a ? "M" : "SOF");
   icn["AR.I.ULTRA LIGHT"] = text("UL");
   icn["AR.I.VIP"] = text("VIP");
   icn["AR.I.FF.MILITARY FIXED WING"] = {
@@ -283,15 +285,15 @@ export default function (
   icn["AIR.M1.INTERCEPTOR"] = textm1("I");
   icn["AIR.M1.TANKER"] = textm1("K");
   icn["AIR.M1.UTILITY"] = textm1("U");
-  icn["AIR.M1.VSTOL"] = textm1(STD2525 && !numberSIDC ? "L" : "V");
+  icn["AIR.M1.VSTOL"] = textm1(legacyLetter ? "L" : "V");
   icn["AIR.M1.PASSENGER"] = textm1("PX");
   icn["AIR.M1.ULTRA LIGHT"] = textm1("UL");
   icn["AIR.M1.AIRBORNE COMMAND POST"] =
-    STD2525 && !numberSIDC ? textm1("D") : textm1("ACP");
+    legacyLetter ? textm1("D") : textm1("ACP");
   icn["AIR.M1.ANTISURFACE WARFARE"] =
-    STD2525 && !numberSIDC ? textm1("N") : textm1("ASUW");
+    legacyLetter ? textm1("N") : textm1("ASUW");
   icn["AIR.M1.AIRBORNE EARLY WARNING"] =
-    STD2525 && !numberSIDC ? textm1("W") : textm1("AEW");
+    legacyLetter ? textm1("W") : textm1("AEW");
   icn["AIR.M1.GOVERNMENT"] = textm1("GOV");
   icn["AIR.M1.HYPERSONIC"] = [
     {
@@ -326,22 +328,24 @@ export default function (
   icn["AIR.M1.RECONNAISSANCE"] = textm1("R");
   icn["AIR.M1.TRAINER"] = textm1("T");
   icn["AIR.M1.PHOTOGRAPHIC"] =
-    STD2525 && !numberSIDC ? textm1("X") : textm1("PH");
+    legacyLetter ? textm1("X") : textm1("PH");
   icn["AIR.M1.PERSONNEL RECOVERY"] = textm1("PR");
   icn["AIR.M1.ANTISUBMARINE WARFARE"] =
-    STD2525 && !numberSIDC ? textm1("S") : textm1("ASW");
+    legacyLetter ? textm1("S") : textm1("ASW");
   icn["AIR.M1.COMMUNICATIONS"] =
-    STD2525 && !numberSIDC ? textm1("Y") : textm1("COM");
-  icn["AIR.M1.ELECTRONIC SURVEILLANCE MEASURES"] = STD2525
+    legacyLetter ? textm1("Y") : textm1("COM");
+  icn["AIR.M1.ELECTRONIC SURVEILLANCE MEASURES"] = STD2525 || metadata.app6a
     ? textm1("Z")
     : textm1("ESM");
   icn["AIR.M1.MINE COUNTERMEASURES"] = textm1("MCM");
   icn["AIR.M1.SEARCH AND RESCUE"] = textm1("SAR");
-  icn["AIR.M1.SPECIAL OPERATIONS FORCES"] = textm1("SOF");
+  icn["AIR.M1.SPECIAL OPERATIONS FORCES"] = textm1(
+    metadata.app6a && metadata.dimension === "Air" ? "M" : "SOF"
+  );
   icn["AIR.M1.SURFACE WARFARE"] = textm1("SUW");
   icn["AIR.M1.VIP"] = textm1("VIP");
   icn["AIR.M1.COMBAT SEARCH AND RESCUE"] =
-    STD2525 && !numberSIDC ? textm1("H") : textm1("CSAR");
+    legacyLetter ? textm1("H") : textm1("CSAR");
   icn["AIR.M1.SUPRESSION OF ENEMY AIR DEFENCE"] = textm1("SEAD");
   icn["AIR.M1.UNMANNED AERIAL VEHICLE"] = {
     type: "path",
@@ -387,7 +391,7 @@ export default function (
     type: "path",
     d: "m 87,135 v -11 l 6,-5 V 65 l 7,-10 7,10 v 54 l 6,5 v 11 l -13,-10 z",
   };
-  if (STD2525 || numberSIDC)
+  if (STD2525 || numberSIDC || metadata.app6a)
     icn["AIR.MISSILE.ICON"].fill = frame
       ? colors.fillColor.Unknown
       : colors.iconFillColor.Unknown;

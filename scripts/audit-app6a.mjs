@@ -8,6 +8,10 @@ import { app6aCatalog } from "../studio/app6a-catalog.js";
 const output = path.resolve("output/app6a-audit");
 fs.mkdirSync(output, { recursive: true });
 const [command, phase] = process.argv.slice(2);
+// Transform groups hold their children in .draw, not in nested arrays alone.
+const flattenParts = parts => parts.flatMap(part => Array.isArray(part)
+  ? flattenParts(part)
+  : part ? [part, ...flattenParts(part.draw || [])] : []);
 if (command === "snapshot") {
   if (!["before", "after"].includes(phase)) throw new Error("Use snapshot before|after");
   const target = path.join(output, `${phase}.json`);
@@ -15,7 +19,7 @@ if (command === "snapshot") {
   const rows = app6aCatalog.map(entry => ({ ...entry, cases: (entry.affiliation ? [entry.affiliation] : ["U", "F", "N", "H"]).flatMap(affiliation => [true, false].map(frame => {
     const sidc = entry.id[0] + affiliation + entry.id[2] + (entry.status || "P") + entry.id.slice(4) + entry.modifier.replaceAll("*", "-") + "---";
     const symbol = new ms.Symbol(sidc, { standard: "APP6A", frame, fill: true, size: 70, infoFields: false, strokeWidth: 3 });
-    const parts = symbol.drawInstructions.flat(Infinity).filter(Boolean);
+    const parts = flattenParts(symbol.drawInstructions);
     return { affiliation, frame, sidc, valid: symbol.isValid(), svg: symbol.asSVG(), fills: [...new Set(parts.filter(p => p.icon && p.fill).map(p => p.fill))], labels: parts.filter(p => p.icon && p.type === "text").map(p => p.text), colors: symbol.getColors() };
   })) }));
   fs.writeFileSync(target, JSON.stringify({ capturedAt: new Date().toISOString(), rows }));
@@ -24,6 +28,8 @@ if (command === "snapshot") {
   const before = JSON.parse(fs.readFileSync(path.join(output, "before.json")));
   const after = JSON.parse(fs.readFileSync(path.join(output, "after.json")));
   const references = JSON.parse(fs.readFileSync(path.join(output, "references.json")));
+  const symbolReferences = JSON.parse(fs.readFileSync(path.join(output, "symbols/references.json")));
+  const illustrated = new Set(symbolReferences.filter(row => row.cases?.length).map(row => row.id));
   const expected = JSON.parse(fs.readFileSync("scripts/app6a-expectations.json"));
   const normalize = value => String(value).replace(/\s/g, "").replace(/^white$/, "rgb(255,255,255)");
   const palette = {U:"rgb(255,255,128)",F:"rgb(128,224,255)",N:"rgb(170,255,170)",H:"rgb(255,128,128)"};
@@ -46,9 +52,9 @@ if (command === "snapshot") {
   // Current audit scope is explicitly S-scheme only, per the user's request.
   const rows = after.rows.filter(row => row.id.startsWith("S")).map(row => {
     const old = baseline.get(row.id);
-    return { ...row, before: old?.cases || [], reference: references[row.hierarchy] || null, rules: expected[row.id] || null, failuresBefore: old ? checks(old) : [], failuresAfter: checks(row), changed: !old || row.cases.some(c => c.svg !== old.cases.find(b=>b.affiliation===c.affiliation && b.frame===c.frame)?.svg) };
+    return { ...row, before: old?.cases || [], reference: references[row.hierarchy] || null, illustrated: illustrated.has(row.id), rules: expected[row.id] || null, failuresBefore: old ? checks(old) : [], failuresAfter: checks(row), changed: !old || row.cases.some(c => c.svg !== old.cases.find(b=>b.affiliation===c.affiliation && b.frame===c.frame)?.svg) };
   });
-  const summary = { symbols: rows.length, cases: rows.reduce((sum,row)=>sum+row.cases.length,0), referenceRows: rows.filter(r => r.reference).length, reviewedRules: rows.filter(r => r.rules && !r.rules.conflict).length, changedSymbols: rows.filter(r => r.changed).length, failuresBefore: rows.reduce((n,r) => n+r.failuresBefore.length,0), failuresAfter: rows.reduce((n,r) => n+r.failuresAfter.length,0), invalid: rows.flatMap(r => r.cases).filter(c=>!c.valid).length };
+  const summary = { symbols: rows.length, cases: rows.reduce((sum,row)=>sum+row.cases.length,0), referenceRows: rows.filter(r => r.reference).length, illustratedRows: rows.filter(r => r.illustrated).length, reviewedRules: rows.filter(r => r.rules && !r.rules.conflict).length, changedSymbols: rows.filter(r => r.changed).length, failuresBefore: rows.reduce((n,r) => n+r.failuresBefore.length,0), failuresAfter: rows.reduce((n,r) => n+r.failuresAfter.length,0), invalid: rows.flatMap(r => r.cases).filter(c=>!c.valid).length };
   fs.writeFileSync(path.join(output, "report.json"), JSON.stringify({ summary, rows }));
   fs.copyFileSync("scripts/app6a-audit.html", path.join(output, "index.html"));
   const served = "dist/studio/audit";

@@ -442,6 +442,23 @@ export default {
       ms._translate(0, -20, icn["GR.IC.MORTAR"]),
       icn["GR.IC.FF.AMPHIBIOUS"]
     ];
+    if (this.metadata.app6a) {
+      // The full-height mortar is only the unmodified icon. Leave room below
+      // it for the mounting and terrain marks in Annex D's composite rows.
+      for (const code of ["S-G-UCFMS-", "S-G-UCFMSW", "S-G-UCFMT-", "S-G-UCFMTA", "S-G-UCFMTS", "S-G-UCFMTC", "S-G-UCFMTO"]) {
+        const cy = code === "S-G-UCFMTO" || code === "S-G-UCFMTA" ? 104 : 112;
+        const tip = code === "S-G-UCFMTS" ? 82 : 54;
+        sId[code][0] = [
+          { ...icn["GR.IC.MORTAR"][0], cy },
+          { ...icn["GR.IC.MORTAR"][1], d: `M100,${cy - 6} V${tip + 4}` },
+          ms._translate(0, tip - 54, icn["GR.IC.MORTAR"][2])
+        ];
+        if (code === "S-G-UCFMTO" || code === "S-G-UCFMTA") {
+          sId[code][1] = ms._translate(0, -18, sId[code][1]);
+          sId[code][2] = ms._translate(0, 10, ms._scale(0.7, sId[code][2]));
+        }
+      }
+    }
     sId["S-G-UCFS--"] = [icn["GR.IC.SURVEY"]];
     sId["S-G-UCFSS-"] = [
       icn["GR.IC.SURVEY"],
@@ -466,7 +483,7 @@ export default {
     sId["S-G-UCRH--"] = [icn["GR.IC.FF.HORSE"]];
     sId["S-G-UCRV--"] = [
       icn["GR.IC.FF.RECONNAISSANCE"],
-      _STD2525 ? icn["GR.M2.CAVALRY"] : []
+      _STD2525 || this.metadata.app6a ? icn["GR.M2.CAVALRY"] : []
     ];
     sId["S-G-UCRVA-"] = [icn["GR.IC.ARMOUR"], icn["GR.IC.FF.RECONNAISSANCE"]];
     sId["S-G-UCRVM-"] = [
@@ -510,7 +527,7 @@ export default {
     ];
     sId["S-G-UCRX--"] = [
       icn["GR.IC.FF.RECONNAISSANCE"],
-      _STD2525
+      _STD2525 || this.metadata.app6a
         ? icn["GR.M2.LONG RANGE SURVEILLANCE"]
         : [
             ms._translate(0, -20, icn["GR.M2.MOUNTAIN"]),
@@ -581,7 +598,7 @@ export default {
       icn["GR.IC.CBRN"],
       icn["GR.IC.FF.RECONNAISSANCE"],
       icn["GR.M2.WHEELED"],
-      _STD2525 ? icn["GR.M1.CHEMICAL SURVEILLANCE"] : []
+      _STD2525 || this.metadata.app6a ? icn["GR.M1.CHEMICAL SURVEILLANCE"] : []
     ];
     sId["S-G-UUAN--"] = [icn["GR.IC.CBRN"], icn["GR.M1.NUCLEAR"]];
     sId["S-G-UUAB--"] = [icn["GR.IC.CBRN"], icn["GR.M1.BIOLOGICAL"]];
@@ -613,10 +630,15 @@ export default {
       icn["GR.IC.MILITARY INTELLIGENCE"],
       icn["GR.M1.UNMANNED AERIAL VEHICLE"]
     ];
-    sId["S-G-UUMS--"] = [
-      ms._translate(-30, 0, icn["GR.IC.MILITARY INTELLIGENCE"]),
-      icn["GR.IC.RADIO"]
-    ];
+    sId["S-G-UUMS--"] = this.metadata.app6a
+      ? [
+          { ...icn["GR.IC.MILITARY INTELLIGENCE"], y: 132, fontsize: 30 },
+          ms._translate(0, 50, ms._scale(2, { ...icn["GR.M1.SIGNALS INTELLIGENCE"], strokewidth: 1 }))
+        ]
+      : [
+          ms._translate(-30, 0, icn["GR.IC.MILITARY INTELLIGENCE"]),
+          icn["GR.IC.RADIO"]
+        ];
     sId["S-G-UUMSE-"] = [icn["GR.IC.ELECTRONIC WARFARE"]];
     sId["S-G-UUMSEA"] = [
       icn["GR.IC.ARMOUR"],
@@ -675,6 +697,16 @@ export default {
       icn["GR.IC.MILITARY INTELLIGENCE"],
       icn["GR.M1.TACTICAL EXPLOITATION"]
     ];
+    // Annex D stacks these two labels with equal prominence, rather than
+    // using the later large central MI and small upper modifier.
+    if (this.metadata.app6a) {
+      for (const code of ["S-G-UUMRX-", "S-G-UUMMO-", "S-G-UUMO--", "S-G-UUMT--"]) {
+        sId[code] = [
+          { ...sId[code][0], y: 132, fontsize: 30 },
+          { ...sId[code][1], y: 84, fontsize: 32 }
+        ];
+      }
+    }
     sId["S-G-UUMQ--"] = [icn["GR.IC.INTERROGATION"]];
     sId["S-G-UUMJ--"] = [icn["GR.IC.JOINT INTELLIGENCE CENTRE"]];
     sId["S-G-UUL---"] = [
@@ -1075,6 +1107,17 @@ export default {
       icn["GR.IC.TRANSPORTATION"],
       icn["GR.M1.MISSILE"]
     ];
+    if (this.metadata.app6a) {
+      for (const code of ["S-G-USTM--", "S-G-USTMT-", "S-G-USTMC-", "S-G-USTR--", "S-G-USTRT-", "S-G-USTRC-", "S-G-USTS--", "S-G-USTST-", "S-G-USTSC-", "S-G-USTI--", "S-G-USTIT-", "S-G-USTIC-"]) {
+        sId[code] = sId[code].map(part => part === icn["GR.IC.TRANSPORTATION"]
+          ? ms._translate(0, 20, ms._scale(0.7, part)) : part);
+      }
+      // The airport primitive already includes its own wheel and spokes.
+      for (const code of ["S-G-USTA--", "S-G-USTAT-", "S-G-USTAC-"]) {
+        sId[code] = sId[code].map(part => part === icn["GR.IC.TRANSPORTATION"] ? []
+          : part === icn["GR.IC.AIRPORT OF DEBARKATION"] ? ms._translate(0, 10, ms._scale(1.4, part)) : part);
+      }
+    }
     //1.X.3.1.3.4.8 SIDC BROKEN
     //sId['S-G-UST---']
     sId["S-G-USX---"] = [icn["GR.IC.MAINTENANCE"]];

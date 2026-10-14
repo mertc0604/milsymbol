@@ -5,6 +5,7 @@ dist
 .pnpm-store
 pnpm-lock.yaml
 tmp/pdfs/
+tmp/*.log
 output/app6a-audit/
 __pycache__/
 *.pyc

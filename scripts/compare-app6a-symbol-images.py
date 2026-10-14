@@ -14,7 +14,9 @@ if "--resume" in sys.argv and (OUT/"comparison.json").exists():
 def compare_case(case):
         old=previous.get(case["key"])
         files=[case["sourceImage"]]+[v["image"] for v in case["variants"]]
-        if old and old.get("comparison") and all((OUT/f).stat().st_mtime<last_run for f in files):
+        if (OUT/(case["key"]+"-baseline.png")).exists(): files.append(case["key"]+"-baseline.png")
+        metrics_unchanged=Path(__file__).with_name("app6a_image_metrics.py").stat().st_mtime<last_run
+        if old and old.get("comparison") and metrics_unchanged and all((OUT/f).stat().st_mtime<last_run for f in files):
             case["comparison"]=old["comparison"]
             if old.get("error"): case["error"]=old["error"]
             return
@@ -35,11 +37,11 @@ def compare_case(case):
             before.save(OUT/(key+"-before.png"))
             before_score,before_color,_=compare(expected,before)
         else: before_score=before_color=None
-        case["comparison"]={"outlineSimilarity":round(score,4),"colorMAE":round(color,4),"strokeWidth":variant["strokeWidth"],"beforeOutlineSimilarity":before_score,"beforeColorMAE":before_color,"status":"visual-review-required"}
+        case["comparison"]={"outlineSimilarity":round(score,4),"colorMAE":round(color,4),"strokeWidth":variant["strokeWidth"],"beforeOutlineSimilarity":before_score,"beforeColorMAE":before_color,"status":"source-conflict" if case.get("sourceConflict") else "visual-review-required"}
 with ThreadPoolExecutor(max_workers=8) as pool:
     for count,_ in enumerate(pool.map(compare_case,[c for r in rows for c in r.get("cases",[])]),1):
         if count%400==0: print(f"Compared {count} pairs",flush=True)
-result={"scope":"S only — excludes G tactical graphics","method":"Independent APP-6A PDF cells; four affiliations; only F/FO/UF frame modes illustrated in the publication. Tight foreground crop, aspect-preserving 256px normalization; disclosed best stroke width 1–4; 2px edge tolerance. Color error reported separately. Before uses the preserved pre-fix snapshot at stroke 3. Scores are triage, not automatic conformance certification.","rows":rows}
+result={"scope":"S only — excludes G tactical graphics","method":"Independent APP-6A PDF cells; printed pp. 130–261 (PDF 136–268, offset changes within the document); four affiliations; only F/FO/UF frame modes illustrated in the publication. Tight foreground crop, aspect-preserving 256px normalization; disclosed best stroke width 1–4; 2px edge tolerance. Dark-stroke comparison falls back to colored foreground for icons without black. Color error reported separately. Before uses the selected preserved pre-fix snapshot at stroke 3. Scores are triage, not automatic conformance certification; source conflicts are flagged separately.","rows":rows}
 (OUT/"comparison.json").write_text(json.dumps(result,indent=2))
 print(f"Compared {sum(len(r.get('cases',[])) for r in rows)} publication pairs for {len(rows)} S symbols. Empty cells: {failures}")
 # Review every distinct symbol in the friend variant, worst similarities first.

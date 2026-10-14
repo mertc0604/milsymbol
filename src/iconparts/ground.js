@@ -111,7 +111,9 @@ export default function (
   };
   icn["GR.IC.AIR DEFENSE MISSILE"] = {
     type: "path",
-    d: "M90,120 L90,90 C90,80 110,80 110,90 L110,120",
+    d: metadata.app6a
+      ? `M85,${{ Unknown: 105, Friend: 124, Neutral: 134, Hostile: 101 }[affiliation]} V75 C85,58 115,58 115,75 V${{ Unknown: 105, Friend: 124, Neutral: 134, Hostile: 101 }[affiliation]}`
+      : "M90,120 L90,90 C90,80 110,80 110,90 L110,120",
     fill: false
   };
   icn["GR.IC.FLOATING CRAFT"] = {
@@ -306,6 +308,10 @@ export default function (
     STD2525 || numberSIDC ? iconFillColor : !frame ? iconFillColor : false;
   icn["GR.I.CIVILIAN"].stroke = black;
   icn["GR.I.CIVILIAN"].strokewidth = 3;
+  if (metadata.app6a) {
+    icn["GR.I.CIVILIAN"].fill = iconColor;
+    icn["GR.I.CIVILIAN"].stroke = false;
+  }
   icn["GR.IC.COMMAND AND CONTROL"] = text("");
   icn["GR.IC.COMBAT"] = text("CBT");
   icn["GR.IC.COMBAT SERVICE SUPPORT"] = text("CSS");
@@ -362,7 +368,7 @@ export default function (
   };
   icn["GR.IC.EXPLOSIVE ORDNANCE DISPOSAL"] = text("EOD");
   icn["GR.IC.FEDERAL BUREAU OF INVESTIGATION (FBI)"] = text("FBI");
-  icn["GR.IC.FIELD ARTILLERY"] = { type: "circle", cx: 100, cy: 100, r: 15 };
+  icn["GR.IC.FIELD ARTILLERY"] = { type: "circle", cx: 100, cy: 100, r: metadata.app6a ? 10 : 15 };
   icn["GR.IC.FIELD ARTILLERY OBSERVER"] = [
     {
       type: "path",
@@ -416,7 +422,7 @@ export default function (
   };
   icn["GR.IC.HUMAN RESOURCES"] = text("HR");
   icn["GR.IC.INFORMATION OPERATIONS"] = text(
-    STD2525 && !numberSIDC ? "IW" : "IO"
+    (STD2525 && !numberSIDC) || metadata.app6a ? "IW" : "IO"
   );
   icn["GR.IC.INTERNATIONAL SECURITY ASSISTANCE FORCE (ISAF)"] = text("ISAF");
   icn["GR.IC.INTERROGATION"] = text("IPW");
@@ -531,9 +537,10 @@ export default function (
     text: "MWR"
   };
   icn["GR.IC.MORTAR"] = [
-    { type: "circle", cx: 100, cy: 115, r: 5, fill: false },
-    { type: "path", d: "M100,111 l0,-30 M90,90 l10,-10 10,10", fill: false }
+    { type: "circle", cx: 100, cy: metadata.app6a ? 140 : 115, r: metadata.app6a ? 6 : 5, fill: false },
+    { type: "path", d: metadata.app6a ? "M100,134 V58" : "M100,111 l0,-30 M90,90 l10,-10 10,10", fill: false }
   ];
+  if (metadata.app6a) icn["GR.IC.MORTAR"].push({ type: "path", d: "M100,54 96,64 104,64 Z", stroke: false });
   icn["GR.IC.MORTUARY AFFAIRS"] = {
     type: "path",
     d: "m 70,85 h 60 v 30 H 70 Z  m 40,5 v 20  M 74.8,100 H 125",
@@ -717,7 +724,9 @@ export default function (
       type: "path",
       fill: false,
       styleFill: true,
-      d: "M 119,100 A 18.5,18.3 0 0 1 99.4,118 18.5,18.3 0 0 1 81.2,100 18.5,18.3 0 0 1 99.4,81.8 18.5,18.3 0 0 1 119,100 Z  M 100,81.9 V 118  M 82.9,91.2 117,108  M 82.9,108 117,91.2"
+      d: metadata.app6a
+        ? "M138,100 A38,38 0 1 1 62,100 A38,38 0 1 1 138,100 Z M100,62 V138 M67,81 133,119 M67,119 133,81"
+        : "M 119,100 A 18.5,18.3 0 0 1 99.4,118 18.5,18.3 0 0 1 81.2,100 18.5,18.3 0 0 1 99.4,81.8 18.5,18.3 0 0 1 119,100 Z  M 100,81.9 V 118  M 82.9,91.2 117,108  M 82.9,108 117,91.2"
     }
   ];
   icn["GR.IC.TRANSPORTATION SECURITY AGENCY (TSA)"] = text("TSA");
@@ -797,6 +806,16 @@ export default function (
       fill: false
     }
   }[affiliation];
+  if (metadata.app6a) {
+    // Annex D, PDF 173–175: the dome meets the frame at different heights
+    // for each identity; the missile body terminates at the dome's apex.
+    icn["GR.IC.FF.AIR DEFENCE"].d = {
+      Unknown: "M45,125 C60,98 140,98 155,125",
+      Friend: "M25,150 C25,115.3 175,115.3 175,150",
+      Neutral: "M45,155 C45,127 155,127 155,155",
+      Hostile: "M49,121 C60,94.3 140,94.3 151,121"
+    }[affiliation];
+  }
   icn["GR.IC.FF.AIR AND NAVAL GUNFIRE LIAISON COMPANY"] = []; //TODO
   icn["GR.IC.FF.AMPHIBIOUS"] = {
     Unknown: {
@@ -1432,7 +1451,7 @@ export default function (
   icn["GR.M1.CLOSE PROTECTION"] = textm1("CLP");
   icn["GR.M1.COMBAT"] = textm1("CBT");
   icn["GR.M1.COMMAND AND CONTROL"] = textm1("C2");
-  icn["GR.M1.COMMAND AND CONTROL ROTARY WING"] = STD2525
+  icn["GR.M1.COMMAND AND CONTROL ROTARY WING"] = STD2525 || metadata.app6a
     ? textm1("Y")
     : textm1("C2");
   icn["GR.M1.TILT-ROTOR"] = textm1("TR");
@@ -2071,7 +2090,7 @@ export default function (
   icn["GR.M2.MOUNTAIN"] = {
     type: "path",
     stroke: false,
-    d: "m 87,142 10,-20 5,10 3,-5 8,15"
+    d: metadata.app6a ? "M80,150 100,115 120,150 Z" : "m 87,142 10,-20 5,10 3,-5 8,15"
   };
   icn["GR.M2.MULTIPLE ALTITUDES"] = textm2("H/MA");
   icn["GR.M2.MULTI-CHANNEL"] = textm2("MC");
@@ -2263,7 +2282,7 @@ export default function (
     x: 100,
     y: 130,
     fontsize: 20,
-    text: "VTOL"
+    text: metadata.app6a ? "VSTOL" : "VTOL"
   };
   icn["GR.M2.VETERINARY"] = {
     type: "text",
@@ -2332,7 +2351,7 @@ export default function (
       fill: false
     }
   ];
-  if (!STD2525 && !numberSIDC) {
+  if (!STD2525 && !numberSIDC && !metadata.app6a) {
     icn["GR.EQ.AIR DEFENCE GUN"].push({
       type: "path",
       d: "M 85,75 100,60 115,75",
@@ -2422,11 +2441,13 @@ export default function (
   icn["GR.EQ.SURFACE-TO-SURFACE MISSILE LAUNCHER"] = [
     icn["GR.EQ.MISSILE LAUNCHER"]
   ];
-  icn["GR.EQ.SURFACE-TO-SURFACE MISSILE LAUNCHER"].push({
-    type: "path",
-    d: "m 85,140 30,0",
-    fill: false
-  });
+  if (!metadata.app6a) {
+    icn["GR.EQ.SURFACE-TO-SURFACE MISSILE LAUNCHER"].push({
+      type: "path",
+      d: "m 85,140 30,0",
+      fill: false
+    });
+  }
   icn["GR.EQ.MORTAR"] = [
     { type: "path", d: "m 100,60 0,60 M 85,75 100,60 115,75", fill: false },
     { type: "circle", cx: 100, cy: 130, r: 10, fill: false }
@@ -2982,7 +3003,9 @@ export default function (
     {
       type: "path",
       fill: false,
-      d: STD2525 ? "m 135,70 -70,0 35,70 z" : "m 65,130 70,0 -35,-70 z"
+      d: STD2525 || metadata.app6a
+        ? "m 135,70 -70,0 35,70 z"
+        : "m 65,130 70,0 -35,-70 z"
     }
   ];
   icn["GR.EQ.SENSOR"] = {
@@ -3172,7 +3195,7 @@ export default function (
 
   // SUBSURFACE
 
-  icn["SOF.IC.UNDERWATER DEMOLITION TEAM"] = text("UD");
+  icn["SOF.IC.UNDERWATER DEMOLITION TEAM"] = text(metadata.app6a ? "UDT" : "UD");
   icn["SOF.M2.ATTACK"] = textm2("A");
   icn["SOF.M2.REFUEL"] = textm2("K");
   icn["SOF.M2.UTILITY"] = textm2("U");

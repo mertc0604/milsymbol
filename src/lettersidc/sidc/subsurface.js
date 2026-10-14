@@ -156,7 +156,9 @@ export default {
     sId["S-U-WDMM--"] = [icn["SU.IC.SEA MINE DECOY, MOORED"]];
     sId["S-U-N-----"] = [icn["SU.IC.NON-SUBMARINE"]];
     sId["S-U-ND----"] = [icn["SU.IC.DIVER, CIVILIAN"]];
-    sId["S-U-NB----"] = []; // N/A
+    sId["S-U-NB----"] = this.metadata.app6a
+      ? [icn["SU.IC.SEABED ROCK/STONE, OBSTACLE, OTHER"]]
+      : []; // APP-6A Annex D: non-mine, mine-like bottom return.
     sId["S-U-E-----"] = [icn["SU.IC.ENVIRONMENTAL REPORT LOCATION"]];
     sId["S-U-V-----"] = [icn["SU.IC.DIVE REPORT LOCATION"]];
     sId["S-U-X-----"] = [icn["SU.IC.UNEXPLODED EXPLOSIVE ORDNANCE"]];

@@ -31,7 +31,7 @@ export default {
     sId["S-A-MFR---"] = [icn["AR.I.RECONNAISSANCE"]];
     sId["S-A-MFRW--"] = [icn["AR.I.AIRBORNE EARLY WARNING"]];
     sId["S-A-MFRZ--"] = [icn["AR.I.ELECTRONIC SUPPORT MEASURES"]];
-    sId["S-A-MFRX--"] = _STD2525
+    sId["S-A-MFRX--"] = _STD2525 || this.metadata.app6a
       ? [icn["AR.I.2525 PHOTOGRAPHIC"]]
       : [icn["AR.I.RECONNAISSANCE"], icn["AIR.M2.PHOTOGRAPHIC"]];
     sId["S-A-MFP---"] = [icn["AR.I.PATROL"]];

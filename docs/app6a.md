@@ -99,14 +99,16 @@ Tests: `test/app6a.test.js`; build the editor with `pnpm studio:build`.
 
 ## Independent S-symbol image audit
 
-After building the studio, run the local developer checks explicitly:
+After building the studio, run the local developer checks explicitly. Preserve a
+pre-change snapshot before editing the renderer; set `APP6A_BASELINE` to that
+snapshot when rendering comparison images:
 
 ```sh
 export NODE_OPTIONS='--import=data:text/javascript,globalThis.__version__=%22dev%22'
 node scripts/audit-app6a.mjs snapshot after
 python3 scripts/extract-app6a-references.py /absolute/path/APP_6_A_.pdf
 python3 scripts/extract-app6a-symbol-images.py /absolute/path/APP_6_A_.pdf
-node scripts/render-app6a-symbol-images.mjs
+APP6A_BASELINE=output/app6a-audit/before.json node scripts/render-app6a-symbol-images.mjs
 python3 scripts/compare-app6a-symbol-images.py
 node scripts/audit-app6a.mjs report
 ```
@@ -114,16 +116,19 @@ node scripts/audit-app6a.mjs report
 Before/after reports require the original local `before.json` snapshot. On a
 fresh checkout, capture a baseline with `snapshot before` **before modifying the
 renderer**; a snapshot made afterwards is not evidence of the original behavior.
+For a later review cycle, point `APP6A_BASELINE` at a separately preserved
+pre-change snapshot instead.
 Python must provide `pdfplumber`, Pillow and NumPy; Node must provide `sharp`
 (or set `SHARP_MODULE` to its installation). Set `PYTHON` to select the interpreter.
 The PDF and generated images stay local under ignored `output/app6a-audit/` and
 `dist/studio/audit/`. Open `/audit/symbols/` on the local studio server.
 
 The audit extracts actual Annex D pixels, preserving PDF page/crop coordinates,
-and compares them to independently rendered SVGs. It covers **678 illustrated S
-entries / 3,188 image pairs** across U/F/N/H and the F/FO/UF frame modes shown in
-the publication. Five gray taxonomy headings contain no illustration:
-`S-G-EW----`, `S-G-EX----`, `S-G-IM----`, `S-S-X-----`, `S-U-N-----`.
+and compares them to independently rendered SVGs. It covers **676 illustrated S
+entries / 3,180 image pairs** across U/F/N/H and the F/FO/UF frame modes shown in
+the publication. Seven gray taxonomy headings contain no illustration:
+`S-G-EW----`, `S-G-EX----`, `S-G-IM----`, `S-S-X-----`, `S-S-E-----`,
+`S-S-Z-----`, `S-U-N-----`.
 They are explicitly unverified, never counted as passing image comparisons.
 
 The report shows publication, preserved pre-fix snapshot (where available),
@@ -138,9 +143,13 @@ framed icons, affiliation-colored unframed merchant icons, removal of later
 civilian purple, solid CIV lettering, less-than-lethal mine horns, ammunition
 production sizing, and isolation from overlapping EMS icon providers.
 
-Two printed cells appear to be copy/paste errors: Unknown `S-U-WMOD--` (PDF 166)
-and Hostile `S-U-NM----` (PDF 167) show an HZ merchant ship. Their source images
-are retained and marked as conflicts, not copied into mine/marine-life icons.
+The audit flags 41 affiliation/frame image pairs with publication conflicts.
+These include apparent copy/paste errors such as Unknown `S-U-WMOD--` (PDF 166)
+and Hostile `S-U-NM----` (PDF 167), which show an HZ merchant ship, plus four
+missile rows whose Annex B code meanings disagree with the Annex D table. Their
+source images are retained and marked as conflicts rather than being copied into
+unrelated icons. The remaining image pairs still require visual review; the
+comparison score is a triage aid, not a conformance verdict.
 The original `before.json` is never overwritten. `--resume` on the comparison
 script reuses unchanged image results; omit it after changing the metric itself.
 
