@@ -43,6 +43,20 @@ export default function (
   //  const none = colors.none[affiliation];
   const black = colors.black[affiliation];
   const white = colors.white[affiliation];
+  // Annex D draws unframed utility equipment with saturated affiliation lines,
+  // while its framed examples use thin black interior strokes.
+  const app6aUtilityStroke = frame
+    ? black
+    : {
+        Unknown: "rgb(255,255,0)",
+        Friend: "rgb(0,255,255)",
+        Neutral: "rgb(0,255,0)",
+        Hostile: "rgb(255,0,0)"
+      }[affiliation] || black;
+  const app6aUtilityLine = metadata.app6a
+    ? { stroke: app6aUtilityStroke, strokewidth: 1.5 }
+    : {};
+  const utilityPart = part => Object.assign(part, app6aUtilityLine);
 
   //const numberSIDC = metadata.numberSIDC;
   const icn = {};
@@ -2479,15 +2493,15 @@ export default function (
   icn["GR.EQ.TASER"] = [icn["GR.EQ.NON-LETHAL WEAPON"], text("Z")];
   icn["GR.EQ.WATER CANNON"] = [icn["GR.EQ.NON-LETHAL WEAPON"], text("W")];
   icn["GR.EQ.LIMITED CROSS-COUNTRY"] = [
-    { type: "path", d: "m 70,130 60,0", fill: false },
-    { type: "circle", cx: 75, cy: 135, r: 5, fill: false },
-    { type: "circle", cx: 125, cy: 135, r: 5, fill: false }
+    utilityPart({ type: "path", d: metadata.app6a ? "m 63,122 74,0" : "m 70,130 60,0", fill: false }),
+    utilityPart({ type: "circle", cx: metadata.app6a ? 70 : 75, cy: metadata.app6a ? 130 : 135, r: metadata.app6a ? 6 : 5, fill: false }),
+    utilityPart({ type: "circle", cx: metadata.app6a ? 130 : 125, cy: metadata.app6a ? 130 : 135, r: metadata.app6a ? 6 : 5, fill: false })
   ];
   icn["GR.EQ.CROSS-COUNTRY"] = [
-    { type: "path", d: "m 70,130 60,0", fill: false },
-    { type: "circle", cx: 75, cy: 135, r: 5, fill: false },
-    { type: "circle", cx: 100, cy: 135, r: 5, fill: false },
-    { type: "circle", cx: 125, cy: 135, r: 5, fill: false }
+    utilityPart({ type: "path", d: metadata.app6a ? "m 63,122 74,0" : "m 70,130 60,0", fill: false }),
+    utilityPart({ type: "circle", cx: metadata.app6a ? 70 : 75, cy: metadata.app6a ? 130 : 135, r: metadata.app6a ? 6 : 5, fill: false }),
+    utilityPart({ type: "circle", cx: 100, cy: metadata.app6a ? 130 : 135, r: metadata.app6a ? 6 : 5, fill: false }),
+    utilityPart({ type: "circle", cx: metadata.app6a ? 130 : 125, cy: metadata.app6a ? 130 : 135, r: metadata.app6a ? 6 : 5, fill: false })
   ];
   icn["GR.EQ.ARMOURED FIGHTING VEHICLE"] = {
     type: "path",
@@ -2654,11 +2668,13 @@ export default function (
     { type: "circle", cx: 100, cy: 115, r: 5, fill: false },
     { type: "circle", cx: 115, cy: 115, r: 5, fill: false }
   ];
-  icn["GR.EQ.UTILITY VEHICLE"] = {
+  icn["GR.EQ.UTILITY VEHICLE"] = utilityPart({
     type: "path",
     fill: false,
-    d: "m 70,65 c 0,15 60,15 60,0 l 0,65 -60,0 z"
-  };
+    d: metadata.app6a
+      ? "m 63,70 c 0,15 74,15 74,0 l 0,52 -74,0 z"
+      : "m 70,65 c 0,15 60,15 60,0 l 0,65 -60,0 z"
+  });
   icn["GR.EQ.UTILITY VEHICLE BACKHOE"] = [
     { type: "path", fill: false, d: "M 130,130 100,80 75,95 75,95" },
     { type: "path", d: "M 75,105 85,95 75,95 z" }
@@ -2713,12 +2729,30 @@ export default function (
     d: "m 70,100 l 60,0 M 100,78.3 100,130 M 85,85 115,85"
   };
   icn["GR.EQ.BUS"] = [icn["GR.EQ.UTILITY VEHICLE"], text("B")];
+  const semiWheelY = metadata.app6a ? (frame ? 124 : 128) : 135;
+  const semiWheelRadius = metadata.app6a ? 6 : 5;
   icn["GR.EQ.SEMI-TRAILER TRUCK"] = [
-    icn["GR.EQ.UTILITY VEHICLE"],
-    { type: "path", fill: false, d: "m 140,90 0,20 m -10,-10 10,0" },
-    { type: "circle", cx: 75, cy: 135, r: 5, fill: false },
-    { type: "circle", cx: 85, cy: 135, r: 5, fill: false },
-    { type: "circle", cx: 125, cy: 135, r: 5, fill: false }
+    metadata.app6a
+      ? utilityPart({
+          type: "path",
+          fill: false,
+          d: frame
+            ? "m 63,72 c 0,12 65,12 65,0 l 0,44 -65,0 z"
+            : "m 63,74 c 0,15 65,15 65,0 l 0,45 -65,0 z"
+        })
+      : icn["GR.EQ.UTILITY VEHICLE"],
+    utilityPart({
+      type: "path",
+      fill: false,
+      d: metadata.app6a
+        ? frame
+          ? "m 140,80 0,25 m -10,-12.5 10,0"
+          : "m 140,85 0,13 m -10,-6.5 10,0"
+        : "m 140,90 0,20 m -10,-10 10,0"
+    }),
+    utilityPart({ type: "circle", cx: metadata.app6a ? 69 : 75, cy: semiWheelY, r: semiWheelRadius, fill: false }),
+    utilityPart({ type: "circle", cx: metadata.app6a ? 79 : 85, cy: semiWheelY, r: semiWheelRadius, fill: false }),
+    utilityPart({ type: "circle", cx: metadata.app6a ? 121 : 125, cy: semiWheelY, r: semiWheelRadius, fill: false })
   ];
   icn["GR.EQ.WATER VEHICLE"] = [
     icn["GR.EQ.UTILITY VEHICLE"],

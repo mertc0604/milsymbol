@@ -113,7 +113,7 @@ for (const standard of ["APP6A", "APP6", "2525"]) {
   const mi = iconParts(new ms.Symbol("SFGPUUMS-------", { standard }));
   if (legacy) {
     result["SIGINT MI below antenna"] = [mi.find(p => p.text === "MI").y, 132];
-    result["SIGINT no radio circle"] = [mi.some(p => p.d?.includes("5.9")), false];
+    result["SIGINT no radio circle"] = [mi.some(p => p.d && p.d.includes("5.9")), false];
   }
   for (const code of ["UUMRX-", "UUMMO-", "UUMO--", "UUMT--"]) {
     const texts = iconParts(new ms.Symbol(`SFGP${code}-----`, { standard })).filter(p => p.type === "text");
@@ -202,6 +202,22 @@ result["APP6A merchant label sits within the hull"] = [
   cargoParts.filter(part => part.type === "text" && part.text === "CA").map(part => [part.y, part.fontsize]),
   [[107, 24]]
 ];
+for (const [affiliation, outline] of [
+  ["U", "rgb(255,255,0)"],
+  ["F", "rgb(0,255,255)"],
+  ["N", "rgb(0,255,0)"],
+  ["H", "rgb(255,0,0)"]
+]) {
+  for (const frame of [true, false]) {
+    for (const functionId of ["EVUL--", "EVUS--"]) {
+      const parts = iconParts(new ms.Symbol(`S${affiliation}GP${functionId}-----`, { frame }));
+      result[`APP6A ${functionId} equipment outline ${affiliation}/${frame}`] = [
+        parts.filter(part => part.type === "path" || part.type === "circle").every(part => part.stroke === (frame ? "black" : outline) && part.strokewidth === 1.5),
+        true
+      ];
+    }
+  }
+}
 const civilianPatrol = new ms.Symbol("SFSPXL---------").asSVG();
 const civilianAirText = new ms.Symbol("SFAPC----------").drawInstructions.flat(Infinity).find(p=>p && p.icon && p.text === "CIV");
 result["APP6A CIV uses solid lettering"] = [civilianAirText.fill, "black"];
