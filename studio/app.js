@@ -599,7 +599,8 @@ function syncApp6aTextFields() {
 function syncStandardControls() {
   const modern = config().family === "modern";
   dom.contextField.hidden = !modern;
-  dom.sidcInput.maxLength = modern ? 30 : 15;
+  // Validate after removing publication whitespace, not while pasting it.
+  dom.sidcInput.removeAttribute("maxlength");
   dom.affiliation.innerHTML = (state.standardId === "app6a" ? app6aAffiliations : affiliations)
     .map((item) => option(item.value, item.label))
     .join("");
@@ -946,20 +947,31 @@ function bindEvents() {
     });
 
   dom.applySidc.addEventListener("click", () => {
-    const value = dom.sidcInput.value.trim().toUpperCase().replace(/\s/g, "");
+    let value = dom.sidcInput.value.trim().toUpperCase().replace(/\s/g, "");
     const allowed =
-      config().family === "modern" ? /^\d{20,30}$/ : /^[A-Z0-9-]{10,15}$/;
+      config().family === "modern" ? /^\d{20,30}$/ : /^[A-Z0-9*-]{10,15}$/;
     if (!allowed.test(value)) {
       toast(
         config().family === "modern"
           ? "Enter a numeric SIDC with 20–30 digits"
-          : "Enter a letter-based SIDC with 10–15 characters"
+          : "Enter a letter-based SIDC with 10–15 characters (letters, digits, - or *)"
       );
       return;
     }
+    const hasWildcards = value.includes("*");
+    if (hasWildcards) {
+      // Publication templates leave identity/status open. Resolve those using
+      // the editor selections; unspecified optional fields remain empty.
+      const characters = [...value];
+      if (characters[1] === "*")
+        characters[1] = app6aAffiliations.find(item => item.value === state.affiliation).legacy;
+      if (characters[3] === "*")
+        characters[3] = statuses.find(item => item.value === state.status).legacy;
+      value = characters.join("").replace(/\*/g, "-");
+    }
     state.customSidc = value;
     renderAll();
-    toast("SIDC applied");
+    toast(hasWildcards ? "SIDC applied — wildcard fields resolved using current identity/status; other fields left unspecified" : "SIDC applied");
   });
   dom.sidcInput.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {

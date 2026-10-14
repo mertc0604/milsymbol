@@ -20,6 +20,13 @@ same mode. Search accepts names, function codes and full SIDCs; Clear / Escape
 resets search and pagination. Section switches return the form to its top.
 On narrow screens, the compact symbol links to the full preview/download panel.
 
+The SIDC input accepts `*` placeholders in letter-based publication examples,
+including whitespace and line breaks copied from PDFs. Identity and status
+placeholders use the current editor selections; other `*` characters become
+`-` (unspecified). Explicit identity, status and modifier codes are preserved.
+The input and exported SIDC show the resolved code. Numeric SIDCs still require
+20–30 digits.
+
 APP-6A (1998) has its own publication-derived catalog: 877 point-symbol entries,
 edition-specific SIDC validation, Present/Planned status, and automatic installation
 modifiers. It reuses the library's NATO drawing primitives; it is not a complete
