@@ -64,6 +64,8 @@ The studio offers APP-6A independently of APP-6B. It restricts status to
 Present/Planned, excludes later command/towed-array amplifiers, and automatically
 encodes installations as H- (or HB for feint/dummy installations). Names and
 provenance come from the APP-6A catalog rather than the APP-6B npm dataset.
+Its selectable catalog and manual code entry are restricted to the 683 S-scheme
+tactical symbols; G-scheme tactical graphics are excluded from the editor.
 
 ## Publication ambiguities and editorial decisions
 
@@ -142,14 +144,22 @@ Reviewed edition-specific corrections include merchant labels and opaque white
 framed icons, affiliation-colored unframed merchant icons, removal of later
 civilian purple, solid CIV lettering, less-than-lethal mine horns, ammunition
 production sizing, and isolation from overlapping EMS icon providers.
+The subsurface review also corrects the ten sea-mine variants, underwater decoy,
+and man-made seabed installation in the existing subsurface primitive module.
+Annex D's smaller horns, oval bodies, mooring stems, bottom/wave/side marks and
+fine dealt lines are used only for APP-6A. The decoy's top bar is separated from
+its three triangles. These twelve entries were checked against 48 independent
+publication cells; two inconsistent Unknown cells remain flagged for review.
 
-The audit flags 41 affiliation/frame image pairs with publication conflicts.
+The audit flags 42 affiliation/frame image pairs with publication conflicts.
 These include apparent copy/paste errors such as Unknown `S-U-WMOD--` (PDF 166)
 and Hostile `S-U-NM----` (PDF 167), which show an HZ merchant ship, plus four
 missile rows whose Annex B code meanings disagree with the Annex D table. Their
 source images are retained and marked as conflicts rather than being copied into
 unrelated icons. The remaining image pairs still require visual review; the
 comparison score is a triage aid, not a conformance verdict.
+The Unknown `S-U-WMFD--` cell (PDF 165) also differs from the other three identities:
+it shows a solid arrow in a circle rather than a crossed floating mine.
 The original `before.json` is never overwritten. `--resume` on the comparison
 script reuses unchanged image results; omit it after changing the metric itself.
 

@@ -1100,6 +1100,106 @@ export default function (
     fill: false,
     d: "m 65,100 15,-20 20,30 20,-30 15,20 m -70,10 15,-20 20,30 20,-30 15,20",
   };
+  if (metadata.app6a) {
+    // Annex D, printed pp. 158–161: compact horns, oval bodies and fine
+    // cancellation/attachment lines. Coordinates follow the publication's
+    // geometric proportions, independently of the later NATO mine glyphs.
+    const filled = (d) => ({
+      type: "path",
+      d,
+      fill: iconFillColor,
+      stroke: black,
+      strokewidth: 1.8,
+    });
+    const line = (d) => ({
+      type: "path",
+      d,
+      fill: false,
+      stroke: black,
+      strokewidth: 1.8,
+    });
+    const mine = (rx, ry, horns, attachment = [], cancellation = "") => [
+      filled(horns),
+      filled(
+        `M${100 + rx},100 a${rx},${ry} 0 1 0 ${-2 * rx},0 a${rx},${ry} 0 1 0 ${2 * rx},0 Z`
+      ),
+      ...attachment,
+      ...(cancellation ? [line(cancellation)] : []),
+    ];
+    const genericHorns =
+      "M80.5,69.1 71.5,56.5 63.1,62.5 72.1,75.1 Z M119.5,69.1 128.5,56.5 136.9,62.5 128.5,75.1 Z M94.3,49.3 H105.1 V64.3 H94.3 Z";
+    const dealtHorns =
+      "M67,76.6 73.6,70.6 84.4,80.8 77.8,86.8 Z M134.8,76.6 127.6,70.6 116.8,80.8 123.4,86.8 Z M95.8,61.6 H105.4 V76 H95.8 Z";
+    const bottomHorns =
+      "M64.3,74.8 71.5,68.2 82.9,79 75.7,85.6 Z M127.9,67.6 135.1,74.2 123.7,85 116.5,78.4 Z M94.9,59.2 H105.1 V74.2 H94.9 Z";
+    const mooredHorns =
+      "M67,77.5 73.6,72.1 84.4,81.7 77.8,87.1 Z M125.8,71.5 132.4,77.5 121.6,86.5 115,81.1 Z M95.8,64.3 H104.8 V77.5 H95.8 Z";
+    const floatingHorns =
+      "M65.5,75.7 72.1,69.7 83.5,79.9 76.3,86.5 Z M134.5,75.7 127.9,69.7 116.5,79.9 123.1,86.5 Z M94.9,60.7 H105.1 V75.1 H94.9 Z";
+    const otherHorns =
+      "M58.6,70.6 67,63.4 80.8,76 72.4,83.2 Z M133.6,62.8 142,70 128.2,82.6 119.8,74.8 Z M94,52 H106 V70 H94 Z";
+    const bottom = () => [filled("M63.7,124.6 H135.7 V135.4 H63.7 Z")];
+    const mooring = () => [line("M100.6,123.1 V145.3 M68.8,145.3 H131.8")];
+    const waves = () => [
+      line(
+        "M62.5,135.1 67.3,124.9 74.5,135.1 81.1,124.9 87.7,135.1 94.3,124.9 100.3,135.1 106.9,124.9 112.9,135.1 119.5,124.9 124.9,135.1 130.9,124.9 137.5,135.1"
+      ),
+    ];
+    const sideMarks = () => [line("M54.4,101.8 H65.5 M134.5,101.8 H146.2")];
+    icn["SU.IC.SEA MINE"] = mine(39.3, 35.7, genericHorns);
+    icn["SU.IC.SEA MINE NEUTRALIZED"] = mine(
+      27.6,
+      24.9,
+      dealtHorns,
+      [],
+      "M137.8,67.6 70.6,128.2 M63.4,67.6 130.6,128.2"
+    );
+    icn["SU.IC.SEA MINE - BOTTOM"] = mine(29.1, 26.4, bottomHorns, bottom());
+    icn["SU.IC.SEA MINE NEUTRALIZED - BOTTOM"] = mine(
+      29.1,
+      26.4,
+      bottomHorns,
+      bottom(),
+      "M144.1,60.4 51.7,140.2 M54.7,60.4 147.1,140.2"
+    );
+    icn["SU.IC.SEA MINE - MOORED"] = mine(26.4, 23.1, mooredHorns, mooring());
+    icn["SU.IC.SEA MINE NEUTRALIZED - MOORED"] = mine(
+      26.4,
+      23.1,
+      mooredHorns,
+      mooring(),
+      "M144.4,61.3 52,141.1 M55,61.3 147.4,141.1"
+    );
+    icn["SU.IC.SEA MINE - FLOATING"] = mine(27.9, 25.5, floatingHorns, waves());
+    icn["SU.IC.SEA MINE NEUTRALIZED - FLOATING"] = mine(
+      27.9,
+      25.5,
+      floatingHorns,
+      waves(),
+      "M144.7,61.9 52.3,141.7 M55.3,61.9 147.7,141.7"
+    );
+    icn["SU.IC.SEA MINE (IN OTHER POSITION)"] = mine(
+      34.5,
+      30.6,
+      otherHorns,
+      sideMarks()
+    );
+    icn["SU.IC.SEA MINE (IN OTHER POSITION) NEUTRALIZED"] = mine(
+      34.5,
+      30.6,
+      otherHorns,
+      sideMarks(),
+      "M144.4,138.4 52.6,58 M55.6,138.4 147.4,58"
+    );
+    // The top bar is separate from the three decoy triangles.
+    icn["SU.IC.UNDERWATER DECOY"] = filled(
+      "M65,100 81.2,80.8 V119.8 Z M92.6,100 108.2,80.8 V119.8 Z M119.6,100 135.2,80.8 V119.8 Z M60.8,66.7 H142.4 V73.9 H60.8 Z"
+    );
+    icn["SU.IC.SEABED INSTALLATION/MANMADE"] = filled(
+      "M53.5,130.3 70.9,100.9 81.7,123.7 103.9,69.7 118.3,123.7 132.1,92.5 146.5,130.3 Z"
+    );
+  }
+
   icn["SU.M1.ANTISUBMARINE WARFARE"] = textm1("ASW");
   icn["SU.M1.AUXILIARY"] = textm1("AUX");
   icn["SU.M1.COMMAND AND CONTROL"] = textm1("C2");

@@ -132,7 +132,7 @@ const data = {
   aliases: { app6e: "2525e" },
   standards: {
     app6a: {
-      icons: app6aCatalog.map((item) => {
+      icons: app6aCatalog.filter((item) => item.id.startsWith("S")).map((item) => {
         const code = item.id.slice(4);
         const categories = {
           P: "Space",

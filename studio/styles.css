@@ -189,7 +189,7 @@ h3 {
 }
 .workspace {
   display: grid;
-  grid-template-columns: 300px minmax(360px, 1fr) 350px;
+  grid-template-columns: 280px minmax(360px, 1fr) clamp(380px, 32vw, 560px);
   min-height: 0;
   max-width: 1920px;
   width: 100%;
@@ -627,7 +627,7 @@ textarea::placeholder {
   flex-shrink: 0;
 }
 .stage {
-  height: 260px;
+  height: clamp(300px, 38vh, 400px);
   display: grid;
   place-items: center;
   padding: 28px;
@@ -866,7 +866,7 @@ dialog p {
 }
 @media (min-width: 1500px) {
   .workspace {
-    grid-template-columns: 330px minmax(420px, 1fr) 390px;
+    grid-template-columns: 310px minmax(420px, 1fr) clamp(460px, 34vw, 620px);
   }
   .editor-heading {
     padding-top: 30px;
@@ -879,7 +879,7 @@ dialog p {
     padding-right: 38px;
   }
   .stage {
-    height: 310px;
+    height: clamp(340px, 40vh, 440px);
   }
   .stage-panel {
     padding: 28px;
@@ -887,7 +887,7 @@ dialog p {
 }
 @media (max-width: 1100px) {
   .workspace {
-    grid-template-columns: 255px minmax(320px, 1fr) 295px;
+    grid-template-columns: 235px minmax(300px, 1fr) 340px;
   }
   .editor-heading,
   .editor-tabs,
@@ -900,7 +900,7 @@ dialog p {
     padding: 24px 16px;
   }
   .stage {
-    height: 230px;
+    height: 280px;
     padding: 22px;
   }
   .preview-toolbar > span {

@@ -33,6 +33,7 @@ source_conflicts={
     "S-F-A-----": {"H":"Hostile aviation cell depicts an unknown NC ship."},
     "S-F-AFU---": {"F":"Friend fixed-wing utility cell depicts a neutral submarine."},
     "S-U-WMOD--": {"U":"Unknown cell depicts an HZ merchant vessel instead of a neutralized mine."},
+    "S-U-WMFD--": {"U":"Unknown cell depicts a solid arrow in a circle; the other three cells use a crossed floating mine. Publication inconsistency retained for review."},
     "S-U-NM----": {"H":"Hostile cell depicts an HZ merchant vessel instead of marine life."},
     "S-G-EWMAT-": {"*":"Annex B defines EWMAT as theatre; Annex D uses its hierarchy/code for short range without T. Annex B semantics retained pending authoritative resolution."},
     "S-G-EWMAS-": {"*":"Annex B defines EWMAS as short range; Annex D uses its hierarchy/code for theatre with T. Annex B semantics retained pending authoritative resolution."},

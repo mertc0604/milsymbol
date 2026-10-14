@@ -10,30 +10,6 @@ const standards = [
     version: ""
   },
   {
-    id: "2525c",
-    label: "MIL‑2525C",
-    detail: "15 CHAR",
-    family: "legacy",
-    standard: "2525",
-    version: ""
-  },
-  {
-    id: "2525d",
-    label: "MIL‑2525D",
-    detail: "NUMERIC / D",
-    family: "modern",
-    standard: "2525",
-    version: "10"
-  },
-  {
-    id: "2525e",
-    label: "MIL‑2525E",
-    detail: "NUMERIC / E",
-    family: "modern",
-    standard: "2525",
-    version: "13"
-  },
-  {
     id: "app6b",
     label: "APP‑6B",
     detail: "NATO / 15 CHAR",
@@ -55,6 +31,30 @@ const standards = [
     detail: "NATO / E",
     family: "modern",
     standard: "APP6",
+    version: "13"
+  },
+  {
+    id: "2525c",
+    label: "MIL‑2525C",
+    detail: "15 CHAR",
+    family: "legacy",
+    standard: "2525",
+    version: ""
+  },
+  {
+    id: "2525d",
+    label: "MIL‑2525D",
+    detail: "NUMERIC / D",
+    family: "modern",
+    standard: "2525",
+    version: "10"
+  },
+  {
+    id: "2525e",
+    label: "MIL‑2525E",
+    detail: "NUMERIC / E",
+    family: "modern",
+    standard: "2525",
     version: "13"
   }
 ];
@@ -193,7 +193,7 @@ const dom = Object.fromEntries(
 );
 
 const state = {
-  standardId: "2525e",
+  standardId: "app6a",
   selectedId: null,
   search: "",
   category: "all",
@@ -680,7 +680,7 @@ function renderAll() {
   document.getElementById("supportNote").textContent = state.standardId === "app6e"
     ? "Compatibility view using the shared 2525E catalog. This is not a separate edition-specific catalog."
     : state.standardId === "app6a"
-      ? `${icon.source || "APP-6A (1998)"}. ${dataset().icons.length} catalog entries; point symbols only, not a full conformance certification.${icon.remarks ? " " + icon.remarks : ""}`
+      ? `${icon.source || "APP-6A (1998)"}. ${dataset().icons.length} tactical symbols (S-scheme).${icon.remarks ? " " + icon.remarks : ""}`
       : "Rendered with milsymbol. Symbol appearance may differ from older standard publications.";
   dom.sidcInput.value = sidc;
   for (const button of [dom.downloadSvg, dom.downloadPng, dom.copySvg, dom.copySidc]) button.disabled = !currentSvg;
@@ -956,6 +956,10 @@ function bindEvents() {
           ? "Enter a numeric SIDC with 20–30 digits"
           : "Enter a letter-based SIDC with 10–15 characters (letters, digits, - or *)"
       );
+      return;
+    }
+    if (state.standardId === "app6a" && !value.startsWith("S")) {
+      toast("APP-6A: enter an S-scheme tactical symbol code");
       return;
     }
     const hasWildcards = value.includes("*");

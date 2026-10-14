@@ -19,6 +19,9 @@ mode. A deliberately selected value is not silently replaced by clicking the
 same mode. Search accepts names, function codes and full SIDCs; Clear / Escape
 resets search and pagination. Section switches return the form to its top.
 On narrow screens, the compact symbol links to the full preview/download panel.
+The editor opens on APP-6A. Standard tabs are grouped in edition order:
+APP-6A/B/D/E, then MIL-2525C/D/E. The desktop preview receives approximately
+one third of the workspace, with a larger symbol stage.
 
 The SIDC input accepts `*` placeholders in letter-based publication examples,
 including whitespace and line breaks copied from PDFs. Identity and status
@@ -27,7 +30,10 @@ placeholders use the current editor selections; other `*` characters become
 The input and exported SIDC show the resolved code. Numeric SIDCs still require
 20–30 digits.
 
-APP-6A (1998) has its own publication-derived catalog: 877 point-symbol entries,
+APP-6A (1998) displays 683 publication-derived S-scheme tactical symbols.
+G-scheme tactical graphics are excluded from this editor view and from manual
+APP-6A code entry. The library retains its existing 877-entry point profile.
+The editor provides
 edition-specific SIDC validation, Present/Planned status, and automatic installation
 modifiers. It reuses the library's NATO drawing primitives; it is not a complete
 implementation of multipoint tactical graphics or weather symbols. See
