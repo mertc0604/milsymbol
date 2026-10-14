@@ -31,6 +31,7 @@ export default function (
   */
 
   const frame = metadata.frame;
+  const app6a = metadata.app6a === true;
   const affiliation = metadata.affiliation || "Friend";
   //const baseGeometry = metadata.baseGeometry;
   const numberSIDC = metadata.numberSIDC;
@@ -86,7 +87,7 @@ export default function (
   };
   icn["SE.IC.AMPHIBIOUS FORCE FLAGSHIP"] = text("LCC");
   icn["SE.IC.AMPHIBIOUS ASSAULT"] = text("LA");
-  icn["SE.IC.AMPHIBIOUS ASSAULT SHIP, GENERAL"] = text("LHA");
+  icn["SE.IC.AMPHIBIOUS ASSAULT SHIP, GENERAL"] = text(app6a ? "LA" : "LHA");
   icn["SE.IC.AMPHIBIOUS ASSAULT SHIP, MULTI-PURPOSE"] = text("LHD");
   icn["SE.IC.AMPHIBIOUS TRANSPORT, DOCK"] = text("LPD");
   icn["SE.IC.AMPHIBIOUS ASSAULT SHIP, HELICOPTER"] = text("LPH");
@@ -98,9 +99,9 @@ export default function (
   };
   icn["SE.IC.MINELAYER"] = text("ML");
   icn["SE.IC.MINESWEEPER"] = text("MS");
-  icn["SE.IC.MINESWEEPER, DRONE"] = text("MSD");
+  icn["SE.IC.MINESWEEPER, DRONE"] = text(app6a ? "MD" : "MSD");
   icn["SE.IC.MINEHUNTER"] = text("MH");
-  icn["SE.IC.MINE COUNTER MEASURE SUPPORT SHIP"] = text("MCS");
+  icn["SE.IC.MINE COUNTER MEASURE SUPPORT SHIP"] = text(app6a ? "MA" : "MCS");
   icn["SE.IC.MINE COUNTERMEASURES"] = text("MCM");
   icn["SE.IC.SEA SURFACE DECOY"] = {
     type: "path",
@@ -230,7 +231,7 @@ export default function (
   icn["SE.IC.AMMUNITION SHIP"] = text("AE");
   icn["SE.IC.STORES SHIP"] = text("AF");
   icn["SE.IC.AUXILIARY FLAG OR COMMAND SHIP"] = text("AGF");
-  icn["SE.IC.INTELLIGENCE COLLECTOR"] = text("AGI");
+  icn["SE.IC.INTELLIGENCE COLLECTOR"] = text(app6a ? "JI" : "AGI");
   icn["SE.IC.OCEAN RESEARCH SHIP"] = text("AGO");
   icn["SE.IC.SURVEY SHIP"] = text("AGS");
   icn["SE.IC.HOSPITAL SHIP"] = text("AH");
@@ -239,15 +240,15 @@ export default function (
   icn["SE.IC.OILER, REPLENISHMENT"] = text("AOR");
   icn["SE.IC.REPAIR SHIP"] = text("AR");
   icn["SE.IC.SUBMARINE TENDER"] = text("AS");
-  icn["SE.IC.TUG, OCEAN GOING"] = text("AT");
-  icn["SE.IC.SERVICE CRAFT, YARD, GENERAL"] = STD2525 ? text("YY") : text("YT");
+  icn["SE.IC.TUG, OCEAN GOING"] = text(app6a ? "AS" : "AT");
+  icn["SE.IC.SERVICE CRAFT, YARD, GENERAL"] = STD2525 || app6a ? text("YY") : text("YT");
   icn["SE.IC.BARGE, NOT SELF-PROPELLED"] = text("YB");
   icn["SE.IC.BARGE, SELF-PROPELLED"] = text("YS");
   icn["SE.IC.TUG, HARBOUR"] = text("YT");
   icn["SE.IC.LAUNCH"] = text("YFT");
   icn["SE.IC.MERCHANT SHIP, GENERAL"] = {
     type: "path",
-    fill: STD2525 ? iconFillColor : !frame ? iconFillColor : false,
+    fill: STD2525 || app6a ? iconFillColor : !frame ? iconFillColor : false,
     d: "m 75,100 0,-35 50,0 0,35 20,0 -15,35 -60,0 -15,-35 z",
   };
   icn["SE.IC.CARGO, GENERAL"] = [
@@ -258,8 +259,8 @@ export default function (
       stroke: false,
       x: 100,
       y: 103,
-      fontsize: 45,
-      text: /*STD2525 ? "CA" :*/ "A",
+      fontsize: app6a ? 30 : 45,
+      text: app6a ? "CA" : "A",
     },
   ];
   icn["SE.IC.CONTAINER SHIP"] = [
@@ -299,8 +300,8 @@ export default function (
       stroke: false,
       x: 100,
       y: 103,
-      fontsize: /*STD2525 ? "30" :*/ "45",
-      text: /*STD2525 ? "RO" : */ "E",
+      fontsize: app6a ? 30 : "45",
+      text: app6a ? "RO" : "E",
     },
   ];
   icn["SE.IC.FERRY"] = [
@@ -311,8 +312,8 @@ export default function (
       stroke: false,
       x: 100,
       y: 103,
-      fontsize: 45,
-      text: /*STD2525 ? "FE" :*/ "F",
+      fontsize: app6a ? 30 : 45,
+      text: app6a ? "FE" : "F",
     },
   ];
   icn["SE.IC.HEAVY LIFT"] = [
@@ -329,7 +330,7 @@ export default function (
   ];
   icn["SE.IC.HOVERCRAFT"] = {
     type: "path",
-    d: STD2525
+    d: STD2525 || app6a
       ? "m 65,100 0,-30 5,10 60,0 5,-10 0,30 10,0 -15,35 -60,0 -15,-35 z"
       : "m 90,80 0,15.6 C 78.4,96.9 70,100.6 70,105 c 0,5.5 13.4,10 30,10 16.6,0 30,-4.5 30,-10 0,-4.4 -8.4,-8.1 -20,-9.4 L 110,80 90,80 z m -15,40 50,0",
   };
@@ -347,8 +348,8 @@ export default function (
   ];
   icn["SE.IC.HOVERCRAFT CIVILIAN"] = {
     type: "path",
-    fill: STD2525 ? iconFillColor : !frame ? iconFillColor : false,
-    d: STD2525
+    fill: STD2525 || app6a ? iconFillColor : !frame ? iconFillColor : false,
+    d: STD2525 || app6a
       ? "m 65,100 0,-30 5,10 60,0 5,-10 0,30 10,0 -15,35 -60,0 -15,-35 z"
       : "m 90,80 0,15.6 C 78.4,96.9 70,100.6 70,105 c 0,5.5 13.4,10 30,10 16.6,0 30,-4.5 30,-10 0,-4.4 -8.4,-8.1 -20,-9.4 L 110,80 90,80 z m -15,40 50,0",
   };
@@ -358,7 +359,7 @@ export default function (
       d: "m 65,100 0,-30 5,10 60,0 5,-10 0,30 10,0 -15,35 -60,0 -15,-35 z",
       strokewidth: false,
     },
-    STD2525
+    STD2525 || app6a
       ? {
           type: "text",
           alignmentBaseline: "middle",
@@ -391,8 +392,8 @@ export default function (
       stroke: false,
       x: 100,
       y: 103,
-      fontsize: 45,
-      text: /*STD2525 ? "OT" :*/ "O",
+      fontsize: app6a ? 30 : 45,
+      text: app6a ? "OT" : "O",
     },
   ];
   icn["SE.IC.PASSENGER SHIP"] = [
@@ -403,8 +404,8 @@ export default function (
       stroke: false,
       x: 100,
       y: 103,
-      fontsize: 45,
-      text: /*STD2525 ? "PA" :*/ "P",
+      fontsize: app6a ? 30 : 45,
+      text: app6a ? "PA" : "P",
     },
   ];
   icn["SE.IC.TUG, OCEAN GOING CIVILIAN"] = [
@@ -415,8 +416,8 @@ export default function (
       stroke: false,
       x: 100,
       y: 103,
-      fontsize: 45,
-      text: /*STD2525 ? "TU" :*/ "T",
+      fontsize: app6a ? 30 : 45,
+      text: app6a ? "TU" : "T",
     },
   ];
   icn["SE.IC.TOW"] = [
@@ -477,7 +478,7 @@ export default function (
   ];
   icn["SE.IC.FISHING VESSEL"] = {
     type: "path",
-    fill: STD2525 ? iconFillColor : !frame ? iconFillColor : false,
+    fill: STD2525 || app6a ? iconFillColor : !frame ? iconFillColor : false,
     d: "m 75,100 0,-15 20,0 0,15 50,0 -15,35 -60,0 -15,-35 z M 105,57.4 105,100 m 30,-35 -30,35",
   };
   icn["SE.IC.DRIFTER"] = [
@@ -522,12 +523,12 @@ export default function (
   ];
   icn["SE.IC.LEISURE CRAFT, SAILING BOAT"] = {
     type: "path",
-    fill: STD2525 ? iconFillColor : !frame ? iconFillColor : false,
+    fill: STD2525 || app6a ? iconFillColor : !frame ? iconFillColor : false,
     d: "m 105,55 0,40 35,0 z m -5,-5 0,50 m 45,0 -15,35 -60,0 -15,-35 z",
   };
   icn["SE.IC.LEISURE CRAFT, MOTORIZED"] = {
     type: "path",
-    fill: STD2525 ? iconFillColor : !frame ? iconFillColor : false,
+    fill: STD2525 || app6a ? iconFillColor : !frame ? iconFillColor : false,
     d: "m 70,97.4 15,-30 10,0 -15,30 65,0 -15,35 -60,0 -15,-35 z",
   };
   icn["SE.IC.LEISURE CRAFT, MOTORIZED, RIGID-HULL INFLATABLE BOAT"] = [

@@ -77,8 +77,13 @@ export default function getMetadata() {
   metadata.context = mapping.context[0];
 
   if (this.style.standard) {
-    metadata.STD2525 = this.style.standard == "APP6" ? false : true;
+    metadata.STD2525 = !["APP6", "APP6A"].includes(this.style.standard);
   }
+
+  metadata.app6a = this.style.standard
+    ? this.style.standard === "APP6A"
+    : ms._standardEdition === "A";
+  if (metadata.app6a) metadata.edition = "A";
 
   if (this.style.monoColor != "") {
     metadata.fill = false;

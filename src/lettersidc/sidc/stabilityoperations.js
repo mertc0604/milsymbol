@@ -8,6 +8,7 @@ export default {
   getIcons: getIcons_letter,
   iconParts: [icons],
   icons: function stabilityoperations(sId, bbox, icn, _STD2525) {
+    if (this.metadata?.app6a) return;
     //Adds support for 2525C Stability Operations
     sId["O-V-A-----"] = [icn["ST.IC.ARSON/FIRE"]];
     sId["O-V-M-----"] = [icn["ST.IC.KILLING VICTIM"]];

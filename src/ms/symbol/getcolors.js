@@ -19,7 +19,7 @@ export default function getColors() {
   const baseColorNone = ms.getColorMode("None");
 
   //If it is a Civilian Symbol and civilian colors not are turned off, use civilian colors...
-  if (this.style.civilianColor && this.metadata.civilian) {
+  if (this.style.civilianColor && this.metadata.civilian && !this.metadata.app6a) {
     baseFillColor.Friend = baseFillColor.Neutral = baseFillColor.Unknown =
       baseFillColor.Civilian;
     baseFrameColor.Friend = baseFrameColor.Neutral = baseFrameColor.Unknown =
@@ -81,8 +81,8 @@ export default function getColors() {
     //Dirty override, we want colors in the icon if we just turn off the frame. This is a special fix for filled icn in 2525.
     colors.iconFillColor = !this.metadata.frame
       ? baseFillColor
-      : baseColorOffWhite;
-    colors.white = baseColorOffWhite;
+      : this.metadata.app6a ? baseColorWhite : baseColorOffWhite;
+    colors.white = this.metadata.app6a ? baseColorWhite : baseColorOffWhite;
   } else {
     colors.fillColor = baseColorNone;
     //Fix frame color if it should be turned off.

@@ -1,0 +1,214 @@
+{
+  "S-S-XM----": {
+    "opaque": true,
+    "identity": true,
+    "source": "APP-6A Annex D, printed pp. 149–154 (PDF 155–160)",
+    "description": "Framed icon has opaque white fill; unframed icon uses affiliation color; civilian purple is not used."
+  },
+  "S-S-XMC---": {
+    "opaque": true,
+    "identity": true,
+    "label": "CA",
+    "source": "APP-6A Annex D, printed pp. 149–154 (PDF 155–160)",
+    "description": "Framed icon has opaque white fill; unframed icon uses affiliation color; civilian purple is not used."
+  },
+  "S-S-XMR---": {
+    "opaque": true,
+    "identity": true,
+    "label": "RO",
+    "source": "APP-6A Annex D, printed pp. 149–154 (PDF 155–160)",
+    "description": "Framed icon has opaque white fill; unframed icon uses affiliation color; civilian purple is not used."
+  },
+  "S-S-XMO---": {
+    "opaque": true,
+    "identity": true,
+    "label": "OT",
+    "source": "APP-6A Annex D, printed pp. 149–154 (PDF 155–160)",
+    "description": "Framed icon has opaque white fill; unframed icon uses affiliation color; civilian purple is not used."
+  },
+  "S-S-XMTU--": {
+    "opaque": true,
+    "identity": true,
+    "label": "TU",
+    "source": "APP-6A Annex D, printed pp. 149–154 (PDF 155–160)",
+    "description": "Framed icon has opaque white fill; unframed icon uses affiliation color; civilian purple is not used."
+  },
+  "S-S-XMF---": {
+    "opaque": true,
+    "identity": true,
+    "label": "FE",
+    "source": "APP-6A Annex D, printed pp. 149–154 (PDF 155–160)",
+    "description": "Framed icon has opaque white fill; unframed icon uses affiliation color; civilian purple is not used."
+  },
+  "S-S-XMP---": {
+    "opaque": true,
+    "identity": true,
+    "label": "PA",
+    "source": "APP-6A Annex D, printed pp. 149–154 (PDF 155–160)",
+    "description": "Framed icon has opaque white fill; unframed icon uses affiliation color; civilian purple is not used."
+  },
+  "S-S-XMH---": {
+    "opaque": true,
+    "identity": true,
+    "label": "HZ",
+    "source": "APP-6A Annex D, printed pp. 149–154 (PDF 155–160)",
+    "description": "Framed icon has opaque white fill; unframed icon uses affiliation color; civilian purple is not used."
+  },
+  "S-S-XMTO--": {
+    "opaque": true,
+    "identity": true,
+    "label": "TW",
+    "source": "APP-6A Annex D, printed pp. 149–154 (PDF 155–160)",
+    "description": "Framed icon has opaque white fill; unframed icon uses affiliation color; civilian purple is not used."
+  },
+  "S-S-XF----": {
+    "opaque": true,
+    "identity": true,
+    "source": "APP-6A Annex D, printed pp. 149–154 (PDF 155–160)",
+    "description": "Framed icon has opaque white fill; unframed icon uses affiliation color; civilian purple is not used."
+  },
+  "S-S-XFDF--": {
+    "opaque": true,
+    "identity": true,
+    "label": "DF",
+    "source": "APP-6A Annex D, printed pp. 149–154 (PDF 155–160)",
+    "description": "Framed icon has opaque white fill; unframed icon uses affiliation color; civilian purple is not used."
+  },
+  "S-S-XFDR--": {
+    "opaque": true,
+    "identity": true,
+    "label": "DR",
+    "source": "APP-6A Annex D, printed pp. 149–154 (PDF 155–160)",
+    "description": "Framed icon has opaque white fill; unframed icon uses affiliation color; civilian purple is not used."
+  },
+  "S-S-XFTR--": {
+    "opaque": true,
+    "identity": true,
+    "label": "TR",
+    "source": "APP-6A Annex D, printed pp. 149–154 (PDF 155–160)",
+    "description": "Framed icon has opaque white fill; unframed icon uses affiliation color; civilian purple is not used."
+  },
+  "S-S-XR----": {
+    "opaque": true,
+    "identity": true,
+    "source": "APP-6A Annex D, printed pp. 149–154 (PDF 155–160)",
+    "description": "Framed icon has opaque white fill; unframed icon uses affiliation color; civilian purple is not used."
+  },
+  "S-S-XL----": {
+    "opaque": true,
+    "identity": true,
+    "source": "APP-6A Annex D, printed pp. 149–154 (PDF 155–160)",
+    "description": "Framed icon has opaque white fill; unframed icon uses affiliation color; civilian purple is not used."
+  },
+  "S-S-XH----": {
+    "opaque": true,
+    "identity": true,
+    "source": "APP-6A Annex D, printed pp. 149–154 (PDF 155–160)",
+    "description": "Framed icon has opaque white fill; unframed icon uses affiliation color; civilian purple is not used."
+  },
+  "S-S-CALA--": {
+    "label": "LA",
+    "source": "APP-6A Annex D, printed p. 144",
+    "description": "Publication label: LA."
+  },
+  "S-S-CMMA--": {
+    "label": "MA",
+    "source": "APP-6A Annex D, printed p. 145",
+    "description": "Publication label: MA."
+  },
+  "S-S-CMMD--": {
+    "label": "MD",
+    "source": "APP-6A Annex D, printed p. 145",
+    "description": "Publication label: MD."
+  },
+  "S-S-NF----": {
+    "label": "AS",
+    "source": "APP-6A Annex D, printed p. 148",
+    "description": "Publication label: AS."
+  },
+  "S-S-NI----": {
+    "label": "JI",
+    "source": "APP-6A Annex D, printed p. 148",
+    "description": "Publication label: JI."
+  },
+  "S-S-NS----": {
+    "label": "YY",
+    "source": "APP-6A Annex D, printed p. 148",
+    "description": "Publication label: YY."
+  },
+  "S-S-NH----": {
+    "label": "NC",
+    "source": "APP-6A Annex D, printed p. 149",
+    "description": "Publication label: NC."
+  },
+  "S-A-CF----": {
+    "white": true,
+    "source": "APP-6A, printed p. 142",
+    "description": "The publication includes an opaque white interior (framed case). Geometry remains subject to visual review."
+  },
+  "S-A-CH----": {
+    "white": true,
+    "source": "APP-6A, printed p. 142",
+    "description": "The publication includes an opaque white interior (framed case). Geometry remains subject to visual review."
+  },
+  "S-A-CL----": {
+    "white": true,
+    "source": "APP-6A, printed p. 142",
+    "description": "The publication includes an opaque white interior (framed case). Geometry remains subject to visual review."
+  },
+  "S-A-WD----": {
+    "white": true,
+    "source": "APP-6A, printed p. 141",
+    "description": "The publication includes an opaque white interior (framed case). Geometry remains subject to visual review."
+  },
+  "S-G-UCFS--": {
+    "white": true,
+    "source": "APP-6A, printed p. 190",
+    "description": "The publication includes an opaque white interior (framed case). Geometry remains subject to visual review."
+  },
+  "S-G-UUSX--": {
+    "white": true,
+    "source": "APP-6A, printed p. 205",
+    "description": "The publication includes an opaque white interior (framed case). Geometry remains subject to visual review."
+  },
+  "G-C-MAAU--": {
+    "white": true,
+    "source": "APP-6A, printed p. 277",
+    "description": "The publication includes an opaque white interior (framed case). Geometry remains subject to visual review."
+  },
+  "G-C-MMPOS-": {
+    "white": true,
+    "source": "APP-6A, printed p. 283",
+    "description": "The publication includes an opaque white interior (framed case). Geometry remains subject to visual review."
+  },
+  "G-C-SPQA--": {
+    "white": true,
+    "source": "APP-6A, printed p. 318",
+    "description": "The publication includes an opaque white interior (framed case). Geometry remains subject to visual review."
+  },
+  "G-C-SPQC--": {
+    "white": true,
+    "source": "APP-6A, printed p. 318",
+    "description": "The publication includes an opaque white interior (framed case). Geometry remains subject to visual review."
+  },
+  "G-C-SPQI--": {
+    "white": true,
+    "source": "APP-6A, printed p. 319",
+    "description": "The publication includes an opaque white interior (framed case). Geometry remains subject to visual review."
+  },
+  "G-O-PHW---": {
+    "white": true,
+    "source": "APP-6A, printed p. 341",
+    "description": "The publication includes an opaque white interior (framed case). Geometry remains subject to visual review."
+  },
+  "S-U-WMOD--": {
+    "conflict": true,
+    "source": "APP-6A, printed p. 160 (PDF 166)",
+    "description": "Source conflict: the Unknown cell contains an HZ merchant vessel, while the other cells depict a mine. Mine rendering retained; this row is not certified."
+  },
+  "S-U-NM----": {
+    "conflict": true,
+    "source": "APP-6A, printed p. 161 (PDF 167)",
+    "description": "Source conflict: the Hostile cell contains an HZ merchant vessel, while the other cells depict marine life. Marine-life rendering retained; this row is not certified."
+  }
+}

@@ -1,5 +1,37 @@
 # Milsymbol
 
+> This checkout contains an independent modification of
+> [Spatial Illusions' milsymbol](https://github.com/spatialillusions/milsymbol),
+> including Military Symbol Studio and partial APP-6A support. It is not an
+> official Spatial Illusions or NATO release. See [STUDIO.md](STUDIO.md) for
+> local use, publication packaging, and attribution.
+>
+> The original copyright and [MIT license](LICENSE) are retained. A GitHub fork
+> is recommended to preserve the visible upstream relationship, but is not an
+> MIT license requirement. Redistributed copies must retain the copyright and
+> permission notice. A public repository alone is not a substitute for a license.
+
+## Acknowledgements
+
+[Open Military Symbol Studio](https://mertc0604.github.io/milsymbol/) ·
+[Studio documentation](STUDIO.md)
+
+Many thanks to **Måns Beckman / Spatial Illusions**, the creator of
+[milsymbol](https://github.com/spatialillusions/milsymbol), for building and
+sharing this excellent military symbology library under the MIT license.
+
+Military Symbol Studio is built on his work. This project extends the original
+milsymbol library with a browser-based symbol editor, standard and modifier
+selection, and partial APP-6A support. The underlying rendering architecture
+and much of the symbol implementation come from milsymbol and its contributors;
+we gratefully acknowledge that foundation.
+
+Our additions are an independent community extension, not an official release
+or endorsement by Måns Beckman, Spatial Illusions, or NATO. The original
+copyright notice and [MIT license](LICENSE) are preserved.
+
+## About the original library
+
 Milsymbol is a small library in pure JavaScript that creates military unit symbols according to MIL-STD-2525 and STANAG APP-6.
 
 ![Figure 13](https://github.com/spatialillusions/milsymbol/blob/master/docs/images/milsymbol.png?raw=true)

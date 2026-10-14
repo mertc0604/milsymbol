@@ -10,6 +10,7 @@ export default {
   iconParts: [tacticalpoints],
   labels: labels,
   icons: function tacticalPoints(sidc, bbox, icn, std2525) {
+    if (this.metadata?.app6a) return;
     // Tactical Point Symbols =========================================================================
     sidc["G-T-D-----"] = icn["TP.DESTROY"]; //TACGRP.TSK.DSTY
     bbox["G-T-D-----"] = { x1: 0, x2: 200, y1: 40, y2: 160 };

@@ -23,6 +23,9 @@
     "./index.d.ts"
   ],
   "scripts": {
+    "studio:build": "rollup -c && node scripts/build-studio.mjs",
+    "studio:build:public": "rollup -c && node scripts/build-studio.mjs --public",
+    "studio:serve": "node scripts/serve-studio.mjs",
     "lint": "eslint src test --fix",
     "prebuild": "npm run lint && npm test",
     "build": "npm run bundle && npm run minify",

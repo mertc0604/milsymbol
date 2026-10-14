@@ -56,7 +56,11 @@ export default {
       icn["GR.IN.M2.NUCLEAR MATERIAL STORAGE"],
     ];
     sId["S-G-IMA---"] = [icn["GR.IN.IC.AIRCRAFT PRODUCTION & ASSEMBLY"]];
-    sId["S-G-IME---"] = [icn["GR.IC.FF.CLASS V"]];
+    sId["S-G-IME---"] = [this.metadata.app6a ? {
+      ...icn["GR.IC.FF.CLASS V"],
+      // Annex D, PDF p. 265: full-height ammunition-production icon.
+      d: "M77,132 V78 C77,49 123,49 123,78 V132 M70,132 H130",
+    } : icn["GR.IC.FF.CLASS V"]];
     sId["S-G-IMG---"] = [icn["GR.EQ.TANK"]];
     sId["S-G-IMV---"] = [icn["GR.IC.MAINTENANCE"]];
     sId["S-G-IMN---"] = [icn["GR.EQ.DOZER"]];

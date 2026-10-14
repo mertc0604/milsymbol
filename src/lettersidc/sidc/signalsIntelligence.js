@@ -8,6 +8,7 @@ export default {
   getIcons: getIcons_letter,
   iconParts: [signalsintelligence],
   icons: function signalsIntelligence(sId, bbox, icn, _STD2525) {
+    if (this.metadata?.app6a) return;
     //Adds support for 2525C Signals Intelligence
     sId["I-P-S-----"] = []; // N/A
     sId["I-P-SC----"] = []; // N/A

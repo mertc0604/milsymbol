@@ -89,7 +89,8 @@ export default function icon(ms) {
         specialbbox = ms._iconCache[icnet].letterSIDC.bbox;
       } else {
         if (typeof ms._getIcons.letter === "function") {
-          ms._iconCache[icnet].letterSIDC = ms._getIcons.letter(
+          ms._iconCache[icnet].letterSIDC = ms._getIcons.letter.call(
+            this,
             ms,
             iconParts,
             this.metadata.STD2525

@@ -10,6 +10,8 @@ export default {
   getIcons: getIcons_letter,
   iconParts: [icons, tacticalpoints],
   icons: function emergencymanagementsymbols(sId, bbox, icn, _STD2525) {
+    // Later EMS codes overlap APP-6A sea codes (notably S-S-XL----).
+    if (this.metadata?.app6a) return;
     //Adds support for 2525C Emergency Management Symbols
     sId["E-I-A-----"] = [icn["AC.IC.CRIMINAL.CIVIL DISTURBANCE"]];
     sId["E-I-AC----"] = [icn["ST.IC.GROUP"], icn["AC.M1.RIOT"]];

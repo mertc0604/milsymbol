@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Browse military symbols, select a standard, and configure modifiers. Export as SVG or PNG."
+    />
+    <meta name="theme-color" content="#ffffff" />
+    <link rel="icon" href="./favicon.svg" />
+    <link rel="stylesheet" href="./styles.css" />
+    <title>Military Symbol Editor</title>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="./"
+          ><svg viewBox="0 0 32 26" width="28" height="24" aria-hidden="true">
+            <rect
+              x="2"
+              y="4"
+              width="28"
+              height="19"
+              rx="1"
+              fill="#c5e7f7"
+              stroke="currentColor"
+              stroke-width="1.8"
+            />
+            <path
+              d="m2 4 28 19M30 4 2 23"
+              stroke="currentColor"
+              stroke-width="1.5"
+            /></svg
+          >Military Symbol Editor</a
+        >
+        <div class="top-actions">
+          <a
+            href="https://github.com/mertc0604/milsymbol"
+            target="_blank"
+            rel="noreferrer"
+            >Source code ↗</a
+          ><button id="helpButton" class="quiet-button">Help</button>
+        </div>
+      </header>
+      <nav class="standard-switcher" aria-label="Symbology standard">
+        <span class="standard-label">Standard</span
+        ><button id="standardPrev" hidden>Previous</button>
+        <div id="standardTabs" class="standard-tabs"></div>
+        <button id="standardNext" hidden>Next</button>
+      </nav>
+      <main class="workspace">
+        <aside class="catalog-panel">
+          <div class="panel-heading">
+            <h2>Symbol library</h2>
+            <span id="resultCount" class="count-badge" role="status" aria-label="Matching symbols">—</span>
+          </div>
+          <div class="search-box"
+            ><svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="10.5" cy="10.5" r="6.5" />
+              <path d="m16 16 4.5 4.5" /></svg
+            ><input
+              id="symbolSearch"
+              type="search"
+              aria-label="Search symbols"
+              placeholder="Search name or code"
+              autocomplete="off"
+            /><kbd>/</kbd><button id="clearSearch" type="button" aria-label="Clear search" title="Clear search (Esc)" hidden>×</button></div
+          >
+          <label class="category-label"
+            ><span>Symbol set</span
+            ><select id="categoryFilter">
+              <option value="all">All symbol sets</option>
+            </select></label
+          >
+          <div class="list-heading"><span>Name</span><span>Preview</span></div>
+          <div
+            id="symbolGrid"
+            class="symbol-grid"
+            aria-label="Symbol results"
+          ></div>
+          <button id="loadMore" class="load-more" hidden>
+            Show more symbols
+          </button>
+          <div class="catalog-footer">
+            Symbol names follow the selected standard.
+          </div>
+        </aside>
+        <section class="editor-panel">
+          <div class="editor-heading">
+            <div class="heading-copy">
+              <span class="section-caption">Symbol configuration</span>
+              <h1 id="selectedName">Loading symbols…</h1>
+              <p id="selectedPath">Loading the symbol library.</p>
+            </div>
+            <a href="#previewPanel"
+              id="compactPreview"
+              class="compact-preview"
+              aria-label="Go to full preview and downloads"
+              title="Go to full preview and downloads"
+            ></a>
+          </div>
+          <div
+            class="editor-tabs"
+            role="tablist"
+            aria-label="Configuration sections"
+          >
+            <button
+              id="tab-symbol"
+              role="tab"
+              aria-selected="true"
+              aria-controls="panel-symbol"
+              data-editor-tab="symbol"
+            >
+              Symbol
+            </button>
+            <button
+              id="tab-text"
+              role="tab"
+              aria-selected="false"
+              aria-controls="panel-text"
+              data-editor-tab="text"
+              tabindex="-1"
+            >
+              Text amplifiers
+            </button>
+            <button
+              id="tab-style"
+              role="tab"
+              aria-selected="false"
+              aria-controls="panel-style"
+              data-editor-tab="style"
+              tabindex="-1"
+            >
+              Appearance
+            </button>
+          </div>
+          <div class="control-scroll">
+            <div id="panel-symbol" role="tabpanel" aria-labelledby="tab-symbol">
+              <section class="form-section">
+                <h3>Identity &amp; status</h3>
+                <div class="control-group two-col">
+                  <label
+                    ><span>Standard identity</span
+                    ><select id="affiliation"></select
+                  ></label>
+                  <label id="contextField"
+                    ><span>Context</span
+                    ><select id="context"></select
+                  ></label>
+                  <label
+                    ><span>Status</span
+                    ><select id="status"></select
+                  ></label>
+                </div>
+              </section>
+              <section class="form-section">
+                <h3>Unit designation</h3>
+                <div class="toggle-grid">
+                  <label
+                    ><input id="hq" type="checkbox" /><span
+                      >Headquarters</span
+                    ></label
+                  ><label
+                    ><input id="taskForce" type="checkbox" /><span
+                      >Task force</span
+                    ></label
+                  ><label
+                    ><input id="feintDummy" type="checkbox" /><span
+                      >Feint / dummy</span
+                    ></label
+                  >
+                </div>
+                <div
+                  class="segmented"
+                  id="amplifierMode"
+                  role="group"
+                  aria-label="Amplifier type"
+                >
+                  <button class="active" data-mode="echelon">Echelon</button
+                  ><button data-mode="mobility">Mobility</button
+                  ><button data-mode="none">None</button>
+                </div>
+                <label class="full-field"
+                  ><span id="amplifierLabel">Echelon</span
+                  ><select id="amplifierValue"></select
+                ></label>
+              </section>
+              <section class="form-section" id="symbolModifiers">
+                <h3>Icon modifiers</h3>
+                <div class="control-group">
+                  <label
+                    ><span>Modifier 1</span
+                    ><select id="modifier1"></select></label
+                  ><label
+                    ><span>Modifier 2</span
+                    ><select id="modifier2"></select
+                  ></label>
+                </div>
+                <p class="field-note" id="modifierNote"></p>
+              </section>
+              <p class="field-note" id="legacyNote" hidden>
+                In this edition, icon variants are selected directly from the
+                symbol library.
+              </p>
+            </div>
+            <div
+              id="panel-text"
+              role="tabpanel"
+              aria-labelledby="tab-text"
+              hidden
+            >
+              <section class="form-section">
+                <h3>Text amplifiers</h3>
+                <p class="section-description">
+                  Add labels around the symbol. Empty fields are omitted.
+                </p>
+                <div class="control-group two-col" id="standardTextFields">
+                  <label
+                    ><span>Unique designation <small>T</small></span
+                    ><input id="uniqueDesignation" placeholder="e.g. 1/23 INF"
+                  /></label>
+                  <label
+                    ><span>Higher formation <small>M</small></span
+                    ><input id="higherFormation" placeholder="e.g. 2 BDE"
+                  /></label>
+                  <label
+                    ><span>Additional information <small>H</small></span
+                    ><input id="additionalInformation" placeholder="e.g. ALPHA"
+                  /></label>
+                  <label
+                    ><span>Date-time group <small>W</small></span
+                    ><input id="dtg" placeholder="e.g. 091430ZOCT26"
+                  /></label>
+                  <label
+                    ><span>Location <small>Y</small></span
+                    ><input id="location" placeholder="e.g. 35T PF 1234 5678"
+                  /></label>
+                  <label
+                    ><span>Type <small>V</small></span
+                    ><input id="typeLabel" placeholder="e.g. MECH"
+                  /></label>
+                </div>
+                <div id="app6aTextFields" class="control-group two-col" hidden></div>
+                <p id="app6aFieldNote" class="field-note" hidden>APP-6A Table III (pp. 19–21). Only applicable fields are enabled; limits follow the publication.</p>
+              </section>
+              <section class="form-section">
+                <h3>Direction of movement</h3>
+                <label class="range-field"
+                  ><span
+                    >Direction <output id="directionOutput">Off</output></span
+                  ><input
+                    id="direction"
+                    aria-label="Direction of movement"
+                    type="range"
+                    min="-1"
+                    max="360"
+                    value="-1"
+                /></label>
+              </section>
+            </div>
+            <div
+              id="panel-style"
+              role="tabpanel"
+              aria-labelledby="tab-style"
+              hidden
+            >
+              <section class="form-section">
+                <h3>Display</h3>
+                <div class="toggle-grid">
+                  <label
+                    ><input id="fill" type="checkbox" checked /><span
+                      >Fill</span
+                    ></label
+                  ><label
+                    ><input id="frame" type="checkbox" checked /><span
+                      >Frame</span
+                    ></label
+                  ><label
+                    ><input id="icon" type="checkbox" checked /><span
+                      >Icon</span
+                    ></label
+                  ><label
+                    ><input id="infoFields" type="checkbox" checked /><span
+                      >Text labels</span
+                    ></label
+                  >
+                </div>
+                <div class="control-group">
+                  <label
+                    ><span>Color palette</span
+                    ><select id="colorMode">
+                      <option>Light</option>
+                      <option>Medium</option>
+                      <option>Dark</option>
+                    </select></label
+                  >
+                </div>
+                <label class="range-field"
+                  ><span>Symbol size <output id="sizeOutput">100%</output></span
+                  ><input
+                    id="symbolSize"
+                    aria-label="Symbol size"
+                    type="range"
+                    min="55"
+                    max="170"
+                    value="100"
+                /></label>
+                <label class="range-field"
+                  ><span>Stroke width <output id="strokeOutput">4</output></span
+                  ><input
+                    id="strokeWidth"
+                    aria-label="Stroke width"
+                    type="range"
+                    min="1"
+                    max="8"
+                    step="0.5"
+                    value="4"
+                /></label>
+              </section>
+            </div>
+          </div>
+          <div class="editor-footer">
+            <span>Changes update the preview automatically.</span
+            ><button id="resetButton" class="quiet-button">
+              Reset modifiers
+            </button>
+          </div>
+        </section>
+        <aside class="stage-panel" id="previewPanel" tabindex="-1" aria-label="Preview and downloads">
+          <div class="panel-heading">
+            <h2>Preview</h2>
+            <span id="renderState" class="render-state"><i></i>Rendered</span>
+          </div>
+          <div class="preview-card">
+            <div class="stage" id="stage">
+              <div
+                id="symbolPreview"
+                class="symbol-preview"
+                aria-label="Military symbol preview"
+              ></div>
+            </div>
+            <div class="preview-toolbar">
+              <span>Transparent background</span>
+              <div class="view-actions">
+                <button
+                  class="tool-toggle active"
+                  id="gridToggle"
+                  aria-pressed="true"
+                >
+                  Grid</button
+                ><button
+                  class="tool-toggle"
+                  id="outlineToggle"
+                  aria-pressed="false"
+                >
+                  Outline
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="export-bar">
+            <button class="export-primary" id="downloadSvg">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 3v12m-4-4 4 4 4-4M5 15v5h14v-5" /></svg
+              >Download SVG</button
+            ><button id="downloadPng">PNG</button>
+          </div>
+          <section class="sidc-console">
+            <div class="sidc-heading">
+              <label for="sidcInput">Symbol identification code</label
+              ><span id="sidcLength">—</span>
+            </div>
+            <textarea
+              id="sidcInput"
+              rows="2"
+              spellcheck="false"
+              aria-label="SIDC code"
+            ></textarea>
+            <div class="sidc-input-row">
+              <button id="applySidc">Apply code</button
+              ><button id="copySidc" class="quiet-button">Copy SIDC</button>
+            </div>
+            <details class="code-details">
+              <summary>Code breakdown</summary>
+              <div id="sidcSegments" class="sidc-segments"></div>
+            </details>
+          </section>
+          <button id="copySvg" class="copy-svg">Copy SVG source</button>
+          <p class="support-note" id="supportNote">
+            Rendered with milsymbol. Symbol appearance may differ from older
+            standard publications.
+          </p>
+          <a id="publicationAudit" class="support-note" hidden>Compare with APP-6A publication</a>
+          <div class="attribution">
+            Powered by
+            <a
+              href="https://github.com/spatialillusions/milsymbol"
+              target="_blank"
+              rel="noreferrer"
+              >milsymbol</a
+            ><a href="THIRD_PARTY_LICENSES.txt">Licenses &amp; attribution</a>
+          </div>
+          <p class="support-note">Independent community extension. Not an official Spatial Illusions or NATO product.</p>
+        </aside>
+      </main>
+    </div>
+    <dialog id="helpDialog">
+      <button id="closeHelp" class="dialog-close" aria-label="Close help">
+        ×
+      </button>
+      <h2>Using the symbol editor</h2>
+      <p>
+        Select a standard, search the library, then configure the symbol and its
+        text amplifiers. The preview and SIDC update as you edit.
+      </p>
+      <p>
+        Use <kbd>/</kbd> to search and <kbd>Esc</kbd> to clear the search. SVG
+        is a scalable vector file; PNG is exported with a transparent
+        background.
+      </p>
+      <p>
+        MIL-STD-2525C and APP-6A/B use letter-based codes. The later editions use
+        numeric codes.
+      </p>
+      <p>
+        APP-6E uses the shared 2525E catalog here, with milsymbol's
+        rendering conventions. It is a compatibility view, not a separate
+        edition-specific catalog. Echelon and mobility are unspecified until selected.
+      </p>
+    </dialog>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script src="./vendor/milsymbol.js"></script>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

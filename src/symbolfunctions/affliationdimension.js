@@ -73,6 +73,13 @@ export default function affliationdimension(ms) {
       }
       bbox = { x2: bbox.x2 + spacing + 22, y1: 40 - 25 };
     }
+    // APP-6A Table I: uncertainty is a question mark, not a dashed present frame.
+    if (this.metadata.app6a && ["P", "A", "S"].includes(this.options.sidc[1])) {
+      drawArray2.push({ type: "text", text: "?", x: bbox.x2 + spacing, y: 40,
+        fill: frameColor, fontfamily: this.style.fontfamily, fontsize: 35,
+        fontweight: "bold", textanchor: "start", alignmentBaseline: "middle" });
+      bbox = { x2: bbox.x2 + spacing + 22, y1: 15 };
+    }
     if (this.metadata.context == "Simulation") {
       drawArray2.push({
         type: "text",

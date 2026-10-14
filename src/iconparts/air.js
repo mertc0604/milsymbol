@@ -50,6 +50,11 @@ export default function (
     STD2525 || numberSIDC ? iconFillColor : !frame ? iconFillColor : false;
   icn["AR.I.CIVILIAN"].stroke = black;
   icn["AR.I.CIVILIAN"].strokewidth = 3;
+  // APP-6A Annex D uses solid CIV lettering, not the later hollow icon.
+  if (metadata.app6a) {
+    icn["AR.I.CIVILIAN"].fill = iconColor;
+    icn["AR.I.CIVILIAN"].stroke = false;
+  }
   icn["AR.I.MILITARY FIXED WING"] = {
     type: "path",
 
@@ -66,7 +71,7 @@ export default function (
 
     stroke: black,
     d: "M62,80 l30,0 0,-10 16,0 0,10 30,0 0,15 -30,0 0,25 10,0 0,5 -36,0 0,-5 10,0 0,-25 -30,0 Z M95,70 l0,-5 10,0 0,5",
-    fill: STD2525 ? iconFillColor : false,
+    fill: STD2525 || metadata.app6a ? iconFillColor : false,
   };
   icn["AR.I.MILITARY ROTARY WING"] = {
     type: "path",
@@ -92,7 +97,7 @@ export default function (
       type: "path",
 
       stroke: black,
-      fill: STD2525 ? iconFillColor : false,
+      fill: STD2525 || metadata.app6a ? iconFillColor : false,
       d: "m 113,90 c -0.3,8.8 -1.9,20.3 -10.8,24.6 -7.7,2 -12.3,-7.1 -13.8,-13.3 -2.6,-11.5 -2.3,-26 6.9,-34.6 6.0,-4.9 13.1,1.9 14.9,7.8 2,4.9 2.8,10.2 2.8,15.5 z",
     },
   ];
@@ -126,14 +131,14 @@ export default function (
     {
       type: "path",
 
-      fill: STD2525 || numberSIDC ? iconFillColor : false,
+      fill: STD2525 || numberSIDC || metadata.app6a ? iconFillColor : false,
       stroke: black,
       d: "M90,125 l20,0 0,10 -20,0 z",
     },
     {
       type: "circle",
 
-      fill: STD2525 || numberSIDC ? iconFillColor : false,
+      fill: STD2525 || numberSIDC || metadata.app6a ? iconFillColor : false,
       stroke: black,
       cx: 100,
       cy: 90,
@@ -166,6 +171,7 @@ export default function (
   };
   icn["AR.I.AIR DECOY"] = {
     type: "path",
+    ...(metadata.app6a ? { fill: iconFillColor } : {}),
     d: "M65,95 l15,-15 0,30 Z M92.5,95 l15,-15 0,30 Z M120,95 l15,-15 0,30 Z M65,120 l70,0 0,-5 -70,0 Z",
   };
   icn["SU.IC.AIR DECOY DSymbol"] = {

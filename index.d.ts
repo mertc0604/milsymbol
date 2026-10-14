@@ -249,7 +249,7 @@ export function setDashArrays(
 export function getVersion(): string;
 
 /** Sets the preferred standard. */
-export function setStandard(standard: "2525" | "APP6"): boolean;
+export function setStandard(standard: "2525" | "APP6" | "APP6A"): boolean;
 
 type DrawPath = {
   type: "path";

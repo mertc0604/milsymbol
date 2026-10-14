@@ -332,7 +332,7 @@ export default function (
     type: "path",
 
     d: "M 108,117 C 86,129 65,93 86.7,80.7 Z  M 97.2,99.1 118,88.7",
-    fill: STD2525 ? iconFillColor : false
+    fill: STD2525 || metadata.app6a ? iconFillColor : false
   };
   icn["GR.IC.ELECTRONIC WARFARE"] = text("EW");
   icn["GR.IC.EMERGENCY MEDICAL OPERATION"] = {
@@ -587,7 +587,7 @@ export default function (
   icn["GR.IC.PUBLIC AFFAIRS BROADCAST"] = text("BPAD");
   icn["GR.IC.PSYCHOLOGICAL OPERATIONS"] = {
     type: "path",
-    fill: STD2525 ? iconFillColor : false,
+    fill: STD2525 || metadata.app6a ? iconFillColor : false,
     stroke: black,
     d: "M70,85 l40,0 10,-10 0,50 -10,-10 -40,0 z M120,85 l10,0 M120,95 l10,0 M120,105 l10,0 M120,115 l10,0"
   }; //TODO
@@ -698,7 +698,7 @@ export default function (
     {
       type: "path",
       d: "M100,105 l0,-25 20,12.5 z",
-      fill: STD2525 ? iconFillColor : false
+      fill: STD2525 || metadata.app6a ? iconFillColor : false
     }
   ];
   icn["GR.IC.SUSTAINMENT"] = text("SUST");
@@ -1097,7 +1097,7 @@ export default function (
     {
       type: "path",
       d: "M65,85 l70,0 -15,30 -40,0 z",
-      fill: STD2525 ? iconFillColor : false
+      fill: STD2525 || metadata.app6a ? iconFillColor : false
     }
   ];
   icn["GR.IC.FF.SIGNAL"] = {
@@ -1129,7 +1129,7 @@ export default function (
     {
       type: "path",
       d: "M65,85 l70,0 -15,30 -40,0 z",
-      fill: STD2525 ? iconFillColor : false
+      fill: STD2525 || metadata.app6a ? iconFillColor : false
     },
     { type: "text", stroke: false, x: 100, y: 110, fontsize: 25, text: "S" }
   ];
@@ -2967,11 +2967,12 @@ export default function (
     }
   ];
   icn["GR.EQ.ANTIPERSONNEL LAND MINE LESS THAN LETHAL"] = [
-    { type: "circle", cx: 100, cy: 100, r: 22, fill: false },
+    { type: "circle", cx: 100, cy: metadata.app6a ? 110 : 100, r: metadata.app6a ? 35 : 22, fill: false },
     {
       type: "path",
-      d: "M117,82 l20,-18 -18,25z M83,82 l-20,-18 18,25z",
-      stroke: false
+      d: metadata.app6a ? "M75,85 L62,72 M125,85 L138,72" : "M117,82 l20,-18 -18,25z M83,82 l-20,-18 18,25z",
+      fill: metadata.app6a ? false : iconColor,
+      stroke: metadata.app6a ? iconColor : false
     }
   ];
   icn["GR.EQ.ANTITANK MINE"] = { type: "circle", cx: 100, cy: 100, r: 22 };
@@ -3005,7 +3006,7 @@ export default function (
   icn["GR.EQ.PSYCHOLOGICAL OPERATIONS EQUIPMENT"] = {
     type: "path",
 
-    fill: STD2525 ? iconFillColor : false,
+    fill: STD2525 || metadata.app6a ? iconFillColor : false,
     stroke: black,
     d: "m 110,95 10,0 m -10,10 10,0 m -10,10 10,0 m -10,-30 10,0 m -10,-5 -10,10 -30,0 0,20 30,0 10,10 z"
   };

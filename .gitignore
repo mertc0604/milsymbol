@@ -2,6 +2,15 @@
 .DS_Store
 node_modules
 dist
+.pnpm-store
+pnpm-lock.yaml
+tmp/pdfs/
+output/app6a-audit/
+__pycache__/
+*.pyc
+# User-provided reference publication and private deployment state
+APP_6_A_*.pdf
+.openai/
 
 # Local env files
 .env

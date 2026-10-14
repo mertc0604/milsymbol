@@ -75,6 +75,7 @@ ms.reset = function () {
   this._iconSIDC.letter = [];
   this._iconSIDC.number = [];
   this._STD2525 = true;
+  this._standardEdition = "";
   this._svgNS = "http://www.w3.org/2000/svg";
   this._symbolParts = [];
   ms.addSymbolPart(stack);
@@ -247,10 +248,17 @@ ms.setHqStaffLength = function (len) {
 ms.setStandard = function (standard) {
   if (standard == "2525") {
     this._STD2525 = true;
+    this._standardEdition = "";
     return true;
   }
   if (standard == "APP6") {
     this._STD2525 = false;
+    this._standardEdition = "";
+    return true;
+  }
+  if (standard == "APP6A") {
+    this._STD2525 = false;
+    this._standardEdition = "A";
     return true;
   }
   return false;

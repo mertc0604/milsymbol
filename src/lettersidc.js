@@ -27,8 +27,12 @@ const app6b = [
   sea,
   subsurface,
   sof,
-  tacticalpointsapp6,
+  tacticalpointsapp6
 ];
+// APP-6A shares these primitives, but additionally needs the naval station
+// symbols retained in the older 2525 bundle. Edition membership is defined
+// by the existing letter metadata module, not by the APP-6B catalog.
+const app6a = [...app6b, std2525bextra];
 const std2525b = [
   space,
   air,
@@ -41,7 +45,7 @@ const std2525b = [
   signalsIntelligence,
   stabilityoperations,
   std2525bextra,
-  tacticalpoints2525,
+  tacticalpoints2525
 ];
 const std2525c = [
   space,
@@ -55,10 +59,11 @@ const std2525c = [
   signalsIntelligence,
   stabilityoperations,
   emergencymanagementsymbols,
-  tacticalpoints2525,
+  tacticalpoints2525
 ];
 
 export {
+  app6a,
   app6b,
   std2525b,
   std2525c,
@@ -75,5 +80,5 @@ export {
   emergencymanagementsymbols,
   std2525bextra,
   tacticalpoints2525,
-  tacticalpointsapp6,
+  tacticalpointsapp6
 };
