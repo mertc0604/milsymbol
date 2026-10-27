@@ -167,5 +167,9 @@ export default {
     sId["S-U-NBW---"] = [icn["SU.IC.WRECK"]];
     sId["S-U-NM----"] = [icn["SU.IC.MARINE LIFE"]];
     sId["S-U-NA----"] = [icn["SU.IC.SEA ANOMALY"]];
+    if (this.metadata.app6a) {
+      sId["S-U-SS----"] = icn["SU.IC.STATION"];
+      sId["S-U-SSA---"] = icn["SU.IC.STATION ASW SUBMARINE"];
+    }
   },
 };

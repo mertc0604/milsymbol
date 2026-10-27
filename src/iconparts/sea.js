@@ -1,5 +1,6 @@
 import {
   defaultProperties,
+  hasFill,
   text,
   textm1,
   textm2,
@@ -675,10 +676,51 @@ export default function (
   icn["SE.M2.REMOTELY PILOTED"] = textm2("RP");
   icn["SE.M2.EXPENDABLE"] = textm2("EXP");
 
+  if (metadata.app6a) Object.assign(icn, seaStationIconParts());
+
+  // APP-6A Annex D: unframed shapes filled with the identity colour keep black
+  // lines and lettering; other unframed icons are drawn in the identity colour.
+  const app6aUnframed = app6a && !frame && metadata.fill;
   for (const key in icn) {
     if (!icn.hasOwnProperty(key)) continue;
     if (iconParts.hasOwnProperty(key)) console.warn("Override of: " + key);
-    defaultProperties.call(this, icn[key], iconColor);
+    defaultProperties.call(
+      this,
+      icn[key],
+      app6aUnframed && hasFill(icn[key], iconFillColor) ? black : iconColor
+    );
     iconParts[key] = icn[key];
   }
+}
+
+// Shared legacy naval station geometry (APP-6A and MIL-STD-2525B).
+// Return fresh instructions because defaultProperties mutates them per symbol.
+export function seaStationIconParts() {
+  const parts = {
+    "SE.IC.STATION": {
+      type: "path",
+      fill: false,
+      d: "m 70,85 c 20,0 40,0 60,0 0,10 0,20 0,30 -20,0 -40,0 -60,0 0,-10 0,-20 0,-30 z m 30,-15 c 0,20 0,40 0,60 m 35,-5 C 120,148 82.7,149 66.8,126 49.2,105 59.1,69.2 85.2,60.1 103,53.1 124,59.4 135,74.8"
+    }
+  };
+  for (const [name, label] of [
+    ["NONCOMBATANT", "NC"],
+    ["ASW SHIP", "AS"],
+    ["PICKET", "PK"],
+    ["RESCUE", "RS"]
+  ]) {
+    parts[`SE.IC.STATION ${name}`] = [
+      { type: "path", fill: false, d: "m 70,85 60,0 0,30 -60,0 z m 30,-15 0,60" },
+      {
+        type: "text",
+        alignmentBaseline: "middle",
+        stroke: false,
+        x: 100,
+        y: 135,
+        fontsize: 30,
+        text: label
+      }
+    ];
+  }
+  return parts;
 }

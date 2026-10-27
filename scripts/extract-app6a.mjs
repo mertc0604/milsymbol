@@ -6,8 +6,9 @@ import nato from "stanag-app6";
 
 const text = fs.readFileSync(process.argv[2], "utf8");
 const rows = [];
+// Function code columns may contain digits (supply classes US S1-- … S9--).
 const rowPattern =
-  /^(\d\.X[\d.]*?)\s+([SG])\s+([A-Z*\-]+)\s+([A-Z\-]+)\s+([A-Z*\-]+)\s+([A-Z\-]+)\s+([A-Z\-]+)\s+([A-Z\-]+)\s+([A-Z*\-]+)\s+([A-Z*\-]+)\s+([A-Z*\-]+)\s+(.+)/;
+  /^(\d\.X[\d.]*?)\s+([SG])\s+([A-Z*\-]+)\s+([A-Z\-]+)\s+([A-Z*\-]+)\s+([A-Z0-9\-]+)\s+([A-Z0-9\-]+)\s+([A-Z0-9\-]+)\s+([A-Z*\-]+)\s+([A-Z*\-]+)\s+([A-Z*\-]+)\s+(.+)/;
 for (const [pageIndex, page] of text.split("\f").entries()) {
   if (!page.includes("TABLE B-")) continue;
   const footer = [...page.matchAll(/^\s*(\d{2,3})\s*$/gm)].at(-1);

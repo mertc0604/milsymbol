@@ -83,7 +83,14 @@ export default function getMetadata() {
   metadata.app6a = this.style.standard
     ? this.style.standard === "APP6A"
     : ms._standardEdition === "A";
-  if (metadata.app6a) metadata.edition = "A";
+  if (metadata.app6a) {
+    metadata.edition = "A";
+    // Fail closed until a registered letter provider validates this edition.
+    metadata.validation = {
+      valid: false,
+      details: { standard: false, modifierErrors: [] }
+    };
+  }
 
   if (this.style.monoColor != "") {
     metadata.fill = false;

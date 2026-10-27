@@ -24,6 +24,14 @@ export function defaultProperties(instructions, iconColor) {
   }
 }
 
+// True if the part, or any part of a composite icon, is filled with color.
+export function hasFill(instructions, color) {
+  if (!color || !instructions) return false;
+  if (Array.isArray(instructions))
+    return instructions.some(part => hasFill(part, color));
+  return instructions.fill === color;
+}
+
 export function text(str) {
   let size = 45;
   //let y = 115;

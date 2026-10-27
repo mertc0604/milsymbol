@@ -77,6 +77,15 @@ export default {
       icn["GR.IC.TRANSPORTATION"],
       icn["GR.IC.AIRPORT OF DEBARKATION"],
     ];
+    if (this.metadata.app6a) {
+      // Annex D, PDF 267: one wheel under a wing, not a wheel inside a
+      // second airport wheel.
+      const [wing, wheel] = icn["GR.IC.AIRPORT OF DEBARKATION"];
+      sId["S-G-IBA---"] = [
+        { ...wing, d: "M60,78 H139 M59,109 L101,65 M104,85 V143 M78.2,100.8 L129.8,127.2 M78.2,127.2 L129.8,100.8" },
+        { ...wheel, cx: 104, cy: 114, r: 29 },
+      ];
+    }
     sId["S-G-IBN---"] = [icn["GR.IC.NAVAL"]];
     sId["S-G-IT----"] = [icn["GR.IC.TRANSPORTATION"]];
     sId["S-G-IX----"] = [icn["GR.IC.FF.MEDICAL"]];

@@ -8,6 +8,8 @@ export default {
   getIcons: getIcons_letter,
   iconParts: [std2525bicons],
   icons: function std2525b(sId, bbox, icn, _STD2525) {
+    // APP-6A owns these mappings in its sea/subsurface/tactical-point modules.
+    if (this.metadata?.app6a) return;
     // These symbols are in 2525B but not in 2525C and because of this they need to be added
     // The icons are in iconparts/2525b.js
 

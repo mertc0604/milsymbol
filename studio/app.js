@@ -423,7 +423,7 @@ function filteredIcons() {
     if (state.category !== "all" && icon.category !== state.category)
       return false;
     if (!term) return true;
-    if (/^[A-Z][A-Z-][A-Z][A-Z*-][A-Z-]{6}[A-Z0-9*-]{0,5}$/.test(code) && config().family === "legacy")
+    if (/^[A-Z][A-Z-][A-Z][A-Z*-][A-Z0-9-]{6}[A-Z0-9*-]{0,5}$/.test(code) && config().family === "legacy")
       return icon.id === `${code[0]}-${code[2]}-${code.slice(4,10)}`;
     if (/^\d{20,30}$/.test(code) && config().family === "modern")
       return icon.symbolSet === code.slice(4,6) && icon.code === code.slice(10,16);

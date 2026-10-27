@@ -29,10 +29,18 @@ const app6b = [
   sof,
   tacticalpointsapp6
 ];
-// APP-6A shares these primitives, but additionally needs the naval station
-// symbols retained in the older 2525 bundle. Edition membership is defined
-// by the existing letter metadata module, not by the APP-6B catalog.
-const app6a = [...app6b, std2525bextra];
+// Keep edition bundles explicit: they share domain modules, not other bundles.
+const app6a = [
+  space,
+  air,
+  ground,
+  equipment,
+  installations,
+  sea,
+  subsurface,
+  sof,
+  tacticalpointsapp6
+];
 const std2525b = [
   space,
   air,

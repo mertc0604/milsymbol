@@ -2971,6 +2971,246 @@ export const app6aCatalog = [
     "pdfPage": 91
   },
   {
+    "id": "S-G-USS1--",
+    "hierarchy": "1.X.3.1.3.3.3",
+    "name": "SUPPLY CLASS I",
+    "modifier": "**",
+    "page": 85,
+    "pdfPage": 91
+  },
+  {
+    "id": "S-G-USS1T-",
+    "hierarchy": "1.X.3.1.3.3.3.1",
+    "name": "SUPPLY CLASS I THEATER",
+    "modifier": "**",
+    "page": 85,
+    "pdfPage": 91
+  },
+  {
+    "id": "S-G-USS1C-",
+    "hierarchy": "1.X.3.1.3.3.3.2",
+    "name": "SUPPLY CLASS I CORPS",
+    "modifier": "**",
+    "page": 85,
+    "pdfPage": 91
+  },
+  {
+    "id": "S-G-USS2--",
+    "hierarchy": "1.X.3.1.3.3.4",
+    "name": "SUPPLY CLASS II",
+    "modifier": "**",
+    "page": 85,
+    "pdfPage": 91
+  },
+  {
+    "id": "S-G-USS2T-",
+    "hierarchy": "1.X.3.1.3.3.4.1",
+    "name": "SUPPLY CLASS II THEATER",
+    "modifier": "**",
+    "page": 85,
+    "pdfPage": 91
+  },
+  {
+    "id": "S-G-USS2C-",
+    "hierarchy": "1.X.3.1.3.3.4.2",
+    "name": "SUPPLY CLASS II CORPS",
+    "modifier": "**",
+    "page": 85,
+    "pdfPage": 91
+  },
+  {
+    "id": "S-G-USS3--",
+    "hierarchy": "1.X.3.1.3.3.5",
+    "name": "SUPPLY CLASS III",
+    "modifier": "**",
+    "page": 85,
+    "pdfPage": 91
+  },
+  {
+    "id": "S-G-USS3T-",
+    "hierarchy": "1.X.3.1.3.3.5.1",
+    "name": "SUPPLY CLASS III THEATER",
+    "modifier": "**",
+    "page": 85,
+    "pdfPage": 91
+  },
+  {
+    "id": "S-G-USS3C-",
+    "hierarchy": "1.X.3.1.3.3.5.2",
+    "name": "SUPPLY CLASS III CORPS",
+    "modifier": "**",
+    "page": 85,
+    "pdfPage": 91
+  },
+  {
+    "id": "S-G-USS3A-",
+    "hierarchy": "1.X.3.1.3.3.5.3",
+    "name": "SUPPLY CLASS III AVIATION",
+    "modifier": "**",
+    "page": 85,
+    "pdfPage": 91
+  },
+  {
+    "id": "S-G-USS3AT",
+    "hierarchy": "1.X.3.1.3.3.5.3.1",
+    "name": "SUPPLY CLASS III AVIATION THEATER",
+    "modifier": "**",
+    "page": 85,
+    "pdfPage": 91
+  },
+  {
+    "id": "S-G-USS3AC",
+    "hierarchy": "1.X.3.1.3.3.5.3.2",
+    "name": "SUPPLY CLASS III AVIATION CORPS",
+    "modifier": "**",
+    "page": 85,
+    "pdfPage": 91
+  },
+  {
+    "id": "S-G-USS4--",
+    "hierarchy": "1.X.3.1.3.3.6",
+    "name": "SUPPLY CLASS IV",
+    "modifier": "**",
+    "page": 85,
+    "pdfPage": 91
+  },
+  {
+    "id": "S-G-USS4T-",
+    "hierarchy": "1.X.3.1.3.3.6.1",
+    "name": "SUPPLY CLASS IV THEATER",
+    "modifier": "**",
+    "page": 85,
+    "pdfPage": 91
+  },
+  {
+    "id": "S-G-USS4C-",
+    "hierarchy": "1.X.3.1.3.3.6.2",
+    "name": "SUPPLY CLASS IV CORPS",
+    "modifier": "**",
+    "page": 85,
+    "pdfPage": 91
+  },
+  {
+    "id": "S-G-USS5--",
+    "hierarchy": "1.X.3.1.3.3.7",
+    "name": "SUPPLY CLASS V",
+    "modifier": "**",
+    "page": 85,
+    "pdfPage": 91
+  },
+  {
+    "id": "S-G-USS5T-",
+    "hierarchy": "1.X.3.1.3.3.7.1",
+    "name": "SUPPLY CLASS V THEATER",
+    "modifier": "**",
+    "page": 86,
+    "pdfPage": 92
+  },
+  {
+    "id": "S-G-USS5C-",
+    "hierarchy": "1.X.3.1.3.3.7.2",
+    "name": "SUPPLY CLASS V CORPS",
+    "modifier": "**",
+    "page": 86,
+    "pdfPage": 92
+  },
+  {
+    "id": "S-G-USS6--",
+    "hierarchy": "1.X.3.1.3.3.8",
+    "name": "SUPPLY CLASS VI",
+    "modifier": "**",
+    "page": 86,
+    "pdfPage": 92
+  },
+  {
+    "id": "S-G-USS6T-",
+    "hierarchy": "1.X.3.1.3.3.8.1",
+    "name": "SUPPLY CLASS VI THEATER",
+    "modifier": "**",
+    "page": 86,
+    "pdfPage": 92
+  },
+  {
+    "id": "S-G-USS6C-",
+    "hierarchy": "1.X.3.1.3.3.8.2",
+    "name": "SUPPLY CLASS VI CORPS",
+    "modifier": "**",
+    "page": 86,
+    "pdfPage": 92
+  },
+  {
+    "id": "S-G-USS7--",
+    "hierarchy": "1.X.3.1.3.3.9",
+    "name": "SUPPLY CLASS VII",
+    "modifier": "**",
+    "page": 86,
+    "pdfPage": 92
+  },
+  {
+    "id": "S-G-USS7T-",
+    "hierarchy": "1.X.3.1.3.3.9.1",
+    "name": "SUPPLY CLASS VII THEATER",
+    "modifier": "**",
+    "page": 86,
+    "pdfPage": 92
+  },
+  {
+    "id": "S-G-USS7C-",
+    "hierarchy": "1.X.3.1.3.3.9.2",
+    "name": "SUPPLY CLASS VII CORPS",
+    "modifier": "**",
+    "page": 86,
+    "pdfPage": 92
+  },
+  {
+    "id": "S-G-USS8--",
+    "hierarchy": "1.X.3.1.3.3.10",
+    "name": "SUPPLY CLASS VIII",
+    "modifier": "**",
+    "page": 86,
+    "pdfPage": 92
+  },
+  {
+    "id": "S-G-USS8T-",
+    "hierarchy": "1.X.3.1.3.3.10.1",
+    "name": "SUPPLY CLASS VIII THEATER",
+    "modifier": "**",
+    "page": 86,
+    "pdfPage": 92
+  },
+  {
+    "id": "S-G-USS8C-",
+    "hierarchy": "1.X.3.1.3.3.10.2",
+    "name": "SUPPLY CLASS VIII CORPS",
+    "modifier": "**",
+    "page": 86,
+    "pdfPage": 92
+  },
+  {
+    "id": "S-G-USS9--",
+    "hierarchy": "1.X.3.1.3.3.11",
+    "name": "SUPPLY CLASS IX",
+    "modifier": "**",
+    "page": 86,
+    "pdfPage": 92
+  },
+  {
+    "id": "S-G-USS9T-",
+    "hierarchy": "1.X.3.1.3.3.11.1",
+    "name": "SUPPLY CLASS IX THEATER",
+    "modifier": "**",
+    "page": 86,
+    "pdfPage": 92
+  },
+  {
+    "id": "S-G-USS9C-",
+    "hierarchy": "1.X.3.1.3.3.11.2",
+    "name": "SUPPLY CLASS IX CORPS",
+    "modifier": "**",
+    "page": 86,
+    "pdfPage": 92
+  },
+  {
     "id": "S-G-USSX--",
     "hierarchy": "1.X.3.1.3.3.12",
     "name": "SUPPLY CLASS X",

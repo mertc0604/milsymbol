@@ -1,5 +1,6 @@
 import {
   defaultProperties,
+  hasFill,
   text,
   textm1,
   textm2,
@@ -39,6 +40,9 @@ export default function (
   const iconFillColor = colors.iconFillColor[affiliation];
   const white = colors.white[affiliation];
   const black = colors.black[affiliation];
+  // APP-6A Annex D: unframed shapes filled with the identity colour keep black
+  // lines and lettering; other unframed icons are drawn in the identity colour.
+  const app6aUnframed = metadata.app6a && !frame && metadata.fill;
 
   //const numberSIDC = metadata.numberSIDC;
   const icn = {};
@@ -462,7 +466,10 @@ export default function (
           ? black
           : "rgb(0, 130, 24)"
         : iconFillColor,
-    stroke: (STD2525 || numberSIDC) && !monoColor ? black : iconColor,
+    stroke:
+      ((STD2525 || numberSIDC) && !monoColor) || app6aUnframed
+        ? black
+        : iconColor,
     d: "m 106.6,101.6 0,26.3 -13.1,-13.1 z m -19.7,0 0,26.3 -13.1,-13.1 z m 39.4,0 0,26.3 -13.1,-13.1 13.1,-13.1 M 100,75.3 c -14.5,0 -26.3,11.8 -26.3,26.3 l 52.5,0 C 126.3,87.1 114.5,75.3 100,75.3 z m -6.6,0 0,-13.1 13.1,0 0,13.1 m -29.8,12.3 -9.3,-9.3 9.3,-9.3 9.3,9.3 m 27.9,0 9.3,-9.3 9.3,9.3 -9.3,9.3",
   };
   icn["SU.IC.SEA MINE DECOY, BOTTOM/GROUND"] = [
@@ -1243,10 +1250,48 @@ export default function (
   icn["SU.M2.REMOTELY PILOTED"] = textm2("RP");
   icn["SU.M2.EXPENDABLE"] = textm2("EXP");
 
+  if (metadata.app6a) Object.assign(icn, subsurfaceStationIconParts());
+
+  // Annex D draws these contacts black for every identity.
+  const app6aBlack = [
+    "SU.IC.SEABED ROCK/STONE, OBSTACLE, OTHER",
+    "SU.IC.WRECK",
+    "SU.IC.MARINE LIFE",
+    "SU.IC.SEA ANOMALY",
+  ];
   for (const key in icn) {
     if (!icn.hasOwnProperty(key)) continue;
     if (iconParts.hasOwnProperty(key)) console.warn("Override of: " + key);
-    defaultProperties.call(this, icn[key], iconColor);
+    defaultProperties.call(
+      this,
+      icn[key],
+      app6aUnframed &&
+        (hasFill(icn[key], iconFillColor) || app6aBlack.includes(key))
+        ? black
+        : iconColor
+    );
     iconParts[key] = icn[key];
   }
+}
+
+// Shared legacy station geometry; neither edition depends on the other's bundle.
+export function subsurfaceStationIconParts() {
+  return {
+    "SU.IC.STATION ASW SUBMARINE": {
+      type: "path",
+      d: "m 80,85 40,0 0,-20 -40,0 z m 20,-30 0,40 m -40,15 15,15 50,0 15,-15 -15,-15 -50,0 z"
+    },
+    "SU.IC.STATION": [
+      { type: "path", d: "m 70,85 60,0 0,30 -60,0 z m 30,-15 0,60" },
+      {
+        type: "text",
+        alignmentBaseline: "middle",
+        stroke: false,
+        x: 100,
+        y: 135,
+        fontsize: 30,
+        text: "SS"
+      }
+    ]
+  };
 }

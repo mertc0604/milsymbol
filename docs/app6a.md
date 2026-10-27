@@ -6,7 +6,7 @@ Annex B page and the one-based PDF page, plus the original hierarchy identifier.
 
 ## Scope
 
-The independent catalog contains **877 entries**: 683 warfighting entries from
+The independent catalog contains **907 entries**: 713 warfighting entries from
 Tables B-III through B-VIII and 194 single-glyph tactical entries from Table B-IX
 (including fixed-affiliation entries). The current publication-image audit is
 strictly **S-scheme only**; G-scheme graphics are outside that audit.
@@ -64,7 +64,7 @@ The studio offers APP-6A independently of APP-6B. It restricts status to
 Present/Planned, excludes later command/towed-array amplifiers, and automatically
 encodes installations as H- (or HB for feint/dummy installations). Names and
 provenance come from the APP-6A catalog rather than the APP-6B npm dataset.
-Its selectable catalog and manual code entry are restricted to the 683 S-scheme
+Its selectable catalog and manual code entry are restricted to the 713 S-scheme
 tactical symbols; G-scheme tactical graphics are excluded from the editor.
 
 ## Publication ambiguities and editorial decisions
@@ -80,6 +80,11 @@ tactical symbols; G-scheme tactical graphics are excluded from the editor.
 - **`G-C-OXRD--`**, printed pp. 108-109 (also Annex E): shared by DLRP and
   Diversions, which have different glyphs. Both are excluded from the APP-6A
   profile rather than silently choosing the later-edition interpretation.
+
+Supply classes I-IX (`S-G-USS1--` ... `S-G-USS9C-`, 30 entries, Annex B
+pp. 85-86) have digits in the function ID. Earlier catalog extraction and SIDC
+validation accepted letters only and silently dropped them; both now accept
+digits.
 
 ## Reproducing the catalog
 
@@ -126,8 +131,8 @@ The PDF and generated images stay local under ignored `output/app6a-audit/` and
 `dist/studio/audit/`. Open `/audit/symbols/index.html` on the local studio server.
 
 The audit extracts actual Annex D pixels, preserving PDF page/crop coordinates,
-and compares them to independently rendered SVGs. It covers **676 illustrated S
-entries / 3,180 image pairs** across U/F/N/H and the F/FO/UF frame modes shown in
+and compares them to independently rendered SVGs. It covers **706 illustrated S
+entries / 3,300 image pairs** across U/F/N/H and the F/FO/UF frame modes shown in
 the publication. Seven gray taxonomy headings contain no illustration:
 `S-G-EW----`, `S-G-EX----`, `S-G-IM----`, `S-S-X-----`, `S-S-E-----`,
 `S-S-Z-----`, `S-U-N-----`.
@@ -144,6 +149,14 @@ Reviewed edition-specific corrections include merchant labels and opaque white
 framed icons, affiliation-colored unframed merchant icons, removal of later
 civilian purple, solid CIV lettering, less-than-lethal mine horns, ammunition
 production sizing, and isolation from overlapping EMS icon providers.
+Later shape corrections (not size or position tuning): NBC lines that leave the
+dots inwards and run to the bottom, an upright mortuary coffin, maintenance
+recovery as a bar with end wheels, a centre line in the ordnance missile, eight
+sun rays for equipment manufacture, crossed picks for mines, a claymore drawn
+like the less than lethal mine, and one wheel under a wing for airports.
+Unframed less than lethal, claymore and armoured-vehicle icons are no longer
+clipped by their bounding box. Size-only and position-only differences from
+Annex D are intentionally left as rendered by milsymbol.
 The subsurface review also corrects the ten sea-mine variants, underwater decoy,
 and man-made seabed installation in the existing subsurface primitive module.
 Annex D's smaller horns, oval bodies, mooring stems, bottom/wave/side marks and
@@ -151,10 +164,13 @@ fine dealt lines are used only for APP-6A. The decoy's top bar is separated from
 its three triangles. These twelve entries were checked against 48 independent
 publication cells; two inconsistent Unknown cells remain flagged for review.
 
-The audit flags 42 affiliation/frame image pairs with publication conflicts.
+The audit flags 79 affiliation/frame image pairs with publication conflicts.
 These include apparent copy/paste errors such as Unknown `S-U-WMOD--` (PDF 166)
-and Hostile `S-U-NM----` (PDF 167), which show an HZ merchant ship, plus four
-missile rows whose Annex B code meanings disagree with the Annex D table. Their
+and Hostile `S-U-NM----` (PDF 167), which show an HZ merchant ship, Hostile
+`S-U-SN----` and `S-U-NBW---`, Unknown `S-F-AFUL--`, and Unknown/Hostile
+`S-F-AHU---` (cells copied from other rows), plus four missile rows and the four
+antitank gun rows `S-G-EWGR/EWGL/EWGM/EWGH--`, whose Annex B code meanings
+disagree with the Annex D table (Annex D shifts the gun rows by one). Their
 source images are retained and marked as conflicts rather than being copied into
 unrelated icons. The remaining image pairs still require visual review; the
 comparison score is a triage aid, not a conformance verdict.
@@ -166,11 +182,24 @@ script reuses unchanged image results; omit it after changing the metric itself.
 ## Integration and distribution
 
 APP-6A follows the normal `ms.addIcons(app6a)` registration path. Its bundle is
-assembled in `src/lettersidc.js`; glyph definitions and edition differences live
+an explicit list of domain modules in `src/lettersidc.js`, not derived from
+`app6b` and not dependent on the `std2525bextra` provider. Naval station geometry
+is shared through the existing sea/subsurface icon-part modules; the 2525B extra
+module retains its legacy names. Glyph definitions and edition differences live
 in the existing `src/lettersidc/sidc/` and `src/iconparts/` modules. SIDC vocabulary,
 validation and Table III rules live in the existing letter metadata module.
+That registered metadata provider supplies an optional `validation` result
+(`valid` and extended `details`), recalculated by `setOptions`. The general
+`isValid()` consumer does not import a standard-specific module. APP-6A starts
+with a failed validation result until a letter provider validates it, so a
+numeric SIDC or a missing letter provider cannot bypass the edition checks.
 There is no separate APP-6A renderer, global provider registry or `src/standards`
 layer. EMS and US tactical providers guard against overriding APP-6A definitions.
+
+Registration-isolation tests compare 14,512 combinations of catalog entry,
+identity, status and frame with APP-6A alone and with all bundles registered in
+both orders. SVG output and public validation results must match. This verifies
+integration isolation, not conformance of every illustration to the publication.
 
 `studio/app6a-catalog.js` contains names/provenance for the editor and independent
 catalog tests only. It is not exported from the library entry point or bundled

@@ -52,9 +52,9 @@ Style: Prettier with `trailingComma: "none"`; ESLint requires semicolons and `pr
 
 ### APP-6A profile (fork extension, partial conformance)
 
-- APP-6A uses the existing `lettersidc/sidc` and `iconparts` modules, registered through `ms.addIcons(app6a)`. Do not add a second renderer or global provider registry.
-- `src/lettersidc/metadata.js` contains the independent Annex B code vocabulary, `isApp6aSidc` and Table III field/modifier rules. `isValid()` applies these edition checks.
-- `studio/app6a-catalog.js` holds 877 editor/test entries with publication references. It is not part of the rendering library. Tests assert its IDs match the metadata vocabulary.
+- APP-6A explicitly lists the existing `lettersidc/sidc` and `iconparts` domain modules, registered through `ms.addIcons(app6a)`. It must not derive its bundle from `app6b` or load `std2525bextra`. Shared naval station geometry lives in the sea/subsurface icon-part modules. Do not add a second renderer or global provider registry.
+- `src/lettersidc/metadata.js` contains the independent Annex B code vocabulary, `isApp6aSidc` and Table III field/modifier rules. The registered metadata provider returns optional `metadata.validation = {valid, details}`; `isValid()` consumes this result without importing edition-specific code. `setOptions()` recalculates it. APP-6A fails closed until a letter provider validates it.
+- `studio/app6a-catalog.js` holds 907 editor/test entries with publication references. It is not part of the rendering library. Tests assert its IDs match the metadata vocabulary.
 - EMS, US tactical, stability and SIGINT providers guard against overriding APP-6A definitions. Only explicitly registered modules are available after `ms.reset()`.
 - Scope is point symbols only: no multipoint graphics, weather, or intel/mapping schemes. `docs/app6a.md` lists the errata and explicit local image-audit commands. Generated evidence stays in `output/app6a-audit/` and local `dist/studio/audit/`; the active image audit is S-scheme only.
 

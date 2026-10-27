@@ -395,6 +395,18 @@ export default function (
     icn["AIR.MISSILE.ICON"].fill = frame
       ? colors.fillColor.Unknown
       : colors.iconFillColor.Unknown;
+  // APP-6A Annex D: one centered SUS label, with a gap in the missile body.
+  // Do not reuse the later edition's left SU / right S role modifiers.
+  if (metadata.app6a) {
+    icn["AIR.MISSILE.IC.SUBSURFACE TO SURFACE"] = [
+      {
+        type: "path",
+        d: "M93,83 V65 l7,-10 7,10 v18 M93,113 v6 l-6,5 v11 l13,-10 13,10 v-11 l-6,-5 v-6",
+        fill: icn["AIR.MISSILE.ICON"].fill
+      },
+      { ...text("SUS"), y: 100, fontsize: 36 }
+    ];
+  }
   icn["AIR.MISSILE.IC.ANTIBALLISTIC MISSILE"] = {
     type: "text",
     stroke: false,

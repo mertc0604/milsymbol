@@ -74,9 +74,14 @@ export default function getColors() {
       !this.metadata.frame && !(!this.metadata.frame && !this.style.icon)
         ? baseColorNone
         : baseFillColor;
+    //APP-6A: in unframed symbols colour is the sole indicator of affiliation, so the icon takes the identity colour (Table V).
+    const app6aUnframed =
+      this.metadata.app6a && !this.metadata.frame && !this.metadata.controlMeasure;
     colors.iconColor =
       typeof this.style.iconColor === "object"
         ? this.style.iconColor
+        : app6aUnframed
+        ? baseIconColor
         : baseColorBlack;
     //Dirty override, we want colors in the icon if we just turn off the frame. This is a special fix for filled icn in 2525.
     colors.iconFillColor = !this.metadata.frame

@@ -10,6 +10,10 @@ export default {
   iconParts: [tacticalpoints],
   labels: labels,
   icons: function tacticalPoints(sidc, bbox, icn, std2525) {
+    if (this.metadata.app6a) {
+      sidc["G-O-SBWD--"] = icn["TP.WRECK, DANGEROUS"];
+      bbox["G-O-SBXD--"] = { x1: 35, x2: 165, y1: 70, y2: 130 };
+    }
     // Tactical Point Symbols =========================================================================
     sidc["G-T-GD----"] = icn["TP.DESTROY"]; //2.X.1.1.9
     bbox["G-T-GD----"] = { x1: 0, x2: 200, y1: 40, y2: 160 };

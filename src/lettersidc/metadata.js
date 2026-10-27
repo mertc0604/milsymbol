@@ -381,6 +381,15 @@ export function metadata(ms, metadata, mapping) {
     metadata.dimension = mapping.dimension[1];
   }
 
+  if (metadata.app6a) {
+    const standard = isApp6aSidc(this.options.sidc);
+    const modifierErrors = validateApp6aOptions(this.options.sidc, this.options);
+    metadata.validation = {
+      valid: standard && modifierErrors.length === 0,
+      details: { standard, modifierErrors }
+    };
+  }
+
   return metadata;
 }
 
@@ -440,6 +449,11 @@ S-G-USAXC- S-G-USAL-- S-G-USALT- S-G-USALC- S-G-USAW-- S-G-USAWT- S-G-USAWC-
 S-G-USAQ-- S-G-USAQT- S-G-USAQC- S-G-USM--- S-G-USMT-- S-G-USMC-- S-G-USMM--
 S-G-USMMT- S-G-USMMC- S-G-USMV-- S-G-USMVT- S-G-USMVC- S-G-USMD-- S-G-USMDT-
 S-G-USMDC- S-G-USMP-- S-G-USMPT- S-G-USMPC- S-G-USS--- S-G-USST-- S-G-USSC--
+S-G-USS1-- S-G-USS1T- S-G-USS1C- S-G-USS2-- S-G-USS2T- S-G-USS2C- S-G-USS3--
+S-G-USS3T- S-G-USS3C- S-G-USS3A- S-G-USS3AT S-G-USS3AC S-G-USS4-- S-G-USS4T-
+S-G-USS4C- S-G-USS5-- S-G-USS5T- S-G-USS5C- S-G-USS6-- S-G-USS6T- S-G-USS6C-
+S-G-USS7-- S-G-USS7T- S-G-USS7C- S-G-USS8-- S-G-USS8T- S-G-USS8C- S-G-USS9--
+S-G-USS9T- S-G-USS9C-
 S-G-USSX-- S-G-USSXT- S-G-USSXC- S-G-USSL-- S-G-USSLT- S-G-USSLC- S-G-USSW--
 S-G-USSWT- S-G-USSWC- S-G-USSWP- S-G-USSWPT S-G-USSWPC S-G-UST--- S-G-USTT--
 S-G-USTC-- S-G-USTM-- S-G-USTMT- S-G-USTMC- S-G-USTR-- S-G-USTRT- S-G-USTRC-
@@ -576,7 +590,8 @@ export function isApp6aSidc(value) {
     .toUpperCase()
     .replace(/\*/g, "-")
     .replace(/ /g, "");
-  if (!/^[SG][PUAFNSHJKO][A-Z][AP][A-Z-]{6}[A-Z0-9-]{0,5}$/.test(sidc))
+  // Function IDs may contain digits (supply classes, e.g. USS1--).
+  if (!/^[SG][PUAFNSHJKO][A-Z][AP][A-Z0-9-]{6}[A-Z0-9-]{0,5}$/.test(sidc))
     return false;
   if (!app6aCodes.has(`${sidc[0]}-${sidc[2]}-${sidc.slice(4, 10)}`))
     return false;

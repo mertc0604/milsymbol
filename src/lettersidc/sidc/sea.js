@@ -130,5 +130,12 @@ export default {
     sId["S-S-ZM----"] = [icn["SE.IC.SEA MINELIKE"]];
     sId["S-S-ZN----"] = [icn["SE.IC.NAVIGATIONAL"]];
     sId["S-S-ZI----"] = [icn["SE.IC.ICEBERG"]];
+    if (this.metadata.app6a) {
+      sId["S-S-S-----"] = icn["SE.IC.STATION"];
+      sId["S-S-SP----"] = icn["SE.IC.STATION PICKET"];
+      sId["S-S-SA----"] = icn["SE.IC.STATION ASW SHIP"];
+      sId["S-S-NN----"] = icn["SE.IC.STATION NONCOMBATANT"];
+      sId["S-S-NNR---"] = icn["SE.IC.STATION RESCUE"];
+    }
   },
 };

@@ -1,4 +1,17 @@
-import { ms, app6a, std2525e, lettersea, letteremergencymanagementsymbols } from "../index.mjs";
+import {
+  ms,
+  app6a,
+  app6b,
+  std2525b,
+  std2525c,
+  app6d,
+  std2525d,
+  std2525e,
+  lettersea,
+  lettersubsurface,
+  letterstd2525bextra,
+  letteremergencymanagementsymbols
+} from "../index.mjs";
 import { getApp6aFields, app6aCodes } from "../src/lettersidc/metadata.js";
 import { app6aCatalog } from "../studio/app6a-catalog.js";
 
@@ -7,8 +20,13 @@ ms.addIcons(app6a);
 ms.setStandard("APP6A");
 
 const result = {
-  "catalog count": [app6aCatalog.length, 877],
-  "unique catalog IDs": [new Set(app6aCatalog.map((row) => row.id)).size, 877],
+  "APP6A has its own bundle": [app6a === app6b, false],
+  "APP6A does not register the 2525B extra provider": [
+    app6a.includes(letterstd2525bextra),
+    false
+  ],
+  "catalog count": [app6aCatalog.length, 907],
+  "unique catalog IDs": [new Set(app6aCatalog.map((row) => row.id)).size, 907],
   "code set matches catalog": [
     JSON.stringify([...app6aCodes]),
     JSON.stringify(app6aCatalog.map((row) => row.id))
@@ -85,6 +103,25 @@ for (const affiliation of ["U", "F", "N", "H"]) {
   for (const code of ["WM----", "WMS---", "WMAA--", "WMU---"]) {
     const parts = iconParts(new ms.Symbol(`S${affiliation}AP${code}-----`));
     result[`missile yellow fill ${affiliation}/${code}`] = [parts.some(p => p.type === "path" && p.fill === "rgb(255,255,128)"), true];
+  }
+}
+for (const affiliation of ["U", "F", "N", "H"]) {
+  for (const frame of [true, false]) {
+    for (const standard of ["APP6A", "APP6", "2525", "APP6A"]) {
+      const symbol = new ms.Symbol(`S${affiliation}APWMU--------`, {
+        standard,
+        frame
+      });
+      const labels = iconParts(symbol)
+        .filter(part => part.type === "text")
+        .map(part => [part.text, part.x, part.y]);
+      result[`subsurface missile label ${standard}/${affiliation}/${frame}`] = [
+        labels,
+        standard === "APP6A"
+          ? [["SUS", 100, 100]]
+          : [["S", 68, 85], ["U", 68, 115], ["S", 132, 100]]
+      ];
+    }
   }
 }
 result["APP6A land-mine triangle points down"] = [
@@ -202,12 +239,15 @@ result["APP6A merchant label sits within the hull"] = [
   cargoParts.filter(part => part.type === "text" && part.text === "CA").map(part => [part.y, part.fontsize]),
   [[107, 24]]
 ];
-for (const [affiliation, outline] of [
-  ["U", "rgb(255,255,0)"],
-  ["F", "rgb(0,255,255)"],
-  ["N", "rgb(0,255,0)"],
-  ["H", "rgb(255,0,0)"]
-]) {
+// In unframed symbols colour is the sole indicator of affiliation (APP-6A
+// para. 2 and Table V); Annex D draws the icons in these identity colours.
+const identityColour = {
+  U: "rgb(255, 255, 0)",
+  F: "rgb(0, 255, 255)",
+  N: "rgb(0, 255, 0)",
+  H: "rgb(255, 0, 0)"
+};
+for (const [affiliation, outline] of Object.entries(identityColour)) {
   for (const frame of [true, false]) {
     for (const functionId of ["EVUL--", "EVUS--"]) {
       const parts = iconParts(new ms.Symbol(`S${affiliation}GP${functionId}-----`, { frame }));
@@ -218,6 +258,66 @@ for (const [affiliation, outline] of [
     }
   }
 }
+function iconColours(symbol) {
+  const colours = iconParts(symbol)
+    .filter(part => part.icon)
+    .flatMap(part => [part.stroke, part.fill])
+    .filter(colour => colour && colour !== "none");
+  return [...new Set(colours)].sort();
+}
+for (const [affiliation, colour] of Object.entries(identityColour)) {
+  const light = { U: "rgb(255,255,128)", F: "rgb(128,224,255)", N: "rgb(170,255,170)", H: "rgb(255,128,128)" }[affiliation];
+  for (const code of ["EWAL--", "EVATH-", "ES----", "EXMC--", "EVUB--"]) {
+    const sidc = `S${affiliation}GP${code}-----`;
+    result[`APP6A unframed ${code} icon in identity colour ${affiliation}`] = [
+      iconColours(new ms.Symbol(sidc, { frame: false })),
+      [colour]
+    ];
+    result[`APP6A framed ${code} icon stays black ${affiliation}`] = [
+      iconColours(new ms.Symbol(sidc, { frame: true })),
+      ["black"]
+    ];
+  }
+  result[`APP6A unframed sea combatant in identity colour ${affiliation}`] = [
+    iconColours(new ms.Symbol(`S${affiliation}SPCLCC-----`, { frame: false })),
+    [colour]
+  ];
+  // Annex D fills these shapes with the identity colour and keeps black lines.
+  for (const sidc of [`S${affiliation}SPXMC-----`, `S${affiliation}UPWDM-----`]) {
+    result[`APP6A unframed ${sidc} keeps black lines`] = [
+      iconColours(new ms.Symbol(sidc, { frame: false })),
+      ["black", light].sort()
+    ];
+  }
+  // Annex D draws bottom returns, wrecks, marine life and anomalies black.
+  for (const code of ["NB----", "NBR---", "NBW---", "NM----", "NA----"]) {
+    result[`APP6A unframed ${code} stays black ${affiliation}`] = [
+      iconColours(new ms.Symbol(`S${affiliation}UP${code}-----`, { frame: false })),
+      ["black"]
+    ];
+  }
+  for (const standard of ["APP6", "2525"]) {
+    result[`${standard} unframed equipment icon stays black ${affiliation}`] = [
+      iconColours(new ms.Symbol(`S${affiliation}GPEWAL-----`, { standard, frame: false })),
+      ["black"]
+    ];
+  }
+}
+result["APP6A tactical graphic stays black"] = [
+  iconColours(new ms.Symbol("GFTPGD---------")),
+  ["black"]
+];
+result["APP6A unframed icon follows monoColor"] = [
+  iconColours(new ms.Symbol("SFGPEVUL-------", { frame: false, monoColor: "rgb(10,20,30)" })),
+  ["rgb(10,20,30)"]
+];
+result["APP6A unframed icon honours a custom iconColor"] = [
+  iconColours(new ms.Symbol("SFGPEWAL-------", {
+    frame: false,
+    iconColor: new ms.ColorMode("black", "rgb(1,2,3)", "black", "black", "black", "black")
+  })),
+  ["rgb(1,2,3)"]
+];
 const civilianPatrol = new ms.Symbol("SFSPXL---------").asSVG();
 const civilianAirText = new ms.Symbol("SFAPC----------").drawInstructions.flat(Infinity).find(p=>p && p.icon && p.text === "CIV");
 result["APP6A CIV uses solid lettering"] = [civilianAirText.fill, "black"];
@@ -290,6 +390,90 @@ ms.addIcons(lettersea);
 ms.setStandard("APP6A");
 result["APP6A uses normally registered sea module"] = [new ms.Symbol("SFSPXMC--------").isValid(), true];
 result["APP6A does not secretly load unregistered air modules"] = [new ms.Symbol("SFAPMF---------").isValid(), false];
+for (const code of ["S-----", "SP----", "SA----", "NN----", "NNR---"]) {
+  result[`sea module alone supplies APP6A station ${code}`] = [
+    new ms.Symbol(`SFSP${code}-----`).isValid(),
+    true
+  ];
+}
+ms.reset();
+ms.addIcons(lettersubsurface);
+ms.setStandard("APP6A");
+for (const code of ["SS----", "SSA---"]) {
+  result[`subsurface module alone supplies APP6A station ${code}`] = [
+    new ms.Symbol(`SFUP${code}-----`).isValid(),
+    true
+  ];
+}
+const updated = new ms.Symbol("SFUPSS---------");
+updated.setOptions({ higherFormation: "1 DIV" });
+result["setOptions recomputes modifier validation"] = [updated.isValid(), false];
+updated.setOptions({ higherFormation: "" });
+result["clearing a modifier restores validity"] = [updated.isValid(), true];
+updated.setOptions({ standard: "APP6" });
+result["changing edition removes APP6A validation"] = [
+  updated.metadata.validation,
+  undefined
+];
+
+// Capture both the public validation contract and SVG output. Registering any
+// other standard, in either order, must not alter the independent APP-6A bundle.
+function captureApp6a(bundles) {
+  ms.reset();
+  for (const bundle of bundles) ms.addIcons(bundle);
+  const snapshots = [];
+  for (const row of app6aCatalog) {
+    for (const affiliation of ["U", "F", "N", "H"]) {
+      for (const status of ["P", "A"]) {
+        for (const frame of [true, false]) {
+          const sidc =
+            row.id[0] +
+            affiliation +
+            row.id[2] +
+            status +
+            row.id.slice(4) +
+            row.modifier.replace(/\*/g, "-") +
+            "---";
+          const symbol = new ms.Symbol(sidc, { standard: "APP6A", frame });
+          snapshots.push(
+            JSON.stringify([
+              symbol.asSVG(),
+              symbol.isValid(),
+              symbol.isValid(true)
+            ])
+          );
+        }
+      }
+    }
+  }
+  return snapshots;
+}
+const standalone = captureApp6a([app6a]);
+result["independent bundle comparison cases"] = [standalone.length, 14512];
+const bundles = [app6a, app6b, std2525b, std2525c, app6d, std2525d, std2525e];
+for (const [order, registered] of [
+  ["normal", bundles],
+  ["reverse", [...bundles].reverse()]
+]) {
+  const mixed = captureApp6a(registered);
+  result[`APP6A unchanged by ${order} mixed registration`] = [
+    mixed.filter((value, index) => value !== standalone[index]).length,
+    0
+  ];
+}
+ms.reset();
+ms.addIcons(std2525e);
+result["numeric APP6A fails without a letter provider"] = [
+  new ms.Symbol("130310000012110000000000000000", {
+    standard: "APP6A"
+  }).isValid(),
+  false
+];
+result["numeric provider does not attach letter validation"] = [
+  new ms.Symbol("130310000012110000000000000000", { standard: "2525" }).metadata
+    .validation,
+  undefined
+];
 ms.reset();
 
 export default { "APP-6A point profile": result };

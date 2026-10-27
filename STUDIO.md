@@ -30,16 +30,16 @@ placeholders use the current editor selections; other `*` characters become
 The input and exported SIDC show the resolved code. Numeric SIDCs still require
 20–30 digits.
 
-APP-6A (1998) displays 683 publication-derived S-scheme tactical symbols.
+APP-6A (1998) displays 713 publication-derived S-scheme tactical symbols.
 G-scheme tactical graphics are excluded from this editor view and from manual
-APP-6A code entry. The library retains its existing 877-entry point profile.
+APP-6A code entry. The library retains its existing 907-entry point profile.
 The editor provides
 edition-specific SIDC validation, Present/Planned status, and automatic installation
 modifiers. It reuses the library's NATO drawing primitives; it is not a complete
 implementation of multipoint tactical graphics or weather symbols. See
 [APP-6A support and publication errata](docs/app6a.md).
 
-The current visual audit covers only the 683 S-scheme entries. Follow the local
+The current visual audit covers only the 713 S-scheme entries. Follow the local
 commands in [APP-6A documentation](docs/app6a.md), then open
 `/audit/symbols/index.html` for publication / before / current / difference views.
 G graphics are excluded.

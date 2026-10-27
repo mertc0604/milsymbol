@@ -268,11 +268,13 @@ export default {
       icn["AIR.MISSILE.M1.AIR"],
       icn["AIR.MISSILE.M2.SPACE"],
     ];
-    sId["S-A-WMU---"] = [
-      icn["AIR.MISSILE.ICON"],
-      icn["AIR.MISSILE.M1.SUBSURFACE"],
-      icn["AIR.MISSILE.M2.SURFACE"],
-    ];
+    sId["S-A-WMU---"] = this.metadata.app6a
+      ? [icn["AIR.MISSILE.IC.SUBSURFACE TO SURFACE"]]
+      : [
+          icn["AIR.MISSILE.ICON"],
+          icn["AIR.MISSILE.M1.SUBSURFACE"],
+          icn["AIR.MISSILE.M2.SURFACE"]
+        ];
     sId["S-A-WML---"] = [
       icn["AIR.MISSILE.ICON"],
       icn["AIR.MISSILE.M1.LAND"],

@@ -35,10 +35,20 @@ source_conflicts={
     "S-U-WMOD--": {"U":"Unknown cell depicts an HZ merchant vessel instead of a neutralized mine."},
     "S-U-WMFD--": {"U":"Unknown cell depicts a solid arrow in a circle; the other three cells use a crossed floating mine. Publication inconsistency retained for review."},
     "S-U-NM----": {"H":"Hostile cell depicts an HZ merchant vessel instead of marine life."},
+    "S-U-SN----": {"H":"Hostile cell depicts a small blue surface vessel, not a framed hostile nuclear submarine."},
+    "S-U-NBW---": {"H":"Hostile unframed wreck cell depicts a framed hostile submarine."},
+    "S-F-AHU---": {"U":"Unknown cell depicts a neutral JI square, not SOF rotary-wing utility.","H":"Hostile cell depicts a friend PC circle, not SOF rotary-wing utility."},
+    "S-F-AFUL--": {"U":"Unknown cell depicts a hostile merchant vessel, not SOF fixed-wing utility (light)."},
     "S-G-EWMAT-": {"*":"Annex B defines EWMAT as theatre; Annex D uses its hierarchy/code for short range without T. Annex B semantics retained pending authoritative resolution."},
     "S-G-EWMAS-": {"*":"Annex B defines EWMAS as short range; Annex D uses its hierarchy/code for theatre with T. Annex B semantics retained pending authoritative resolution."},
     "S-G-EWMAL-": {"*":"Annex B defines EWMAL as long range; Annex D labels the same code/hierarchy intermediate range."},
     "S-G-EWMAI-": {"*":"Annex B defines EWMAI as intermediate range; Annex D labels the same code/hierarchy long range."},
+    # Annex D (PDF 247-248) shifts the antitank gun rows by one: 1.X.3.2.1.9.1-4
+    # are light/medium/heavy/recoilless there, recoilless/light/medium/heavy in Annex B.
+    "S-G-EWGR--": {"*":"Annex B defines EWGR as recoilless; Annex D labels the same code/hierarchy light and draws one bar."},
+    "S-G-EWGL--": {"*":"Annex B defines EWGL as light; Annex D labels the same code/hierarchy medium and draws two bars."},
+    "S-G-EWGM--": {"*":"Annex B defines EWGM as medium; Annex D labels the same code/hierarchy heavy and draws three bars."},
+    "S-G-EWGH--": {"*":"Annex B defines EWGH as heavy; Annex D labels the same code/hierarchy recoilless and draws the arrow."},
 }
 printed_pages={}
 
@@ -49,16 +59,45 @@ def clustered(values):
         else: result.append(value)
     return result
 
+def merge_hierarchy_suffixes(words):
+    for word in words:
+        if re.fullmatch(r"1\.X(?:\.\d+)+\.",word["text"]):
+            suffix=next((w for w in words if re.fullmatch(r"\d+",w["text"]) and abs(w["x0"]-word["x0"])<3 and 0<w["top"]-word["top"]<18),None)
+            if suffix: word["text"]+=suffix["text"]
+
+def discover_uncataloged(pdf):
+    """Annex D rows whose hierarchy is absent from the APP-6A catalog.
+    Code and name come from the publication's own Annex B row, so the
+    report can show the gap instead of silently skipping these rows."""
+    annex_b={}
+    for page_index in range(70,135):
+        page=pdf.pages[page_index]
+        words=page.extract_words()
+        footer=next((w for w in words if w["text"].isdigit() and 280<w["x0"]<320 and w["top"]>690),None)
+        for line in (page.extract_text() or "").split("\n"):
+            m=re.fullmatch(r"(1\.X[\d.]+) S \* ([A-Z]) \* (\S\S) (\S\S) (\S\S) \S+ \S+ \S+ (.+)",line.strip())
+            if m:
+                annex_b[m[1]]={"id":f"S-{m[2]}-{m[3]}{m[4]}{m[5]}","name":m[6],"page":int(footer["text"]) if footer else None,"pdfPage":page_index+1}
+    found={}
+    for page_index in range(135,268):
+        words=pdf.pages[page_index].extract_words(); merge_hierarchy_suffixes(words)
+        for anchor in words:
+            hierarchy=anchor["text"]
+            if not re.fullmatch(r"1\.X(?:\.\d+)+",hierarchy) or anchor["x0"]<200 or hierarchy in rows or hierarchy in found: continue
+            if hierarchy not in annex_b:
+                print("Annex D row without Annex B code:",hierarchy,"PDF",page_index+1); continue
+            found[hierarchy]={**annex_b[hierarchy],"hierarchy":hierarchy,"modifier":"**","notInCatalog":True,
+                "catalogNote":"Defined in Annex B and illustrated in Annex D, but absent from the APP-6A catalog/vocabulary (studio/app6a-catalog.js, src/lettersidc/metadata.js)."}
+    return found
+
 with pdfplumber.open(sys.argv[1]) as pdf:
+    rows.update(discover_uncataloged(pdf))
     for page_index in range(135,268):
         page=pdf.pages[page_index]; words=page.extract_words()
         footer=next((w for w in words if w["text"].isdigit() and 280<w["x0"]<320 and w["top"]>690),None)
         if footer: printed_pages[page_index+1]=int(footer["text"])
         if "TABLE D-" not in " ".join(w["text"] for w in words[:35]): continue
-        for word in words:
-            if re.fullmatch(r"1\.X(?:\.\d+)+\.",word["text"]):
-                suffix=next((w for w in words if re.fullmatch(r"\d+",w["text"]) and abs(w["x0"]-word["x0"])<3 and 0<w["top"]-word["top"]<18),None)
-                if suffix: word["text"]+=suffix["text"]
+        merge_hierarchy_suffixes(words)
         frame_header=next((w for w in words if w["text"]=="F" and 280<w["x0"]<307 and 90<w["top"]<130),None)
         if not frame_header: continue
         # Both publication table layouts have 57.6 pt affiliation columns.

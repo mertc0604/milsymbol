@@ -1,7 +1,6 @@
-import { isApp6aSidc, validateApp6aOptions } from "../../lettersidc/metadata.js";
-
 export default function isValid(extended) {
-  const modifierErrors = this.metadata.app6a ? validateApp6aOptions(this.options.sidc, this.options) : [];
+  // Optional SIDC-specific validation is supplied by the metadata provider.
+  const validation = this.metadata.validation;
   const drawInstructions =
     JSON.stringify(this.drawInstructions).indexOf("null") == -1;
 
@@ -13,9 +12,7 @@ export default function isValid(extended) {
       drawInstructions: drawInstructions,
       icon: this.validIcon,
       mobility: this.metadata.mobility != undefined,
-      ...(this.metadata.app6a
-        ? { standard: isApp6aSidc(this.options.sidc), modifierErrors }
-        : {})
+      ...(validation ? validation.details : {})
     };
   } else {
     return (
@@ -27,7 +24,7 @@ export default function isValid(extended) {
       drawInstructions &&
       this.validIcon &&
       this.metadata.mobility != undefined &&
-      (!this.metadata.app6a || isApp6aSidc(this.options.sidc)) && modifierErrors.length === 0
+      (!validation || validation.valid)
     );
   }
 }

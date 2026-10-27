@@ -600,6 +600,14 @@ export default {
       icn["GR.M2.WHEELED"],
       _STD2525 || this.metadata.app6a ? icn["GR.M1.CHEMICAL SURVEILLANCE"] : []
     ];
+    if (this.metadata.app6a) {
+      // Annex D, PDF 204: in the wheeled recon vehicles the NBC sign stays
+      // inside the track, clear of the wheels.
+      for (const code of ["S-G-UUACRW", "S-G-UUACRS"]) {
+        sId[code] = sId[code].map(part => part === icn["GR.IC.CBRN"]
+          ? ms._translate(0, -2, ms._scale(0.52, part)) : part);
+      }
+    }
     sId["S-G-UUAN--"] = [icn["GR.IC.CBRN"], icn["GR.M1.NUCLEAR"]];
     sId["S-G-UUAB--"] = [icn["GR.IC.CBRN"], icn["GR.M1.BIOLOGICAL"]];
     sId["S-G-UUABR-"] = [
@@ -1187,6 +1195,21 @@ export default {
       icn["GR.IC.FF.CORPS SUPPORT"],
       icn["GR.M1.ELECTRO-OPTICAL"]
     ];
+    if (this.metadata.app6a) {
+      // Annex D, PDF 213-215: recovery is a bar with end wheels under the
+      // wrench (not railway wheels); the ordnance missile has a centre line.
+      const recovery = [
+        { ...icn["GR.M2.RAILROAD"][0], d: "M66,110 H134" },
+        { ...icn["GR.M2.RAILROAD"][1], cx: 70, cy: 115, r: 4.5 },
+        { ...icn["GR.M2.RAILROAD"][4], cx: 130, cy: 115, r: 4.5 }
+      ];
+      const missile = { ...icn["GR.M1.MISSILE"], d: "M 95,78 V 58 c 0,-5 10,-5 10,0 v 20 M100,54 V78" };
+      for (const code of Object.keys(sId)) {
+        if (!code.startsWith("S-G-USX")) continue;
+        sId[code] = sId[code].flatMap(part => part === icn["GR.M2.RAILROAD"] ? recovery
+          : part === icn["GR.M1.MISSILE"] ? [missile] : [part]);
+      }
+    }
     sId["S-G-USXBDR"] = [
       icn["GR.IC.MAINTENANCE"],
       icn["GR.M2.BATTLE DAMAGE REPAIR"]

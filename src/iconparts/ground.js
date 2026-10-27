@@ -43,16 +43,9 @@ export default function (
   //  const none = colors.none[affiliation];
   const black = colors.black[affiliation];
   const white = colors.white[affiliation];
-  // Annex D draws unframed utility equipment with saturated affiliation lines,
-  // while its framed examples use thin black interior strokes.
-  const app6aUtilityStroke = frame
-    ? black
-    : {
-        Unknown: "rgb(255,255,0)",
-        Friend: "rgb(0,255,255)",
-        Neutral: "rgb(0,255,0)",
-        Hostile: "rgb(255,0,0)"
-      }[affiliation] || black;
+  // Annex D draws unframed utility equipment with thin lines in the identity
+  // colour, while its framed examples use thin black interior strokes.
+  const app6aUtilityStroke = frame ? black : iconColor;
   const app6aUtilityLine = metadata.app6a
     ? { stroke: app6aUtilityStroke, strokewidth: 1.5 }
     : {};
@@ -273,16 +266,28 @@ export default function (
   icn[
     "GR.IC.BUREAU OF ALCOHOL, TOBACCO, FIREARMS AND EXPLOSIVES (ATF) (DEPARTMENT OF JUSTICE)"
   ] = text("ATF");
-  icn["GR.IC.CBRN"] = [
-    {
-      type: "path",
+  icn["GR.IC.CBRN"] = metadata.app6a
+    ? [
+        // Annex D, PDF 203: larger dots; each line leaves its dot inwards,
+        // crosses the other and runs down to the bottom of the icon.
+        {
+          type: "path",
+          d: "M66,85 C92,79 115,100 115,140 M134,85 C108,79 85,100 85,140",
+          fill: false
+        },
+        { type: "circle", cx: 66, cy: 85, r: 8 },
+        { type: "circle", cx: 134, cy: 85, r: 8 }
+      ]
+    : [
+        {
+          type: "path",
 
-      d: "m 74,120 c 0,-15 13.2,-32.9 65,-36  m -13,36 C 126,105 113,87.1 61.5,84",
-      fill: false
-    },
-    { type: "circle", cx: 65, cy: 90, r: 6 },
-    { type: "circle", cx: 135, cy: 90, r: 6 }
-  ];
+          d: "m 74,120 c 0,-15 13.2,-32.9 65,-36  m -13,36 C 126,105 113,87.1 61.5,84",
+          fill: false
+        },
+        { type: "circle", cx: 65, cy: 90, r: 6 },
+        { type: "circle", cx: 135, cy: 90, r: 6 }
+      ];
   icn[
     "GR.CHEMICAL, BIOLOGICAL, RADIOLOGICAL, NUCLEAR, AND HIGH-YIELD EXPLOSIVES"
   ] = [
@@ -557,7 +562,10 @@ export default function (
   if (metadata.app6a) icn["GR.IC.MORTAR"].push({ type: "path", d: "M100,54 96,64 104,64 Z", stroke: false });
   icn["GR.IC.MORTUARY AFFAIRS"] = {
     type: "path",
-    d: "m 70,85 h 60 v 30 H 70 Z  m 40,5 v 20  M 74.8,100 H 125",
+    // APP-6A Annex D, PDF 215: an upright coffin with a cross.
+    d: metadata.app6a
+      ? "M79,61 h42 v76 h-42 Z M100,66 V131 M83,85 h34"
+      : "m 70,85 h 60 v 30 H 70 Z  m 40,5 v 20  M 74.8,100 H 125",
     fill: false,
     styleFill: true
   };
@@ -1362,14 +1370,24 @@ export default function (
       fill: false
     }
   ];
-  icn["GR.IC.EQUIPMENT MANUFACTURE"] = [
-    { type: "circle", cx: 100, cy: 100, r: 20, fill: false },
-    {
-      type: "path",
-      d: "m 100,120 0,20 m 0,-60 0,-20 m 18.1,28.4 16,-9.6 m -16,31.2 16,12 M 82.5,110 66.1,122 M 82.5,88.8 66.5,78",
-      fill: false
-    }
-  ];
+  icn["GR.IC.EQUIPMENT MANUFACTURE"] = metadata.app6a
+    ? [
+        // APP-6A Annex D, PDF 263: eight rays, including horizontal ones.
+        { type: "circle", cx: 100, cy: 100, r: 20, fill: false },
+        {
+          type: "path",
+          d: "M100,120 V140 M100,80 V60 M80,100 H60 M120,100 H140 M85.9,85.9 L71.7,71.7 M114.1,85.9 L128.3,71.7 M85.9,114.1 L71.7,128.3 M114.1,114.1 L128.3,128.3",
+          fill: false
+        }
+      ]
+    : [
+        { type: "circle", cx: 100, cy: 100, r: 20, fill: false },
+        {
+          type: "path",
+          d: "m 100,120 0,20 m 0,-60 0,-20 m 18.1,28.4 16,-9.6 m -16,31.2 16,12 M 82.5,110 66.1,122 M 82.5,88.8 66.5,78",
+          fill: false
+        }
+      ];
   icn["GR.IC.FF.CLASS X"] = {
     type: "text",
     alignmentBaseline: "middle",
@@ -2779,7 +2797,10 @@ export default function (
   icn["GR.EQ.CBRN EQUIPMENT"] = [
     {
       type: "path",
-      d: "M80,140 c0,-20 10,-60 50,-63 m-10,63 c0,-20 -10,-60 -50,-63 ",
+      // APP-6A Annex D, PDF 260: the lines leave the dots inwards.
+      d: metadata.app6a
+        ? "M70,85 C95,79 116,100 116,136 M130,85 C105,79 84,100 84,136"
+        : "M80,140 c0,-20 10,-60 50,-63 m-10,63 c0,-20 -10,-60 -50,-63 ",
       fill: false
     },
     { type: "circle", cx: 70, cy: 85, r: 8 },
@@ -3013,14 +3034,21 @@ export default function (
           text: "M"
         }
       ];
-  icn["GR.EQ.ANTIPERSONNEL LAND MINE"] = [
-    { type: "circle", cx: 100, cy: 100, r: 22 },
-    {
-      type: "path",
-      d: "M117,82 l20,-18 -18,25z M83,82 l-20,-18 18,25z",
-      stroke: false
-    }
-  ];
+  // APP-6A Annex D, PDF 261: a large mine with thin horns, solid for the
+  // claymore and hollow for the less than lethal mine.
+  icn["GR.EQ.ANTIPERSONNEL LAND MINE"] = metadata.app6a
+    ? [
+        { type: "circle", cx: 100, cy: 110, r: 35 },
+        { type: "path", d: "M75,85 L62,72 M125,85 L138,72", fill: false }
+      ]
+    : [
+        { type: "circle", cx: 100, cy: 100, r: 22 },
+        {
+          type: "path",
+          d: "M117,82 l20,-18 -18,25z M83,82 l-20,-18 18,25z",
+          stroke: false
+        }
+      ];
   icn["GR.EQ.ANTIPERSONNEL LAND MINE LESS THAN LETHAL"] = [
     { type: "circle", cx: 100, cy: metadata.app6a ? 110 : 100, r: metadata.app6a ? 35 : 22, fill: false },
     {
@@ -3077,10 +3105,17 @@ export default function (
     { type: "text", stroke: false, x: 100, y: 90, fontsize: 30, text: "PS" },
     { type: "text", stroke: false, x: 100, y: 120, fontsize: 30, text: "RM" }
   ];
-  icn["GR.IN.IC.MINE"] = {
-    type: "path",
-    d: "m 105,85 10,10 5,-5 c -5,-5 -10,-5 -15,-5 z M 95,85 85,95 80,90 c 5,-5 10,-5 15,-5 z m -5,5 30,30 m -40,0 30,-30"
-  };
+  icn["GR.IN.IC.MINE"] = metadata.app6a
+    ? {
+        // APP-6A Annex D, PDF 263: long crossed picks with curved heads.
+        type: "path",
+        fill: false,
+        d: "M66,132 L134,65 M134,132 L66,65 M62,73 C63,66 70,61 82,61 M138,73 C137,66 130,61 118,61"
+      }
+    : {
+        type: "path",
+        d: "m 105,85 10,10 5,-5 c -5,-5 -10,-5 -15,-5 z M 95,85 85,95 80,90 c 5,-5 10,-5 15,-5 z m -5,5 30,30 m -40,0 30,-30"
+      };
   icn["GR.IN.IC.PROCESSING FACILITY"] = [
     { type: "text", stroke: false, x: 100, y: 90, fontsize: 30, text: "PROC" },
     { type: "text", stroke: false, x: 100, y: 120, fontsize: 30, text: "FAC" }

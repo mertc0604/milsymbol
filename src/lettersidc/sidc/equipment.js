@@ -750,6 +750,11 @@ export default {
       "EXMC--": 122,
       "EXML--": 122,
     };
+    // APP-6A: the larger mines reach y 145 and the armoured vehicle's wheels
+    // y 138; do not clip them.
+    if (this.metadata.app6a) {
+      Object.assign(equipmentBottom, { "EXMC--": 147, "EXML--": 147, "EVA---": 139 });
+    }
     for (const key in equipmentBottom) {
       if (!equipmentBottom.hasOwnProperty(key)) continue;
       bbox["S-G-" + key] = {
