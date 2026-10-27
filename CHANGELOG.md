@@ -1,5 +1,18 @@
 # Change Log
 
+## 3.1.0
+
+### Added
+
+- APP-6A (October 1998) point-symbol profile: `ms.setStandard("APP6A")` or `standard: "APP6A"`, with Annex B code validation through `isValid()`. See `docs/app6a.md`.
+- Military Symbol Studio, a browser editor built on the library (`studio/`, published on GitHub Pages).
+- APP-6A supply classes I-IX, which earlier extraction and validation dropped because their function IDs contain digits.
+
+### Fixed
+
+- APP-6A glyphs whose shape differed from Annex D: NBC lines, mortuary, maintenance recovery, ordnance missile, equipment manufacture, mine, claymore and airport.
+- Unframed APP-6A less-than-lethal mine, claymore and armoured vehicle icons were clipped by their bounding box.
+
 ## 3.0.0
 
 ### Added
