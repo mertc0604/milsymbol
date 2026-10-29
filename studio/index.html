@@ -34,6 +34,10 @@
             /></svg
           >Military Symbol Editor</a
         >
+        <label class="standard-switcher" for="standardSelect">
+          <span class="standard-label">Standard</span>
+          <select id="standardSelect" aria-label="Symbology standard"></select>
+        </label>
         <div class="top-actions">
           <a
             href="https://github.com/mertc0604/milsymbol"
@@ -43,12 +47,6 @@
           ><button id="helpButton" class="quiet-button">Help</button>
         </div>
       </header>
-      <nav class="standard-switcher" aria-label="Symbology standard">
-        <span class="standard-label">Standard</span
-        ><button id="standardPrev" hidden>Previous</button>
-        <div id="standardTabs" class="standard-tabs"></div>
-        <button id="standardNext" hidden>Next</button>
-      </nav>
       <main class="workspace">
         <aside class="catalog-panel">
           <div class="panel-heading">

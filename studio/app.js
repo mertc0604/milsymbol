@@ -130,9 +130,7 @@ const mobilities = [
 
 const dom = Object.fromEntries(
   [
-    "standardTabs",
-    "standardPrev",
-    "standardNext",
+    "standardSelect",
     "symbolSearch",
     "clearSearch",
     "categoryFilter",
@@ -360,15 +358,11 @@ function buildSidc(icon = selectedIcon(), minimal = false) {
   return sidc.join("");
 }
 
-function renderStandardTabs() {
-  dom.standardTabs.innerHTML = standards
-    .map(
-      (standard) => `
-    <button aria-pressed="${standard.id === state.standardId}" data-standard="${standard.id}" class="${standard.id === state.standardId ? "active" : ""}">
-      ${standard.label}<small>${standard.detail}</small>
-    </button>`
-    )
+function renderStandardSelect() {
+  dom.standardSelect.innerHTML = standards
+    .map((standard) => `<option value="${standard.id}">${standard.label}</option>`)
     .join("");
+  dom.standardSelect.value = state.standardId;
 }
 
 function setStandard(id) {
@@ -385,14 +379,13 @@ function setStandard(id) {
   if (id === "app6a" && !["present", "planned"].includes(state.status))
     state.status = "present";
   window.ms.setStandard(next.standard);
-  renderStandardTabs();
+  renderStandardSelect();
   populateCategories();
   chooseInitialSymbol();
   syncStandardControls();
   renderCatalog();
   renderAll();
   document.querySelector(".control-scroll").scrollTop = 0;
-  dom.standardTabs.querySelector(".active")?.scrollIntoView({block: "nearest", inline: "nearest"});
 }
 
 function chooseInitialSymbol() {
@@ -860,18 +853,9 @@ function bindEvents() {
       editorTabs[target].focus();
     });
   });
-  dom.standardTabs.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-standard]");
-    if (button) setStandard(button.dataset.standard);
+  dom.standardSelect.addEventListener("change", () => {
+    setStandard(dom.standardSelect.value);
   });
-  const moveStandard = (delta) => {
-    const index = standards.findIndex((item) => item.id === state.standardId);
-    setStandard(
-      standards[(index + delta + standards.length) % standards.length].id
-    );
-  };
-  dom.standardPrev.addEventListener("click", () => moveStandard(-1));
-  dom.standardNext.addEventListener("click", () => moveStandard(1));
   dom.symbolSearch.addEventListener("input", () => {
     state.search = dom.symbolSearch.value;
     state.visible = 40;
@@ -1040,7 +1024,7 @@ async function init() {
     catalog = await response.json();
     createTextFields();
     bindEvents();
-    renderStandardTabs();
+    renderStandardSelect();
     populateCategories();
     chooseInitialSymbol();
     try {
