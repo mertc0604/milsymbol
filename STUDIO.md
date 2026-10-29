@@ -14,6 +14,24 @@ Open `http://127.0.0.1:4173`.
 
 The build creates `dist/studio/`, including a normalized searchable catalog generated from the standard data packages already used by milsymbol. The site offers MIL-STD-2525C/D/E and APP-6A/B/D/E views. APP-6E uses a compatibility catalog. FM 1-02.2 is not offered in the editor; the underlying library is unchanged. Symbols can be exported as SVG or PNG.
 
+The Text amplifiers tab provides 27 controls grouped by purpose: identity and
+organization, information and assessment, time/location/movement, equipment and
+installations, and engagement/maritime. New fields include quantity,
+reinforced/reduced, staff comments, evaluation rating, combat effectiveness,
+IFF/SIF/AIS, altitude/depth, speed, special headquarters, country text,
+platform type, teardown time, common identifier, installation composition,
+engagement bar and type, guarded unit, and special designator. Each field has
+its identifier and guidance; actual placement follows the renderer's symbol-set
+rules. APP-6A retains publication-specific applicability and length limits.
+Reset clears every amplifier, including fields hidden by the current edition.
+Text values are included in SVG/PNG, separately from the SIDC.
+
+Graphic controls include speed-leader length, HQ staff length, and an optional
+symbol stack outside APP-6A. E editions also offer frame-shape overrides,
+encoded at SIDC position 23. Map range rings, national flag artwork, and
+general-rank stars from the reference generator are separate features, not
+rendered modifiers supplied by this library.
+
 Echelon and mobility start unspecified, including after Reset or switching their
 mode. A deliberately selected value is not silently replaced by clicking the
 same mode. Search accepts names, function codes and full SIDCs; Clear / Escape

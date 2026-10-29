@@ -237,6 +237,7 @@ export default function textfieldsMod(ms) {
     this.options.location ||
     this.options.speed ||
     this.options.specialHeadquarters ||
+    this.options.country ||
     this.options.platformType ||
     this.options.equipmentTeardownTime ||
     this.options.commonIdentifier ||

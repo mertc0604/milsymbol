@@ -497,6 +497,26 @@ textarea::placeholder {
   color: #99a5b1;
   font: 10px var(--mono);
 }
+.modifier-group {
+  margin-top: 24px;
+}
+.modifier-group h4 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #435569;
+}
+.control-group label > .modifier-description {
+  font-size: 10px;
+  line-height: 1.5;
+  color: #8793a0;
+}
+input:disabled,
+select:disabled {
+  color: #99a5b1;
+  background: #f5f7f9;
+  cursor: not-allowed;
+}
 .toggle-grid {
   display: flex;
   flex-wrap: wrap;

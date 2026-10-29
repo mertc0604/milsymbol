@@ -1,4 +1,5 @@
-import { app6aTextFields, app6aSymbolClass, getApp6aFields } from "./vendor/letter-metadata.js";
+import { app6aSymbolClass, getApp6aFields } from "./vendor/letter-metadata.js";
+import { modifierGroups, textModifiers, collectTextModifiers } from "./modifier-fields.js";
 
 const standards = [
   {
@@ -168,14 +169,13 @@ const dom = Object.fromEntries(
     "modifier1",
     "modifier2",
     "modifierNote",
-    "uniqueDesignation",
-    "higherFormation",
-    "additionalInformation",
-    "dtg",
-    "location",
-    "typeLabel",
     "direction",
     "directionOutput",
+    "speedLeader",
+    "hqStaffLength",
+    "stack",
+    "frameShape",
+    "frameShapeField",
     "fill",
     "frame",
     "icon",
@@ -252,6 +252,11 @@ function toast(message) {
 
 function currentOptions(minimal = false) {
   const direction = Number(dom.direction.value);
+  const app6a = state.standardId === "app6a";
+  const sidc = state.customSidc || buildSidc();
+  const values = minimal ? {} : Object.fromEntries(textModifiers.map(({ key, id }) =>
+    [key, document.getElementById(id)?.value || ""]
+  ));
   const options = {
     standard: config().standard,
     size: minimal ? 34 : Number(dom.symbolSize.value),
@@ -263,20 +268,13 @@ function currentOptions(minimal = false) {
     infoFields: minimal ? false : dom.infoFields.checked,
     outlineWidth: !minimal && state.outline ? 7 : 0,
     outlineColor: "#ffffff",
-    uniqueDesignation: minimal ? "" : dom.uniqueDesignation.value,
-    higherFormation: minimal ? "" : dom.higherFormation.value,
-    additionalInformation: minimal ? "" : dom.additionalInformation.value,
-    dtg: minimal ? "" : dom.dtg.value,
-    location: minimal ? "" : dom.location.value,
-    type: minimal ? "" : dom.typeLabel.value,
-    direction: minimal || direction < 0 ? undefined : direction
+    ...collectTextModifiers(values, app6a ? getApp6aFields(sidc).map(field => field.key) : null),
+    direction: minimal || direction < 0 ? undefined : direction,
+    speedLeader: minimal ? 0 : Number(dom.speedLeader.value),
+    hqStaffLength: minimal ? 0 : Number(dom.hqStaffLength.value),
+    stack: minimal || app6a ? 0 : Number(dom.stack.value)
   };
-  if (state.standardId === "app6a") {
-    const sidc = state.customSidc || buildSidc();
-    for (const field of app6aTextFields) options[field.key] = "";
-    if (!minimal) for (const field of getApp6aFields(sidc)) options[field.key] = document.getElementById(`a6-${field.key}`)?.value || "";
-    if (app6aSymbolClass(sidc) === "point") options.direction = undefined;
-  }
+  if (app6a && app6aSymbolClass(sidc) === "point") options.direction = undefined;
   return options;
 }
 
@@ -357,6 +355,7 @@ function buildSidc(icon = selectedIcon(), minimal = false) {
   if (!minimal) {
     applyModernModifier(sidc, state.modifier1, 1);
     applyModernModifier(sidc, state.modifier2, 2);
+    if (standard.version === "13") sidc[22] = dom.frameShape.value;
   }
   return sidc.join("");
 }
@@ -570,35 +569,52 @@ function syncModifiers() {
   dom.modifierNote.textContent = `${setName} and common modifiers for this edition.`;
 }
 
+function createTextFields() {
+  const container = document.getElementById("app6aTextFields");
+  // All editions share one form; applicable APP-6A fields are filtered below.
+  container.innerHTML = modifierGroups.map(group => `<section class="modifier-group">
+    <h4>${escapeHtml(group.label)}</h4><div class="control-group two-col">
+    ${group.fields.map(field => `<label><span data-field-label id="label-${field.id}">${escapeHtml(field.label)} <small>${field.field}</small></span>
+      ${field.choices
+        ? `<select id="${field.id}" data-modifier-field="${field.key}" aria-labelledby="label-${field.id}" aria-describedby="help-${field.id}">${field.choices.map(([value, label]) => option(value, label)).join("")}</select>`
+        : `<input id="${field.id}" data-modifier-field="${field.key}" aria-labelledby="label-${field.id}" aria-describedby="help-${field.id}" placeholder="${escapeHtml(field.placeholder)}" />`}
+      <span class="modifier-description" id="help-${field.id}">${escapeHtml(field.description)}</span></label>`).join("")}
+    </div></section>`).join("");
+  container.addEventListener("input", renderAll);
+}
+
 function syncApp6aTextFields() {
   const active = state.standardId === "app6a";
-  document.getElementById("standardTextFields").hidden = active;
-  const container = document.getElementById("app6aTextFields");
-  container.hidden = !active;
   document.getElementById("app6aFieldNote").hidden = !active;
-  if (!container.children.length) {
-    container.innerHTML = app6aTextFields.map(field => `<label><span>${escapeHtml(field.label)} <small>${field.field}</small></span><input id="a6-${field.key}" data-app6a-field="${field.key}" /></label>`).join("");
-    container.addEventListener("input", renderAll);
-  }
+  const container = document.getElementById("app6aTextFields");
   const sidc = state.customSidc || buildSidc();
   const fields = new Map(getApp6aFields(sidc).map(field => [field.key,field]));
-  for (const field of app6aTextFields) {
-    const input = document.getElementById(`a6-${field.key}`);
-    input.parentElement.hidden = active && !fields.has(field.key);
-    input.disabled = active && !fields.has(field.key);
-    if (active && fields.has(field.key)) {
-      const definition = fields.get(field.key);
-      input.previousElementSibling.innerHTML = `${escapeHtml(definition.label)} <small>${definition.field}</small>`;
-      input.maxLength = fields.get(field.key).maxLength;
-      input.placeholder = `Max. ${input.maxLength} characters · ${definition.field}`;
+  for (const field of textModifiers) {
+    const input = document.getElementById(field.id);
+    const definition = active ? fields.get(field.key) : field;
+    input.parentElement.hidden = !definition;
+    input.disabled = !definition;
+    const label = input.parentElement.querySelector("[data-field-label]");
+    if (definition) {
+      label.innerHTML = `${escapeHtml(definition.label)} <small>${definition.field}</small>`;
+      if (!field.choices) {
+        if (active) input.maxLength = definition.maxLength;
+        else input.removeAttribute("maxlength");
+        input.placeholder = active ? `Max. ${definition.maxLength} characters · ${definition.field}` : field.placeholder;
+      }
     }
   }
+  for (const group of container.querySelectorAll(".modifier-group"))
+    group.hidden = ![...group.querySelectorAll("[data-modifier-field]")].some(input => !input.disabled);
   dom.direction.disabled = active && app6aSymbolClass(sidc) === "point";
+  dom.speedLeader.disabled = dom.direction.disabled;
+  dom.stack.disabled = active;
 }
 
 function syncStandardControls() {
   const modern = config().family === "modern";
   dom.contextField.hidden = !modern;
+  dom.frameShapeField.hidden = config().version !== "13";
   // Validate after removing publication whitespace, not while pasting it.
   dom.sidcInput.removeAttribute("maxlength");
   dom.affiliation.innerHTML = (state.standardId === "app6a" ? app6aAffiliations : affiliations)
@@ -782,7 +798,7 @@ function downloadPng() {
 }
 
 function resetControls() {
-  for (const input of document.querySelectorAll("[data-app6a-field]")) input.value = "";
+  for (const input of document.querySelectorAll("[data-modifier-field]")) input.value = "";
   Object.assign(state, {
     affiliation: "friend",
     context: "0",
@@ -796,15 +812,7 @@ function resetControls() {
   });
   dom.colorMode.value = "Light";
   for (const id of ["hq", "taskForce", "feintDummy"]) dom[id].checked = false;
-  for (const id of [
-    "uniqueDesignation",
-    "higherFormation",
-    "additionalInformation",
-    "dtg",
-    "location",
-    "typeLabel"
-  ])
-    dom[id].value = "";
+  for (const id of ["speedLeader", "hqStaffLength", "stack", "frameShape"]) dom[id].value = "0";
   dom.direction.value = -1;
   dom.fill.checked =
     dom.frame.checked =
@@ -931,14 +939,8 @@ function bindEvents() {
     dom[id].addEventListener("change", () => clearCustomAndRender());
   for (const id of ["fill", "frame", "icon", "infoFields"])
     dom[id].addEventListener("change", renderAll);
-  for (const id of [
-    "uniqueDesignation",
-    "higherFormation",
-    "additionalInformation",
-    "dtg",
-    "location",
-    "typeLabel"
-  ])
+  dom.frameShape.addEventListener("change", () => clearCustomAndRender());
+  for (const id of ["speedLeader", "hqStaffLength", "stack"])
     dom[id].addEventListener("input", renderAll);
   for (const id of ["colorMode", "direction", "symbolSize", "strokeWidth"])
     dom[id].addEventListener("input", () => {
@@ -1036,6 +1038,7 @@ async function init() {
     if (!response.ok)
       throw new Error(`Catalog request failed: ${response.status}`);
     catalog = await response.json();
+    createTextFields();
     bindEvents();
     renderStandardTabs();
     populateCategories();

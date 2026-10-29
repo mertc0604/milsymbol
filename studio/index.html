@@ -185,6 +185,9 @@
                   ><span id="amplifierLabel">Echelon</span
                   ><select id="amplifierValue"></select
                 ></label>
+                <label class="full-field" id="frameShapeField" hidden><span>Frame shape override (E editions)</span><select id="frameShape">
+                  <option value="0">Default for symbol set</option><option value="1">Space</option><option value="2">Air</option><option value="3">Land unit</option><option value="4">Land equipment / sea surface</option><option value="5">Land installation</option><option value="6">Dismounted individual</option><option value="7">Sea subsurface</option><option value="8">Activity / event</option><option value="9">Cyberspace</option>
+                </select></label>
               </section>
               <section class="form-section" id="symbolModifiers">
                 <h3>Icon modifiers</h3>
@@ -215,33 +218,8 @@
                 <p class="section-description">
                   Add labels around the symbol. Empty fields are omitted.
                 </p>
-                <div class="control-group two-col" id="standardTextFields">
-                  <label
-                    ><span>Unique designation <small>T</small></span
-                    ><input id="uniqueDesignation" placeholder="e.g. 1/23 INF"
-                  /></label>
-                  <label
-                    ><span>Higher formation <small>M</small></span
-                    ><input id="higherFormation" placeholder="e.g. 2 BDE"
-                  /></label>
-                  <label
-                    ><span>Additional information <small>H</small></span
-                    ><input id="additionalInformation" placeholder="e.g. ALPHA"
-                  /></label>
-                  <label
-                    ><span>Date-time group <small>W</small></span
-                    ><input id="dtg" placeholder="e.g. 091430ZOCT26"
-                  /></label>
-                  <label
-                    ><span>Location <small>Y</small></span
-                    ><input id="location" placeholder="e.g. 35T PF 1234 5678"
-                  /></label>
-                  <label
-                    ><span>Type <small>V</small></span
-                    ><input id="typeLabel" placeholder="e.g. MECH"
-                  /></label>
-                </div>
-                <div id="app6aTextFields" class="control-group two-col" hidden></div>
+                <p class="field-note">Available fields follow the selected edition. Placement depends on the symbol set; text amplifiers are included in SVG / PNG exports, separately from the SIDC.</p>
+                <div id="app6aTextFields"></div>
                 <p id="app6aFieldNote" class="field-note" hidden>APP-6A Table III (pp. 19–21). Only applicable fields are enabled; limits follow the publication.</p>
               </section>
               <section class="form-section">
@@ -257,6 +235,13 @@
                     max="360"
                     value="-1"
                 /></label>
+              </section>
+              <section class="form-section">
+                <h3>Graphic amplifiers</h3>
+                <div class="control-group two-col">
+                  <label><span>Speed leader length <small>AJ</small></span><input id="speedLeader" type="number" min="0" max="500" value="0" /><span class="modifier-description">Movement line length in pixels. Set a direction above; 0 uses the normal arrow.</span></label>
+                  <label><span>HQ staff length <small>S</small></span><input id="hqStaffLength" type="number" min="0" max="500" value="0" /><span class="modifier-description">Applies when Headquarters is selected. 0 uses the default length.</span></label>
+                </div>
               </section>
             </div>
             <div
@@ -296,6 +281,10 @@
                     </select></label
                   >
                 </div>
+                <label class="full-field"><span>Symbol stack</span><select id="stack">
+                  <option value="0">Single symbol</option><option value="1">2 symbols</option><option value="2">3 symbols</option><option value="3">4 symbols</option><option value="4">5 symbols</option><option value="5">6 symbols</option>
+                </select></label>
+                <p class="field-note">Stacking is an optional display extension, available outside the APP-6A publication profile.</p>
                 <label class="range-field"
                   ><span>Symbol size <output id="sizeOutput">100%</output></span
                   ><input
@@ -421,7 +410,9 @@
       </p>
       <p>
         MIL-STD-2525C and APP-6A/B use letter-based codes. The later editions use
-        numeric codes.
+        numeric codes. Text amplifiers are grouped by purpose and include field
+        identifiers and guidance. They are included in SVG and PNG exports;
+        copying the SIDC alone does not include text or appearance settings.
       </p>
       <p>
         APP-6E uses the shared 2525E catalog here, with milsymbol's
