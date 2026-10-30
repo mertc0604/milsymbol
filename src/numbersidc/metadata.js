@@ -56,11 +56,13 @@ export function metadata(ms, metadata, mapping) {
   };
 
   const functionid = (metadata.functionid = this.options.sidc.substr(10, 10));
+  // Only edition E uses positions 21–22 as common modifier identifiers.
+  // In edition D, positions 21–23 identify the national symbology originator.
   metadata._modifier1 =
-    (this.options.sidc.substr(20, 1) || "0") +
+    (metadata.edition === "E" ? this.options.sidc.substr(20, 1) || "0" : "0") +
     (functionid.substr(6, 2) || "00");
   metadata._modifier2 =
-    (this.options.sidc.substr(21, 1) || "0") +
+    (metadata.edition === "E" ? this.options.sidc.substr(21, 1) || "0" : "0") +
     (functionid.substr(8, 2) || "00");
 
   metadata.context = mapping.context[parseInt(this.options.sidc.substr(2, 1))];

@@ -45,14 +45,16 @@ export default function (ms, sidc) {
       modifier1[icon] = [valid, true];
     }
     if (sidc.modifier1[i]["Code"] && sidc.modifier1[i]["Code"].length == 3) {
-      valid = new ms.Symbol(
-        "1003" +
+      // Three-digit common modifiers belong to edition E (version 13).
+      const symbol = new ms.Symbol((
+        "1303" +
           (sidc.symbolset || "10") +
           "0000000000" +
           sidc.modifier1[i]["Code"].substr(1, 2) +
           "00" +
           sidc.modifier1[i]["Code"].substr(0, 1)
-      ).isValid();
+      ).padEnd(30, "0"));
+      valid = symbol.isValid() && symbol.metadata._modifier1 === sidc.modifier1[i]["Code"];
       modifier1[icon] = [valid, true];
     }
   }
@@ -80,14 +82,16 @@ export default function (ms, sidc) {
       modifier2[icon] = [valid, true];
     }
     if (sidc.modifier2[i]["Code"] && sidc.modifier2[i]["Code"].length == 3) {
-      valid = new ms.Symbol(
-        "1003" +
+      const symbol = new ms.Symbol((
+        "1303" +
           (sidc.symbolset || "10") +
           "0000000000" +
-          sidc.modifier2[i]["Code"].substr(1, 2) +
           "00" +
+          sidc.modifier2[i]["Code"].substr(1, 2) +
+          "0" +
           sidc.modifier2[i]["Code"].substr(0, 1)
-      ).isValid();
+      ).padEnd(30, "0"));
+      valid = symbol.isValid() && symbol.metadata._modifier2 === sidc.modifier2[i]["Code"];
       modifier2[icon] = [valid, true];
     }
   }

@@ -48,6 +48,7 @@
     "eslint": "^10.0.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
+    "flag-icons": "7.6.0",
     "mil-std-2525": "^0.2.8",
     "milstandard-e": "^0.2.14",
     "prettier": "^3.8.1",

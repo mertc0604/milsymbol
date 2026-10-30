@@ -159,6 +159,7 @@ const data = {
           battleDimension: item.id[2],
           category,
           name: item.name,
+          categoryOnly: Boolean(item.categoryOnly),
           path: [...ancestors.map((parent) => parent.name), item.name],
           remarks: item.note || "",
           source: `APP-6A (1998), Annex B, p. ${item.page}`,
@@ -179,7 +180,7 @@ const data = {
 };
 
 fs.mkdirSync(path.join(output, "vendor"), { recursive: true });
-for (const file of ["index.html", "styles.css", "app.js", "modifier-fields.js", "favicon.svg"]) {
+for (const file of ["index.html", "styles.css", "app.js", "modifier-fields.js", "sidc-editor.js", "country-flags.js", "country-codes.js", "country-code-data.js", "favicon.svg"]) {
   if (file === "index.html") {
     const html = fs.readFileSync(path.join(source, file), "utf8");
     fs.writeFileSync(path.join(output, file), html.replace('<html lang="en">', `<html lang="en" data-local-audit="${!publicBuild}">`));
@@ -190,20 +191,34 @@ fs.copyFileSync(
   path.join(output, "vendor", "milsymbol.js")
 );
 fs.writeFileSync(path.join(output, "catalog.json"), JSON.stringify(data));
+// Bundle SVG artwork locally so exports remain self-contained and work offline.
+const flagDirectory = path.join(root, "node_modules", "flag-icons");
+const flagArtwork = JSON.parse(fs.readFileSync(path.join(flagDirectory, "country.json"), "utf8"))
+  .map(({ code, name, flag_4x3 }) => ({code, name, svg: fs.readFileSync(path.join(flagDirectory, flag_4x3), "utf8")}));
+flagArtwork.push({code: "nato", name: "NATO", svg: fs.readFileSync(path.join(source, "flags", "nato.svg"), "utf8")});
+const flags = flagArtwork.map(({code, name, svg}) => {
+    if (!/^[a-z]{2,5}(-[a-z]{2,3})?$/.test(code) ||
+        !/^<svg\b/.test(svg) || !/viewBox="0 0 640 480"/.test(svg) ||
+        /<(?:image|script|foreignObject|style)\b|\bon[a-z]+\s*=|(?:href|xlink:href)="(?!#)/i.test(svg))
+      throw new Error(`Flag artwork must contain self-contained SVG vectors: ${code}`);
+    return { code, name, svg };
+  }).sort((a, b) => a.name.localeCompare(b.name, "en"));
+fs.writeFileSync(path.join(output, "flags.json"), JSON.stringify(flags));
 fs.copyFileSync(path.join(root, "src", "lettersidc", "metadata.js"), path.join(output, "vendor", "letter-metadata.js"));
 fs.copyFileSync(path.join(root, "LICENSE"), path.join(output, "LICENSE.txt"));
 const notices = [
   "Military Symbol Studio — independent modified version of milsymbol.\nNot an official Spatial Illusions or NATO product.\nAPP-6A support is partial; no full-conformance certification is claimed.",
   "milsymbol — https://github.com/spatialillusions/milsymbol\n\n" + fs.readFileSync(path.join(root, "LICENSE"), "utf8"),
-  ...["mil-std-2525", "milstandard-e", "stanag-app6"].map(name => {
+  fs.readFileSync(path.join(source, "flags", "NOTICE.txt"), "utf8"),
+  ...["mil-std-2525", "milstandard-e", "stanag-app6", "flag-icons"].map(name => {
     const directory = path.join(root, "node_modules", name);
     const pkg = JSON.parse(fs.readFileSync(path.join(directory, "package.json"), "utf8"));
-    return `${name} ${pkg.version} — catalog data included in catalog.json\n${typeof pkg.repository === "object" ? pkg.repository.url : pkg.repository}\n\n${fs.readFileSync(path.join(directory, "LICENSE"), "utf8")}`;
+    return `${name} ${pkg.version} — bundled data / artwork\n${typeof pkg.repository === "object" ? pkg.repository.url : pkg.repository}\n\n${fs.readFileSync(path.join(directory, "LICENSE"), "utf8")}`;
   })
 ];
 fs.writeFileSync(path.join(output, "THIRD_PARTY_LICENSES.txt"), notices.join("\n\n----------------------------------------\n\n"));
 if (publicBuild) {
-  const allowed = new Set(["index.html", "styles.css", "app.js", "modifier-fields.js", "favicon.svg", "catalog.json", "vendor/milsymbol.js", "vendor/letter-metadata.js", "LICENSE.txt", "THIRD_PARTY_LICENSES.txt"]);
+  const allowed = new Set(["index.html", "styles.css", "app.js", "modifier-fields.js", "sidc-editor.js", "country-flags.js", "country-codes.js", "country-code-data.js", "favicon.svg", "catalog.json", "flags.json", "vendor/milsymbol.js", "vendor/letter-metadata.js", "LICENSE.txt", "THIRD_PARTY_LICENSES.txt"]);
   const inspect = (directory, prefix = "") => {
     for (const entry of fs.readdirSync(directory, {withFileTypes:true})) {
       const relative = prefix + entry.name;

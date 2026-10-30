@@ -3612,6 +3612,7 @@ export const app6aCatalog = [
   },
   {
     "id": "S-G-EW----",
+    "categoryOnly": true,
     "hierarchy": "1.X.3.2.1",
     "name": "WEAPONS",
     "modifier": "**",
@@ -4396,6 +4397,7 @@ export const app6aCatalog = [
   },
   {
     "id": "S-G-EX----",
+    "categoryOnly": true,
     "hierarchy": "1.X.3.2.4",
     "name": "SPECIAL EQUIPMENT",
     "modifier": "**",
@@ -4580,6 +4582,7 @@ export const app6aCatalog = [
   },
   {
     "id": "S-G-IM----",
+    "categoryOnly": true,
     "hierarchy": "1.X.3.3.5",
     "name": "MILITARY MATERIEL FACILITY",
     "modifier": "H*",
@@ -5036,6 +5039,7 @@ export const app6aCatalog = [
   },
   {
     "id": "S-S-X-----",
+    "categoryOnly": true,
     "hierarchy": "1.X.4.3",
     "name": "NON MILITARY",
     "modifier": "**",
@@ -5180,6 +5184,7 @@ export const app6aCatalog = [
   },
   {
     "id": "S-S-E-----",
+    "categoryOnly": true,
     "hierarchy": "1.X.4.5",
     "name": "EMERGENCY",
     "modifier": "**",
@@ -5212,6 +5217,7 @@ export const app6aCatalog = [
   },
   {
     "id": "S-S-Z-----",
+    "categoryOnly": true,
     "hierarchy": "1.X.4.6",
     "name": "HAZARD",
     "modifier": "**",
@@ -5412,6 +5418,7 @@ export const app6aCatalog = [
   },
   {
     "id": "S-U-N-----",
+    "categoryOnly": true,
     "hierarchy": "1.X.5.4",
     "name": "NON-SUBMARINE",
     "modifier": "**",

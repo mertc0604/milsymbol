@@ -1,0 +1,5 @@
+NATO flag: https://commons.wikimedia.org/wiki/File:Flag_of_NATO.svg
+Source artwork revision 2024-09-06 by Wikimedia Commons contributors, based on the NATO emblem.
+Source: https://upload.wikimedia.org/wikipedia/commons/3/37/Flag_of_NATO.svg
+Wikimedia Commons identifies this work as public domain (US copyright not renewed).
+Adaptation: normalized viewBox from 1024x768 to 640x480; fill style converted to SVG attribute.

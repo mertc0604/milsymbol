@@ -1,5 +1,9 @@
 import { app6aSymbolClass, getApp6aFields } from "./vendor/letter-metadata.js";
+import { decodeEditorSidc, editImportedSidc, numericSidcEdition } from "./sidc-editor.js";
 import { modifierGroups, textModifiers, collectTextModifiers } from "./modifier-fields.js";
+
+import { createCountryFlagPart } from "./country-flags.js";
+import { countryCodeForFlag, countryFlagFromSidc, countrySidcField, withCountryFlag } from "./country-codes.js";
 
 const standards = [
   {
@@ -157,6 +161,7 @@ const dom = Object.fromEntries(
     "contextField",
     "status",
     "colorMode",
+    "countryFlag",
     "hq",
     "taskForce",
     "feintDummy",
@@ -204,6 +209,7 @@ const state = {
   modifier1: "",
   modifier2: "",
   customSidc: "",
+  importedIcon: null,
   outline: false
 };
 
@@ -219,6 +225,7 @@ const dataset = () => {
   return catalog.standards[key];
 };
 const selectedIcon = () =>
+  (state.customSidc && state.importedIcon) ||
   dataset().icons.find((icon) => icon.id === state.selectedId) ||
   dataset().icons[0];
 const normalize = (value) =>
@@ -257,6 +264,7 @@ function currentOptions(minimal = false) {
   ));
   const options = {
     standard: config().standard,
+    countryFlag: minimal ? "" : dom.countryFlag.value,
     size: minimal ? 34 : Number(dom.symbolSize.value),
     strokeWidth: Number(dom.strokeWidth.value),
     colorMode: dom.colorMode.value,
@@ -307,30 +315,31 @@ function buildSidc(icon = selectedIcon(), minimal = false) {
   const standard = config();
   const affiliation = (standard.id === "app6a" ? app6aAffiliations : affiliations).find(
     (item) => item.value === (minimal ? "friend" : state.affiliation)
-  );
+  ) || { legacy: state.affiliation.split(":").at(-1), numeric: state.affiliation.split(":").at(-1) };
   const status = statuses.find(
     (item) => item.value === (minimal ? "present" : state.status)
-  );
+  ) || { legacy: state.status.split(":").at(-1), numeric: state.status.split(":").at(-1) };
 
   if (standard.family === "legacy") {
     let amplifier = [minimal ? "-" : legacyFlagCharacter(), "-"];
     if (!minimal && state.amplifierMode === "echelon") {
       amplifier = [
         legacyFlagCharacter(),
-        echelons.find((item) => item[0] === state.amplifierValue)?.[3] || "-"
+        echelons.find((item) => item[0] === state.amplifierValue)?.[3] || (state.amplifierValue.startsWith("code:") ? state.amplifierValue.slice(5) : "-")
       ];
     } else if (!minimal && state.amplifierMode === "mobility") {
       amplifier = [
         ...(mobilities.find((item) => item[0] === state.amplifierValue)?.[3] ||
-          "--")
+          (state.amplifierValue.startsWith("code:") ? state.amplifierValue.slice(5) : "--"))
       ];
     }
-    if (state.standardId === "app6a" && icon.defaultModifier?.startsWith("H")) {
+    if ((state.standardId === "app6a" || state.customSidc) && icon.defaultModifier?.startsWith("H")) {
       amplifier = ["H", !minimal && dom.feintDummy.checked ? "B" : "-"];
     }
     if (state.standardId === "app6a" && icon.codingScheme === "G")
       amplifier = ["-", "-"];
-    return `${icon.codingScheme || "S"}${icon.prescribedAffiliation || affiliation.legacy}${icon.battleDimension || "G"}${icon.prescribedStatus || status.legacy}${icon.code || "------"}${amplifier.join("")}---`;
+    const sidc = `${icon.codingScheme || "S"}${icon.prescribedAffiliation || affiliation.legacy}${icon.battleDimension || "G"}${icon.prescribedStatus || status.legacy}${icon.code || "------"}${amplifier.join("")}---`;
+    return minimal ? sidc : withCountryFlag(sidc, dom.countryFlag.value, state.standardId);
   }
 
   const sidc = Array(30).fill("0");
@@ -345,9 +354,9 @@ function buildSidc(icon = selectedIcon(), minimal = false) {
       ? "00"
       : state.amplifierMode === "mobility"
         ? mobilities.find((item) => item[0] === state.amplifierValue)?.[2] ||
-          "00"
+          (state.amplifierValue.startsWith("code:") ? state.amplifierValue.slice(5) : "00")
         : echelons.find((item) => item[0] === state.amplifierValue)?.[2] ||
-          "00";
+          (state.amplifierValue.startsWith("code:") ? state.amplifierValue.slice(5) : "00");
   sidc.splice(8, 2, ...amplifier);
   sidc.splice(10, 6, ...(icon.code || "000000").padEnd(6, "0").slice(0, 6));
   if (!minimal) {
@@ -355,7 +364,7 @@ function buildSidc(icon = selectedIcon(), minimal = false) {
     applyModernModifier(sidc, state.modifier2, 2);
     if (standard.version === "13") sidc[22] = dom.frameShape.value;
   }
-  return sidc.join("");
+  return minimal ? sidc.join("") : withCountryFlag(sidc.join(""), dom.countryFlag.value, state.standardId);
 }
 
 function renderStandardSelect() {
@@ -376,6 +385,7 @@ function setStandard(id) {
   state.modifier1 = "";
   state.modifier2 = "";
   state.customSidc = "";
+  state.importedIcon = null;
   if (id === "app6a" && !["present", "planned"].includes(state.status))
     state.status = "present";
   window.ms.setStandard(next.standard);
@@ -446,9 +456,9 @@ function renderCatalog() {
     ? visible
         .map(
           (icon) => `
-    <button class="symbol-card ${icon.id === state.selectedId ? "active" : ""}" aria-pressed="${icon.id === state.selectedId}" data-symbol-id="${escapeHtml(icon.id)}" title="${escapeHtml(icon.name)}">
+    <button class="symbol-card ${icon.id === state.selectedId ? "active" : ""}" aria-pressed="${icon.id === state.selectedId}" data-symbol-id="${escapeHtml(icon.id)}" title="${escapeHtml(icon.name + (icon.categoryOnly ? " — Category: no separate illustration in APP-6A" : ""))}">
       <span class="mini-symbol">${safeMiniSvg(icon)}</span>
-      <strong>${escapeHtml(icon.name)}</strong>
+      <strong>${escapeHtml(icon.name)}${icon.categoryOnly ? ' <span class="category-badge">Category</span>' : ""}</strong>
       <small>${escapeHtml(icon.category)} · ${escapeHtml(icon.code)}</small>
     </button>`
         )
@@ -470,7 +480,9 @@ function populateAmplifier() {
     .map((item) => option(item[0], item[1]))
     .join("");
   const exists = source.some((item) => item[0] === state.amplifierValue);
-  if (!exists) state.amplifierValue = "";
+  if (!exists && state.amplifierValue.startsWith("code:"))
+    dom.amplifierValue.innerHTML += option(state.amplifierValue, `SIDC: ${state.amplifierValue.slice(5)}`);
+  else if (!exists) state.amplifierValue = "";
   dom.amplifierValue.value = state.amplifierValue;
   [...dom.amplifierMode.querySelectorAll("button")].forEach((button) => {
     button.classList.toggle(
@@ -507,9 +519,9 @@ function populateModifierSelect(select, field, selected) {
     }
     select.append(group);
   }
-  select.value = [...select.options].some((item) => item.value === selected)
-    ? selected
-    : "";
+  if (selected && ![...select.options].some(item => item.value === selected))
+    select.insertAdjacentHTML("beforeend", option(selected, `SIDC: ${selected}`));
+  select.value = selected;
   return select.value;
 }
 
@@ -521,12 +533,11 @@ function syncModifiers() {
   dom.affiliation.value = prescribedAffiliation ? app6aAffiliations.find(a => a.legacy === prescribedAffiliation).value : state.affiliation;
   const kind = app6a ? app6aSymbolClass(state.customSidc || buildSidc()) : "";
   const installation =
-    state.standardId === "app6a" &&
-    selectedIcon()?.defaultModifier?.startsWith("H");
+    !modern && selectedIcon()?.defaultModifier?.startsWith("H");
   const tactical =
     state.standardId === "app6a" && selectedIcon()?.codingScheme === "G";
   dom.hq.disabled = Boolean(installation || tactical || (app6a && state.amplifierMode === "mobility"));
-  dom.taskForce.disabled = app6a && kind !== "unit";
+  dom.taskForce.disabled = Boolean(installation || (app6a && kind !== "unit"));
   dom.feintDummy.disabled = tactical;
   dom.amplifierValue.disabled =
     installation || tactical || state.amplifierMode === "none";
@@ -604,6 +615,40 @@ function syncApp6aTextFields() {
   dom.stack.disabled = active;
 }
 
+function selectImportedValue(select, value) {
+  if (![...select.options].some(item => item.value === value))
+    select.insertAdjacentHTML("beforeend", option(value, `SIDC: ${value.replace(/^code:/, "")}`));
+  select.value = value;
+}
+
+function applyImportedSidc(value) {
+  const edition = config().family === "modern" && numericSidcEdition(value);
+  if (edition && edition !== (config().version === "13" ? "e" : "d"))
+    setStandard(`${state.standardId.startsWith("app6") ? "app6" : "2525"}${edition}`);
+  const parsed = decodeEditorSidc(value, { ...config(), icons: dataset().icons });
+  const modern = config().family === "modern";
+  const encoding = modern ? "numeric" : "legacy";
+  const identities = state.standardId === "app6a" ? app6aAffiliations : affiliations;
+  const source = parsed.mobility ? mobilities : echelons;
+  const amplifier = parsed.mobility || parsed.echelon;
+  const amplifierValue = source.find(item => item[modern ? 2 : 3] === amplifier)?.[0];
+  Object.assign(state, {
+    customSidc: value,
+    importedIcon: parsed.icon,
+    selectedId: parsed.icon.id,
+    affiliation: identities.find(item => item[encoding] === parsed.identity)?.value || `code:${parsed.identity}`,
+    status: statuses.find(item => item[encoding] === parsed.status)?.value || `code:${parsed.status}`,
+    context: parsed.context,
+    amplifierMode: parsed.mobility ? "mobility" : ["-", "00"].includes(amplifier) ? "none" : "echelon",
+    amplifierValue: amplifierValue ?? `code:${amplifier}`,
+    modifier1: parsed.modifier1,
+    modifier2: parsed.modifier2
+  });
+  for (const key of ["hq", "taskForce", "feintDummy"]) dom[key].checked = parsed[key];
+  selectImportedValue(dom.frameShape, parsed.frameShape);
+  syncStandardControls();
+}
+
 function syncStandardControls() {
   const modern = config().family === "modern";
   dom.contextField.hidden = !modern;
@@ -613,24 +658,25 @@ function syncStandardControls() {
   dom.affiliation.innerHTML = (state.standardId === "app6a" ? app6aAffiliations : affiliations)
     .map((item) => option(item.value, item.label))
     .join("");
-  dom.affiliation.value = state.affiliation;
+  selectImportedValue(dom.affiliation, state.affiliation);
   dom.status.innerHTML = (
     state.standardId === "app6a" ? statuses.slice(0, 2) : statuses
   )
     .map((item) => option(item.value, item.label))
     .join("");
-  dom.status.value = state.status;
+  selectImportedValue(dom.status, state.status);
   dom.context.innerHTML =
     option("0", "Reality") +
     option("1", "Exercise") +
     option("2", "Simulation");
-  dom.context.value = state.context;
+  selectImportedValue(dom.context, state.context);
   populateAmplifier();
   syncModifiers();
 }
 
 function updateSegments(sidc) {
   const modern = /^\d/.test(sidc);
+  const dEdition = ["app6d", "2525d"].includes(state.standardId);
   const parts = modern
     ? [
         ["Version", sidc.slice(0, 2)],
@@ -639,8 +685,16 @@ function updateSegments(sidc) {
         ["Amplifier", sidc.slice(6, 10)],
         ["Entity", sidc.slice(10, 16)],
         ["Modifiers", sidc.slice(16, 20)],
-        ["Ext.", sidc.slice(20, 22)],
-        ["Reserved", sidc.slice(22)]
+        ...(dEdition ? [
+          ["Originator country", sidc.slice(20, 23)],
+          ["Originator set", sidc.slice(23, 24)],
+          ["National data", sidc.slice(24, 30)]
+        ] : [
+          ["Ext.", sidc.slice(20, 22)],
+          ["Frame shape", sidc.slice(22, 23)],
+          ["Other ext.", sidc.slice(23, 27)],
+          ["Country", sidc.slice(27, 30)]
+        ])
       ]
     : [
         ["Scheme", sidc.slice(0, 1)],
@@ -649,7 +703,8 @@ function updateSegments(sidc) {
         ["Status", sidc.slice(3, 4)],
         ["Function", sidc.slice(4, 10)],
         ["Modifiers", sidc.slice(10, 12)],
-        ["Country/OOB", sidc.slice(12)]
+        ["Country", sidc.slice(12, 14)],
+        ["OOB", sidc.slice(14)]
       ];
   dom.sidcSegments.innerHTML = parts
     .map(([label, value]) => `<span>${label} <b>${value || "—"}</b></span>`)
@@ -662,6 +717,12 @@ function renderAll() {
   state.selectedId = icon.id;
   syncModifiers();
   const sidc = state.customSidc || buildSidc(icon);
+  const countryCode = countryCodeForFlag(dom.countryFlag.value, state.standardId);
+  const countryField = countrySidcField(state.standardId);
+  const countryEncoding = countryField?.description || "";
+  document.getElementById("countryFlagNote").textContent = dom.countryFlag.value && !countryCode
+    ? "Display-only flag: no country code is assigned for this standard. Included in SVG and PNG exports."
+    : `${countryCode ? `${countryField.label} code: ${countryCode}. ` : "Select a country or apply a SIDC to select its flag. "}${countryEncoding}. Included in SVG and PNG exports.`;
   window.ms.setStandard(config().standard);
   try {
     currentSymbol = new window.ms.Symbol(sidc, currentOptions());
@@ -680,16 +741,13 @@ function renderAll() {
     dom.renderState.classList.add("invalid");
     dom.renderState.innerHTML = "<i></i>Rendering error";
   }
-  dom.selectedName.textContent = state.customSidc ? "Custom SIDC" : icon.name;
-  dom.selectedPath.textContent = state.customSidc
-    ? `${config().label} / Manually entered symbol code`
-    : [...new Set([icon.category, ...(icon.path || [])].filter(Boolean))].join(
-        " / "
-      );
+  dom.selectedName.textContent = icon.name;
+  dom.selectedPath.textContent = [...new Set([icon.category, ...(icon.path || [])].filter(Boolean))].join(" / ")
+    + (state.customSidc ? " / Imported SIDC" : "");
   document.getElementById("supportNote").textContent = state.standardId === "app6e"
     ? "Compatibility view using the shared 2525E catalog. This is not a separate edition-specific catalog."
     : state.standardId === "app6a"
-      ? `${icon.source || "APP-6A (1998)"}. ${dataset().icons.length} tactical symbols (S-scheme).${icon.remarks ? " " + icon.remarks : ""}`
+      ? `${icon.source || "APP-6A (1998)"}. ${dataset().icons.length} S-scheme catalog entries.${icon.categoryOnly ? " Category — no separate illustration in APP-6A Annex D; preview is the renderer’s representation." : ""}${icon.remarks ? " " + icon.remarks : ""}`
       : "Rendered with milsymbol. Symbol appearance may differ from older standard publications.";
   dom.sidcInput.value = sidc;
   for (const button of [dom.downloadSvg, dom.downloadPng, dom.copySvg, dom.copySidc]) button.disabled = !currentSvg;
@@ -702,11 +760,12 @@ function renderAll() {
     Number(dom.direction.value) < 0 ? "Off" : `${dom.direction.value}°`;
   dom.sizeOutput.value = `${dom.symbolSize.value}%`;
   dom.strokeOutput.value = dom.strokeWidth.value;
-  document.title = `${state.customSidc ? "Custom SIDC" : icon.name} — Military Symbol Editor`;
+  document.title = `${icon.name} — Military Symbol Editor`;
 }
 
-function clearCustomAndRender({ rerenderCatalog = false } = {}) {
-  state.customSidc = "";
+function updateSidcAndRender(field, { rerenderCatalog = false } = {}) {
+  if (state.customSidc)
+    state.customSidc = editImportedSidc(state.customSidc, buildSidc(), field, config());
   renderAll();
   if (rerenderCatalog) renderCatalog();
 }
@@ -716,6 +775,7 @@ function selectSymbol(id) {
   state.modifier1 = "";
   state.modifier2 = "";
   state.customSidc = "";
+  state.importedIcon = null;
   try {
     localStorage.setItem(`symbol-studio:${state.standardId}`, id);
   } catch {}
@@ -801,8 +861,10 @@ function resetControls() {
     modifier1: "",
     modifier2: "",
     customSidc: "",
+    importedIcon: null,
     outline: false
   });
+  dom.countryFlag.value = "";
   dom.colorMode.value = "Light";
   for (const id of ["hq", "taskForce", "feintDummy"]) dom[id].checked = false;
   for (const id of ["speedLeader", "hqStaffLength", "stack", "frameShape"]) dom[id].value = "0";
@@ -888,15 +950,15 @@ function bindEvents() {
 
   dom.affiliation.addEventListener("change", () => {
     state.affiliation = dom.affiliation.value;
-    clearCustomAndRender({ rerenderCatalog: true });
+    updateSidcAndRender("affiliation", { rerenderCatalog: true });
   });
   dom.context.addEventListener("change", () => {
     state.context = dom.context.value;
-    clearCustomAndRender();
+    updateSidcAndRender("context");
   });
   dom.status.addEventListener("change", () => {
     state.status = dom.status.value;
-    clearCustomAndRender({ rerenderCatalog: true });
+    updateSidcAndRender("status", { rerenderCatalog: true });
   });
   dom.amplifierMode.addEventListener("click", (event) => {
     const button = event.target.closest("[data-mode]");
@@ -904,26 +966,31 @@ function bindEvents() {
     state.amplifierMode = button.dataset.mode;
     state.amplifierValue = "";
     populateAmplifier();
-    clearCustomAndRender();
+    updateSidcAndRender("amplifier");
   });
   dom.amplifierValue.addEventListener("change", () => {
     state.amplifierValue = dom.amplifierValue.value;
-    clearCustomAndRender();
+    updateSidcAndRender("amplifier");
   });
   dom.modifier1.addEventListener("change", () => {
     state.modifier1 = dom.modifier1.value;
-    clearCustomAndRender();
+    updateSidcAndRender("modifier1");
   });
   dom.modifier2.addEventListener("change", () => {
     state.modifier2 = dom.modifier2.value;
-    clearCustomAndRender();
+    updateSidcAndRender("modifier2");
   });
 
   for (const id of ["hq", "taskForce", "feintDummy"])
-    dom[id].addEventListener("change", () => clearCustomAndRender());
+    dom[id].addEventListener("change", () => updateSidcAndRender("flags"));
   for (const id of ["fill", "frame", "icon", "infoFields"])
     dom[id].addEventListener("change", renderAll);
-  dom.frameShape.addEventListener("change", () => clearCustomAndRender());
+  dom.countryFlag.addEventListener("change", () => {
+    if (state.customSidc)
+      state.customSidc = withCountryFlag(state.customSidc, dom.countryFlag.value, state.standardId);
+    renderAll();
+  });
+  dom.frameShape.addEventListener("change", () => updateSidcAndRender("frameShape"));
   for (const id of ["speedLeader", "hqStaffLength", "stack"])
     dom[id].addEventListener("input", renderAll);
   for (const id of ["colorMode", "direction", "symbolSize", "strokeWidth"])
@@ -954,13 +1021,17 @@ function bindEvents() {
       // the editor selections; unspecified optional fields remain empty.
       const characters = [...value];
       if (characters[1] === "*")
-        characters[1] = app6aAffiliations.find(item => item.value === state.affiliation).legacy;
+        characters[1] = app6aAffiliations.find(item => item.value === state.affiliation)?.legacy || state.affiliation.replace(/^code:/, "");
       if (characters[3] === "*")
-        characters[3] = statuses.find(item => item.value === state.status).legacy;
+        characters[3] = statuses.find(item => item.value === state.status)?.legacy || state.status.replace(/^code:/, "");
       value = characters.join("").replace(/\*/g, "-");
     }
-    state.customSidc = value;
+    applyImportedSidc(value);
+    // A newly applied SIDC is authoritative, including empty/unknown country
+    // fields. Never leave the previously selected country's flag on a new code.
+    dom.countryFlag.value = countryFlagFromSidc(value, state.standardId);
     renderAll();
+    renderCatalog();
     toast(hasWildcards ? "SIDC applied — wildcard fields resolved using current identity/status; other fields left unspecified" : "SIDC applied");
   });
   dom.sidcInput.addEventListener("keydown", (event) => {
@@ -1023,6 +1094,22 @@ async function init() {
       throw new Error(`Catalog request failed: ${response.status}`);
     catalog = await response.json();
     createTextFields();
+    // Flags load separately so a missing artwork file cannot take the symbol
+    // editor offline. Downloads stay vector-only and never need a remote CDN.
+    try {
+      const response = await fetch("./flags.json");
+      if (!response.ok) throw new Error(`Flag request failed: ${response.status}`);
+      const flags = await response.json();
+      window.ms.addSymbolPart(createCountryFlagPart(flags));
+      dom.countryFlag.innerHTML = option("", "No flag") + flags.map(flag =>
+        option(flag.code, flag.name)
+      ).join("");
+      dom.countryFlag.disabled = false;
+    } catch (error) {
+      dom.countryFlag.innerHTML = option("", "Flags unavailable — reload to retry");
+      dom.countryFlag.disabled = true;
+      console.error("Unable to load flag artwork", error);
+    }
     bindEvents();
     renderStandardSelect();
     populateCategories();

@@ -362,6 +362,18 @@ textarea::placeholder {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.category-badge {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 2px 5px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 1.2;
+  vertical-align: middle;
+}
 .mini-symbol {
   grid-column: 2;
   grid-row: 1/3;
@@ -545,6 +557,12 @@ select:disabled {
 }
 .full-field {
   max-width: 100%;
+}
+.country-flag-control {
+  margin-top: 20px;
+}
+#countryFlagNote {
+  margin-bottom: 20px;
 }
 .field-note,
 .section-description {
