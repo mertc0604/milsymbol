@@ -832,9 +832,11 @@ function profiledFieldKeys(sidc) {
 }
 
 // Offer a profile's literal values: rebuild a select, or suggest via a datalist.
-function applyFieldChoices(field, input, choices) {
+function applyFieldChoices(field, input, profileChoices) {
+  // Profiles may list plain literals; the form uses [value, label] pairs.
+  const choices = profileChoices && profileChoices.map((choice) => (Array.isArray(choice) ? choice : [String(choice), String(choice)]));
   if (field.choices) {
-    const list = choices || field.choices;
+    const list = choices ? [["", field.choices[0][1]], ...choices.filter(([code]) => code !== "")] : field.choices;
     const signature = JSON.stringify(list);
     if (input.dataset.choices === signature) return;
     const value = input.value;
