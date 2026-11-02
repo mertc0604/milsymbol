@@ -4,6 +4,7 @@
 // 5.4.4 (PDF 40, printed 34) of MIL-STD-2525C, not from current output.
 import { ms, std2525c } from "../index.mjs";
 import {
+  std2525cProfile,
   std2525cTableIV,
   std2525cFields,
   std2525cSymbolClass,
@@ -115,6 +116,44 @@ result["non-S scheme has no layout"] = [
   null
 ];
 
+// SOF (dimension F) is a unit: SOF aircraft are in the AIR dimension (Table A-III,
+// PDF 63-64), every F entry is a "SOF UNIT" (PDF 94), 5.3.1.3 (PDF 23 / 17) gives
+// units the rectangle frame. Table IV note 2 (PDF 30 / 24) covers SOF platforms,
+// which are equipment through the AIR dimension.
+const SOF = "SFFPA-------";
+result["SOF class is unit"] = [std2525cSymbolClass(SOF), "unit"];
+result["SOF aircraft in AIR are equipment"] = [
+  std2525cSymbolClass("SFAPMF------"),
+  "equipment"
+];
+result["SOF takes the unit fields"] = [
+  [
+    "reinforcedReduced",
+    "combatEffectiveness",
+    "higherFormation",
+    "specialHeadquarters"
+  ].map((k) => keys(SOF).indexOf(k) > -1),
+  [true, true, true, true]
+];
+result["SOF rejects the equipment-only fields C L N V"] = [
+  [
+    ok(SOF, { quantity: "5" }),
+    ok("SHFPA-------", { signatureEquipment: "!" }),
+    ok(SOF, { hostile: "ENY" }),
+    ok(SOF, { type: "X" })
+  ],
+  [false, false, false, false]
+];
+result["SOF is valid without a class note"] = [
+  [ok(SOF), std2525cValidate(SOF).details.notes],
+  [true, []]
+];
+result["SOF unit draws its echelon"] = [
+  sym("SFFPA-----" + "-E").metadata.echelon !== "",
+  true
+];
+result["SOF rejects mobility like any unit"] = [ok("SFFPA-----MQ"), false];
+
 // Min / max / max+1 / empty for every free text field and class.
 [
   [UNIT, "unit"],
@@ -205,11 +244,62 @@ result["K is free text up to 5"] = [
 result["L only ! and only hostile"] = [
   [
     ok("SHGPEWM-----", { signatureEquipment: "!" }),
-    ok("SSGPEWM-----", { signatureEquipment: "!" }),
     ok(EQUIPMENT, { signatureEquipment: "!" }),
     ok("SHGPEWM-----", { signatureEquipment: "?" })
   ],
-  [true, true, false, false]
+  [true, false, false]
+];
+// Table IV L (PDF 28 / 22): "text modifier for hostile equipment". Hostile is
+// identity H. Suspect is a separate identity, "potentially hostile" (3.2.42,
+// PDF 16 / 10), so S does not qualify; exercise identities and J/K do not either.
+"PUAFNSGWMDLJK".split("").forEach((id) => {
+  result["L rejected for identity " + id] = [
+    ok("S" + id + "GPEWM-----", { signatureEquipment: "!" }),
+    false
+  ];
+  result["L unavailable reason for identity " + id] = [
+    std2525cProfile.unavailableReason(
+      "signatureEquipment",
+      "S" + id + "GPEWM-----"
+    ),
+    "L is for hostile equipment (identity H only)"
+  ];
+  result["L is not a field for identity " + id] = [
+    keys("S" + id + "GPEWM-----").indexOf("signatureEquipment"),
+    -1
+  ];
+  result["L is not in the layout for identity " + id] = [
+    std2525cTextLayout("S" + id + "GPEWM-----").right[5].indexOf(
+      "signatureEquipment"
+    ),
+    -1
+  ];
+});
+result["L accepted for identity H (field, reason, layout)"] = [
+  [
+    keys("SHGPEWM-----").indexOf("signatureEquipment") > -1,
+    std2525cProfile.unavailableReason("signatureEquipment", "SHGPEWM-----"),
+    std2525cTextLayout("SHGPEWM-----").right[5].indexOf("signatureEquipment") >
+      -1
+  ],
+  [true, "", true]
+];
+result["L error text names identity H only"] = [
+  errors("SSGPEWM-----", { signatureEquipment: "!" }),
+  [
+    "L signatureEquipment: not applicable to equipment symbols (L is for hostile equipment, identity H only)"
+  ]
+];
+result["L is not drawn for suspect equipment"] = [
+  texts(sym("SSGPEWM-----", { signatureEquipment: "!" })).indexOf("!"),
+  -1
+];
+result["L never applies to units or installations, even for H"] = [
+  [
+    ok("SHGPUCI-----", { signatureEquipment: "!" }),
+    ok("SHGPIB------", { signatureEquipment: "!" })
+  ],
+  [false, false]
 ];
 result["N ENY only, independent of identity"] = [
   [

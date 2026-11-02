@@ -26,7 +26,7 @@ Class is the real object class, derived from SIDC positions 3 and 5:
 | dimension G, function ID starts with `E` | equipment |
 | dimension G, any other (`U...`, `------`) | unit |
 | dimension P A S U (space, air, sea surface, subsurface) | equipment (Table IV note 2, PDF 30 / 24) |
-| dimension F (SOF) | unit (product policy, see decision 12) |
+| dimension F (SOF) | unit (see decision 12) |
 | dimension Z X | unknown: only fields that apply to U, E and I alike are open |
 
 Limits: the class is read from the first function letter, so a hand-written
@@ -52,7 +52,7 @@ the same table.
 | H | additionalInformation | 20 | 20 | 20 | free text |
 | J | evaluationRating | 2 | 2 | 2 | `[A-F][1-6]`, 36 pairs |
 | K | combatEffectiveness | 5 | - | 5 | free text, SO value 3 not carried |
-| L | signatureEquipment | - | 1 | - | `!` only, hostile (H, S) |
+| L | signatureEquipment | - | 1 | - | `!` only, hostile equipment: identity H only (decision 13) |
 | M | higherFormation | 21 | - | - | |
 | N | hostile | - | 3 | - | `ENY` only |
 | P | iffSif | 5 | 5 | 5 | |
@@ -84,8 +84,9 @@ source gives no character set, so none is enforced.
 ## Values
 
 - **J**: reliability A-F and credibility 1-6, 36 pairs (Table IV, PDF 28 / 22).
-- **L**: `!` only, and only on hostile equipment (identity H or S; product reading
-  of "text modifier for hostile equipment"; exercise Joker/Faker are not included).
+- **L**: `!` only, and only on equipment of identity H (decision 13). Suspect (S),
+  the exercise identities and Joker/Faker (J, K) are not hostile and are rejected;
+  the unavailable reason reads "L is for hostile equipment (identity H only)".
 - **N**: `ENY` only. Independent of identity H: choosing H does not generate it
   and `hostile: "ENY"` does not change the SIDC.
 - **F**: the API accepts the display forms `(+)`, `(-)`, `(±)`. The transmission
@@ -161,10 +162,38 @@ AB, AO (above), R/AG and the AL bar (below) are graphics drawn by their parts.
 10. **AO grammar**: only the 8-character limit is enforced.
 11. **AB cross-reference** (5.3.4.7 says table III): the field definition in
     Table IV is used.
-12. **SOF class** (Table IV note 2 lists SOF under equipment; every catalogue
-    entry is "SOF UNIT" and 5.3.1.3 gives the unit frame): SOF is treated as
-    units. This is product policy; equipment-only fields (C L N R V) are errors
-    on SOF.
+12. **SOF class (F dimension stays a unit)**. Table IV note 2 (PDF 30 / 24) says
+    "Equipment includes air, space, sea surface, subsurface, and SOF, as well as
+    land-based equipment as shown in table I". Three pieces of evidence say that
+    the note covers SOF *platforms*, and those are already equipment through
+    another dimension, while the F dimension itself holds units only:
+    - SOF aircraft are in the AIR dimension (Table A-III, PDF 63-64 / 57-58:
+      `WAR.AIRTRK.MIL.FIXD.SOF` and `WAR.AIRTRK.MIL.FIXD.DRN.SOF` on PDF 63,
+      `WAR.AIRTRK.MIL.ROT.SOF` on PDF 64, all with SIDC dimension `A`), so they
+      take the equipment fields as air.
+    - Every F entry of the symbol hierarchy is a unit: 1.X.6 "SPECIAL OPERATIONS
+      FORCES (SOF) UNIT", and the children are "SOF UNIT ..." (Table A-III, PDF 94 /
+      88; catalogue pages from PDF 303; `WAR.SOFUNT`, SIDC dimension `F`). There
+      is no equipment entry under F.
+    - 5.3.1.3 (PDF 23 / 17): "All units, regardless of service affiliation ... are
+      depicted with a rectangle frame"; the SOF frame is the unit rectangle.
+    Result: dimension F is class "unit" (no code change, `std2525cSymbolClass`
+    returns "unit"). Equipment-only fields (C L N R V) are errors on F, and unit
+    fields (B D F K M AA) are open. This is a reading of the note against the
+    catalogue, recorded as product policy; no note is emitted per symbol because
+    no remaining ambiguity applies to the F catalogue entries.
+13. **L identity (H only)**. Table IV L (PDF 28 / 22): "A text modifier for hostile
+    equipment; ! indicates detectable electronic signatures". Hostile is the
+    identity H (Tables I/II). The standard defines Suspect separately, as an
+    identity that is "potentially hostile because of its characteristics,
+    behavior, origin, or nationality" (3.2.42, PDF 16 / 10), so S is not hostile
+    equipment. Joker, Faker (J, K) and the exercise identities are not hostile
+    either. L is therefore accepted only for equipment of identity H. APP-6A
+    (Table III "hostile equipment only", PDF 25 / 19; definition 32 Suspect, PDF 16
+    / 10) reads the same way. A previous reading of the 2525C profile allowed H and
+    S; that was removed. (The Studio helper `studio/editor-helpers.js` may still
+    mention H/S; it is not part of this profile and is reported to the Studio
+    owner.)
 
 ## Coverage limits
 

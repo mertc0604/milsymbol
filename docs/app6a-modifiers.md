@@ -119,7 +119,7 @@ tests share one decoder.
 |---|---|---|
 | Figure number | text says "figure 3a", the figure is "Figure 2a" (PDF 28 / 22; 505 PDF 24 / 18) | layout follows Figure 2a; applies to all dimensions |
 | B 10 / E 2 / I G | Table III (PDF 25 / 19) | recorded as a graphic only; no text option, no equipment echelon |
-| L "hostile equipment only" | Table III L; 302.17 hostile = positively identified enemy; 302.32 suspect = potentially hostile | strict: identity `H` and equipment only. S, J, K are not hostile; the source does not extend it |
+| L "hostile equipment only" | Table III L (PDF 25 / 19: "hostile equipment only"); definition 17 Hostile = "a contact positively identified as enemy" (PDF 15 / 9); definition 32 Suspect = "a track or contact which is potentially hostile" (PDF 16 / 10) | strict: identity `H` and equipment only. The source defines Suspect as a separate identity that is only potentially hostile, so S is not hostile; J, K and the exercise identities are not hostile either. MIL-STD-2525C reads its own "hostile equipment" the same way (Table IV, PDF 28 / 22 with 3.2.42 Suspect, PDF 16 / 10). The Studio helper `studio/editor-helpers.js` that says H/S is out of line with both |
 | N `ENY` | Table III N | equipment of any identity; H does not add the text and the text does not change identity (a note is recorded for non-H) |
 | E placement | 503.1a "field E or embedded"; Table I | pending inside, A/S in E by default; `uncertaintyMarker` selects the alternative; one mark only |
 | `O` identity | Table B-I lists it, Table I and C-II give no frame | no frame, no icon, `identityErrors`; never Unknown/Friend |
