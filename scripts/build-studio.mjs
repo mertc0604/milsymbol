@@ -204,7 +204,13 @@ const flags = flagArtwork.map(({code, name, svg}) => {
     return { code, name, svg };
   }).sort((a, b) => a.name.localeCompare(b.name, "en"));
 fs.writeFileSync(path.join(output, "flags.json"), JSON.stringify(flags));
-fs.copyFileSync(path.join(root, "src", "lettersidc", "metadata.js"), path.join(output, "vendor", "letter-metadata.js"));
+// Edition modifier profiles are shared with the library; keep their relative
+// imports intact by mirroring src/ under vendor/.
+for (const directory of ["lettersidc", "modifierprofiles"]) fs.mkdirSync(path.join(output, "vendor", directory), { recursive: true });
+fs.copyFileSync(path.join(root, "src", "lettersidc", "metadata.js"), path.join(output, "vendor", "lettersidc", "metadata.js"));
+for (const file of fs.readdirSync(path.join(root, "src", "modifierprofiles")).filter((name) => name.endsWith(".js")))
+  fs.copyFileSync(path.join(root, "src", "modifierprofiles", file), path.join(output, "vendor", "modifierprofiles", file));
+fs.writeFileSync(path.join(output, "vendor", "letter-metadata.js"), 'export * from "./lettersidc/metadata.js";\n');
 fs.copyFileSync(path.join(root, "LICENSE"), path.join(output, "LICENSE.txt"));
 const notices = [
   "Military Symbol Studio — independent modified version of milsymbol.\nNot an official Spatial Illusions or NATO product.\nAPP-6A support is partial; no full-conformance certification is claimed.",
@@ -219,11 +225,12 @@ const notices = [
 fs.writeFileSync(path.join(output, "THIRD_PARTY_LICENSES.txt"), notices.join("\n\n----------------------------------------\n\n"));
 if (publicBuild) {
   const allowed = new Set(["index.html", "styles.css", "app.js", "modifier-fields.js", "sidc-editor.js", "country-flags.js", "country-codes.js", "country-code-data.js", "editor-helpers.js", "field-reference.js", "identities.js", "favicon.svg", "catalog.json", "flags.json", "vendor/milsymbol.js", "vendor/letter-metadata.js", "LICENSE.txt", "THIRD_PARTY_LICENSES.txt"]);
+  const vendorModule = /^vendor\/(?:lettersidc\/metadata|modifierprofiles\/[a-z0-9-]+)\.js$/;
   const inspect = (directory, prefix = "") => {
     for (const entry of fs.readdirSync(directory, {withFileTypes:true})) {
       const relative = prefix + entry.name;
-      if (entry.isDirectory() && relative === "vendor") inspect(path.join(directory, entry.name), relative + "/");
-      else if (!entry.isFile() || !allowed.has(relative)) throw new Error(`Public build contains unexpected content: ${relative}. Refusing to package it.`);
+      if (entry.isDirectory() && ["vendor", "vendor/lettersidc", "vendor/modifierprofiles"].includes(relative)) inspect(path.join(directory, entry.name), relative + "/");
+      else if (!entry.isFile() || !(allowed.has(relative) || vendorModule.test(relative))) throw new Error(`Public build contains unexpected content: ${relative}. Refusing to package it.`);
     }
   };
   inspect(output);

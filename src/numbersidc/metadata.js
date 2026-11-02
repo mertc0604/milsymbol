@@ -1,4 +1,7 @@
 //import { ms } from "../ms.js";
+import { app6dProfile } from "../modifierprofiles/app6d.js";
+import { applyProfile } from "../modifierprofiles/common.js";
+
 export function metadata(ms, metadata, mapping) {
   const version = this.options.sidc.substr(0, 2);
   //metadata.v13 = version > 13;
@@ -236,6 +239,14 @@ export function metadata(ms, metadata, mapping) {
   }
   if (echelonMobility >= 70 && echelonMobility < 80) {
     metadata.leadership = mapping.echelonMobility[echelonMobility];
+  }
+
+  // The 2525C letter profile never applies to numeric SIDCs.
+  metadata.std2525c = false;
+  // APP-6D: edition D numeric SIDCs rendered with the APP6 standard.
+  if (metadata.edition === "D" && !metadata.STD2525) {
+    metadata.app6d = true;
+    applyProfile(app6dProfile, this.options.sidc, this.options, metadata);
   }
 
   return metadata;

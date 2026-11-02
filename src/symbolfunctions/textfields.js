@@ -1,5 +1,6 @@
 //Text Fields ############################################################################
 import strWidth from "./string-width.js";
+import { joinFields, layoutKeys } from "../modifierprofiles/common.js";
 export default function textfieldsMod(ms) {
   const drawArray1 = [];
   const drawArray2 = [];
@@ -217,8 +218,13 @@ export default function textfieldsMod(ms) {
     }
   }
 
+  // Edition profile layout (APP-6A, 2525C, APP-6D); replaces the legacy rows.
+  const layout = this.metadata.textLayout;
+  const allowed = (position, key) =>
+    !layout || (layout[position] || []).includes(key);
   //Check that we have some texts to print
   const textFields =
+    (layout && layoutKeys(layout).some((key) => this.options[key])) ||
     this.options.quantity ||
     this.options.reinforcedReduced ||
     this.options.staffComments ||
@@ -247,10 +253,17 @@ export default function textfieldsMod(ms) {
     this.options.guardedUnit ||
     this.options.specialDesignator;
   if (this.style.infoFields && textFields) {
-    if (this.options.specialHeadquarters) {
+    if (
+      this.options.specialHeadquarters &&
+      allowed("inner", "specialHeadquarters")
+    ) {
       drawArray2.push(text(this.options.specialHeadquarters));
     }
-    if (this.options.quantity && !this.metadata.dismounted) {
+    if (
+      this.options.quantity &&
+      !this.metadata.dismounted &&
+      allowed("top", "quantity")
+    ) {
       //geometry
       drawArray2.push({
         type: "text",
@@ -266,7 +279,10 @@ export default function textfieldsMod(ms) {
       });
       gbbox.y1 = bbox.y1 - 10 - fontSize;
     }
-    if (this.options.headquartersElement) {
+    if (
+      this.options.headquartersElement &&
+      allowed("bottom", "headquartersElement")
+    ) {
       /*
       if (
         this.metadata.condition &&
@@ -294,11 +310,13 @@ export default function textfieldsMod(ms) {
     }
 
     const gStrings = {
+      L0: "",
       L1: "",
       L2: "",
       L3: "",
       L4: "",
       L5: "",
+      R0: "",
       R1: "",
       R2: "",
       R3: "",
@@ -307,7 +325,11 @@ export default function textfieldsMod(ms) {
     }; //Text information on left and right sIde.
     let a;
     //Air & Space (They should be different but we skip that at the moment) TODO
-    if (!isNaN(this.options.sidc) && this.metadata.baseDimension == "Air") {
+    if (
+      !layout &&
+      !isNaN(this.options.sidc) &&
+      this.metadata.baseDimension == "Air"
+    ) {
       gStrings.R1 = this.options.uniqueDesignation;
       gStrings.R2 = this.options.iffSif;
       gStrings.R3 = this.options.type;
@@ -326,7 +348,10 @@ export default function textfieldsMod(ms) {
       }
     }
     //Land or letterbased SIDC
-    if (isNaN(this.options.sidc) || this.metadata.baseDimension == "Ground") {
+    if (
+      !layout &&
+      (isNaN(this.options.sidc) || this.metadata.baseDimension == "Ground")
+    ) {
       gStrings.L1 = this.options.dtg;
       if (this.options.altitudeDepth || this.options.location) {
         a = [];
@@ -413,7 +438,7 @@ export default function textfieldsMod(ms) {
       }
     }
     // Dismounted individual
-    if (this.metadata.dismounted) {
+    if (!layout && this.metadata.dismounted) {
       if (this.options.quantity) {
         //geometry
         drawArray2.push({
@@ -483,7 +508,11 @@ export default function textfieldsMod(ms) {
     }
 
     //Sea numberbased SIDC
-    if (!isNaN(this.options.sidc) && this.metadata.baseDimension == "Sea") {
+    if (
+      !layout &&
+      !isNaN(this.options.sidc) &&
+      this.metadata.baseDimension == "Sea"
+    ) {
       if (this.options.guardedUnit || this.options.specialDesignator) {
         a = [];
         if (this.options.guardedUnit) a.push(this.options.guardedUnit);
@@ -510,6 +539,7 @@ export default function textfieldsMod(ms) {
     }
     //Sub numberbased SIDC
     if (
+      !layout &&
       !isNaN(this.options.sidc) &&
       this.metadata.baseDimension == "Subsurface"
     ) {
@@ -519,6 +549,21 @@ export default function textfieldsMod(ms) {
       gStrings.R3 = this.options.altitudeDepth;
       gStrings.R4 = this.options.staffComments;
       gStrings.R5 = this.options.additionalInformation;
+    }
+
+    if (layout) {
+      for (let row = 0; row <= 5; row++) {
+        gStrings["L" + row] = joinFields(
+          this.options,
+          (layout.left || [])[row],
+          layout.separator
+        );
+        gStrings["R" + row] = joinFields(
+          this.options,
+          (layout.right || [])[row],
+          layout.separator
+        );
+      }
     }
 
     //Add space on left side
@@ -539,6 +584,7 @@ export default function textfieldsMod(ms) {
               this.metadata.baseGeometry.bbox.width()) /
               2
           : 0,
+        strWidth(gStrings.L0, fontSize, spaceTextIcon),
         strWidth(gStrings.L1, fontSize, spaceTextIcon),
         strWidth(gStrings.L2, fontSize, spaceTextIcon),
         strWidth(gStrings.L3, fontSize, spaceTextIcon),
@@ -564,6 +610,7 @@ export default function textfieldsMod(ms) {
               this.metadata.baseGeometry.bbox.width()) /
               2
           : 0,
+        strWidth(gStrings.R0, fontSize, spaceTextIcon + stack),
         strWidth(gStrings.R1, fontSize, spaceTextIcon + stack),
         strWidth(gStrings.R2, fontSize, spaceTextIcon + stack),
         strWidth(gStrings.R3, fontSize, spaceTextIcon + stack),
@@ -571,6 +618,10 @@ export default function textfieldsMod(ms) {
         strWidth(gStrings.R5, fontSize, spaceTextIcon + stack + flag * 1.5)
       );
 
+    //Extra space above for field 0
+    if (gStrings.L0 || gStrings.R0) {
+      gbbox.y1 = Math.min(gbbox.y1, 100 - 3.5 * fontSize);
+    }
     //Extra space above for field 1
     if (gStrings.L1 || gStrings.R1) {
       gbbox.y1 = Math.min(gbbox.y1, 100 - 2.5 * fontSize);
@@ -592,6 +643,16 @@ export default function textfieldsMod(ms) {
     if (this.style.infoBackground) {
       let leftBox = { x1: 100, y1: 1000, y2: 0 };
       let rightBox = { x2: 100, y1: 1000, y2: 0 };
+      if (gStrings.L0)
+        leftBox = {
+          x1: Math.min(
+            leftBox.x1,
+            bbox.x1 - strWidth(gStrings.L0, fontSize, spaceTextIcon)
+          ),
+          x2: bbox.x1 - spaceTextIcon / 2,
+          y1: Math.min(leftBox.y1, 100 - 3.5 * fontSize),
+          y2: Math.max(leftBox.y2, 100 - 2.5 * fontSize + spaceTextIcon / 2)
+        };
       if (gStrings.L1)
         leftBox = {
           x1: Math.min(
@@ -672,6 +733,16 @@ export default function textfieldsMod(ms) {
           stroke: infoBackgroundFrame || false
         });
       }
+      if (gStrings.R0)
+        rightBox = {
+          x1: bbox.x2 + spaceTextIcon / 2,
+          x2: Math.max(
+            rightBox.x2,
+            bbox.x2 + strWidth(gStrings.R0, fontSize, spaceTextIcon)
+          ),
+          y1: Math.min(rightBox.y1, 100 - 3.5 * fontSize),
+          y2: Math.max(rightBox.y2, 100 - 2.5 * fontSize + spaceTextIcon / 2)
+        };
       if (gStrings.R1)
         rightBox = {
           x1: bbox.x2 + spaceTextIcon / 2,
@@ -754,6 +825,19 @@ export default function textfieldsMod(ms) {
       }
     }
     //geometries
+    if (gStrings.L0)
+      drawArray2.push({
+        type: "text",
+        text: gStrings.L0,
+        x: bbox.x1 - spaceTextIcon,
+        y: 100 - 2.5 * fontSize,
+        textanchor: "end",
+        fontsize: fontSize,
+        fontfamily: fontFamily,
+        fill: fontColor,
+        stroke: false,
+        cssClass: cssClass
+      });
     if (gStrings.L1)
       drawArray2.push({
         type: "text",
@@ -821,6 +905,19 @@ export default function textfieldsMod(ms) {
       });
 
     //geometries
+    if (gStrings.R0)
+      drawArray2.push({
+        type: "text",
+        text: gStrings.R0,
+        x: bbox.x2 + spaceTextIcon + stack,
+        y: 100 - 2.5 * fontSize,
+        textanchor: "start",
+        fontsize: fontSize,
+        fontfamily: fontFamily,
+        fill: fontColor,
+        stroke: false,
+        cssClass: cssClass
+      });
     if (gStrings.R1)
       drawArray2.push({
         type: "text",
