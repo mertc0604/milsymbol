@@ -12,6 +12,8 @@
 // field restriction, no layout, always valid) and keeps its current rendering.
 // See docs/std2525c-modifiers.md for the rule matrix and decision records.
 
+import { isBlank } from "./common.js";
+
 const CLASSES = ["unit", "equipment", "installation"];
 const IDENTITIES = "PUAFNSHGWMDLJK";
 const DIMENSIONS = "PAGSUFXZ";
@@ -233,8 +235,9 @@ function applicable(key, sidc) {
   return limit !== null && identityAllows(key, sidc);
 }
 
+// A missing, empty or whitespace-only value is not present (common.js isBlank).
 function present(value, key) {
-  if (value === undefined || value === null || value === "") return false;
+  if (isBlank(value)) return false;
   return !(key === "speedLeader" && Number(value) === 0);
 }
 function length(value) {

@@ -127,7 +127,7 @@ tests share one decoder.
 | Equipment HQ bit | Table III S (U/E/I) | drawn like a staff; `metadata.locationOffset` true and `headquarters` false semantics for units only (`staffRole`) |
 | F `(±)` glyph | PDF text shows `(+)` | image-checked: plus-minus |
 | Character count | not defined | product policy: Unicode code points, no normalization |
-| Whitespace-only text | not defined | not trimmed; callers should omit empty fields |
+| Whitespace-only text | not defined | product policy: a value that is only whitespace is empty. It creates no row, reserves no separator and is not "present" for validation (so an inapplicable or out-of-range field with a blank value is no error). Non-blank text is not trimmed. Implemented once in `src/modifierprofiles/common.js` (`isBlank`, `joinFields`, `clearBlankText`, which `applyProfile` runs on the symbol's own options) |
 | Q units | not defined | `direction` stays degrees (existing API); not source-defined |
 | Catalogue image errors (Annex D PDF 136, 154, 163-167 / printed 130, 148, 157-161, 261) | duplicated SIDC columns, wrong frames in UF rows, `modifier c` wording for installations | unresolved and unchanged; no icon or restriction derived from them |
 | Faker defined as an aircraft (302.9) vs Table I other dimensions | Table I shows K in all five columns | K is not restricted to air |

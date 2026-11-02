@@ -77,6 +77,14 @@ the same table.
 | AM AN | distance, azimuth | - | - | - | Table XIV only |
 | AO | engagementBar | G/8 | G/8 | G/8 | length 8 only; no `A:BBB-CC` grammar in 2525C |
 
+A value that is only whitespace (what `String.prototype.trim()` removes, including
+no-break and ideographic spaces) is empty: it creates no row, reserves no
+separator, and is not "present" for validation. Non-blank text is not trimmed.
+This is product policy shared by all three edition profiles and implemented in
+`src/modifierprofiles/common.js` (`isBlank`, `joinFields`, `clearBlankText`,
+applied by `applyProfile` to the symbol's own options). The source does not
+define whitespace handling.
+
 Display length is counted in Unicode code points (a modern-display choice; the
 transmission lengths of Table XIV are ASCII and are a separate matter). The
 source gives no character set, so none is enforced.

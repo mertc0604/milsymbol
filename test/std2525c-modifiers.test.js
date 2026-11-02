@@ -3,6 +3,7 @@
 // Table A-II (PDF 58-60, printed 52-54), Figure 2 (PDF 27, printed 21) and
 // 5.4.4 (PDF 40, printed 34) of MIL-STD-2525C, not from current output.
 import { ms, std2525c } from "../index.mjs";
+import { joinFields } from "../src/modifierprofiles/common.js";
 import {
   std2525cProfile,
   std2525cTableIV,
@@ -561,6 +562,179 @@ result["2525 unit with status C keeps its bar"] = [
   new ms.Symbol("SFGCUCI-----", { standard: "2525" }).metadata.condition,
   "FullyCapable"
 ];
+
+// Whitespace-only text is empty: no row, no reserved separator, not "present"
+// for validation. Non-blank text is never trimmed.
+const TEXT_KEYS = [
+  "quantity",
+  "reinforcedReduced",
+  "staffComments",
+  "additionalInformation",
+  "evaluationRating",
+  "combatEffectiveness",
+  "signatureEquipment",
+  "higherFormation",
+  "hostile",
+  "iffSif",
+  "sigint",
+  "uniqueDesignation",
+  "type",
+  "dtg",
+  "altitudeDepth",
+  "location",
+  "speed",
+  "specialHeadquarters",
+  "country",
+  "platformType",
+  "equipmentTeardownTime",
+  "commonIdentifier",
+  "auxiliaryEquipmentIndicator",
+  "headquartersElement",
+  "installationComposition",
+  "engagementBar",
+  "engagementType",
+  "guardedUnit",
+  "specialDesignator"
+];
+const BLANKS = ["   ", "\t", " \n ", " ", "　 "];
+const allBlank = (blank) => {
+  const o = {};
+  TEXT_KEYS.forEach((key) => {
+    o[key] = blank;
+  });
+  return o;
+};
+result["joinFields drops whitespace-only values and their separators"] = [
+  [
+    joinFields({ a: "  ", b: "x" }, ["a", "b"]),
+    joinFields({ a: "x", b: " \t ", c: "y" }, ["a", "b", "c"]),
+    joinFields({ a: "x", b: " " }, ["a", "b"]),
+    joinFields({ a: " ", b: "\n" }, ["a", "b"])
+  ],
+  ["x", "x y", "x", ""]
+];
+result["joinFields keeps non-blank values untrimmed"] = [
+  joinFields({ a: " x ", b: "y" }, ["a", "b"]),
+  " x  y"
+];
+[UNIT, EQUIPMENT, INSTALLATION, "SHGPEWM-----", "SDGPUCI-----", SOF].forEach(
+  (sidc) => {
+    BLANKS.forEach((blank, i) => {
+      const name = "blank " + i + " on " + sidc;
+      const blanked = sym(sidc, allBlank(blank));
+      const plain = sym(sidc);
+      result[name + ": renders exactly like no text"] = [
+        blanked.asSVG(),
+        plain.asSVG()
+      ];
+      result[name + ": same bounding box"] = [
+        [blanked.bbox.x1, blanked.bbox.x2, blanked.bbox.y1, blanked.bbox.y2],
+        [plain.bbox.x1, plain.bbox.x2, plain.bbox.y1, plain.bbox.y2]
+      ];
+      result[name + ": no validation error"] = [
+        std2525cValidate(sidc, allBlank(blank)).details.modifierErrors,
+        std2525cValidate(sidc).details.modifierErrors
+      ];
+      result[name + ": symbol is as valid as without text"] = [
+        blanked.isValid(),
+        plain.isValid()
+      ];
+    });
+  }
+);
+result["blank is not present: inapplicable and out-of-range values"] = [
+  [
+    ok(UNIT, { quantity: " ", type: " ", hostile: " " }),
+    ok(UNIT, { evaluationRating: " ", reinforcedReduced: " " }),
+    ok(EQUIPMENT, { signatureEquipment: " ", combatEffectiveness: "\t" }),
+    ok(UNIT, { country: " ", headquartersElement: "  ", sigint: " " }),
+    ok(UNIT, { dtg: " ", staffComments: "　" })
+  ],
+  [true, true, true, true, true]
+];
+result["blank does not make L available to other identities"] = [
+  ok("SSGPEWM-----", { signatureEquipment: " " }),
+  true
+];
+result["blank among real text: real text is still checked"] = [
+  [
+    ok(UNIT, { quantity: "5", staffComments: " " }),
+    ok(UNIT, { staffComments: "x".repeat(21) + " " })
+  ],
+  [false, false]
+];
+result["whitespace plus text counts as text (length includes spaces)"] = [
+  ok(UNIT, { staffComments: " ".repeat(10) + "x".repeat(11) }),
+  false
+];
+result["blank X keeps no leading space before Y"] = [
+  texts(sym(UNIT, { altitudeDepth: "   ", location: "12.5N" })),
+  ["12.5N"]
+];
+result["blank Y keeps no trailing space after X"] = [
+  texts(sym(UNIT, { altitudeDepth: "100 FT", location: "\t" })),
+  ["100 FT"]
+];
+result["blank K does not split J and P"] = [
+  texts(
+    sym(UNIT, {
+      evaluationRating: "B2",
+      combatEffectiveness: "  ",
+      iffSif: "7"
+    })
+  ),
+  ["B2 7"]
+];
+result["blank J K L N leaves P alone"] = [
+  texts(
+    sym("SHGPEWM-----", {
+      evaluationRating: " ",
+      signatureEquipment: " ",
+      hostile: " ",
+      iffSif: "12"
+    })
+  ),
+  ["12"]
+];
+result["blank F: exercise X is drawn alone and once"] = [
+  texts(sym("SDGPUCI-----", { reinforcedReduced: "  " })),
+  ["X"]
+];
+result["blank F: joker J is drawn alone and once"] = [
+  texts(sym("SJGPUCI-----", { reinforcedReduced: " " })),
+  ["J"]
+];
+result["blank quantity C creates no top text and no extra height"] = [
+  [
+    texts(sym(EQUIPMENT, { quantity: "  " })),
+    sym(EQUIPMENT, { quantity: "  " }).bbox.y1
+  ],
+  [[], sym(EQUIPMENT).bbox.y1]
+];
+result["blank AA creates no inner text and no extra width"] = [
+  [
+    texts(sym(UNIT, { specialHeadquarters: "          " })),
+    sym(UNIT, { specialHeadquarters: "          " }).bbox.x2
+  ],
+  [[], sym(UNIT).bbox.x2]
+];
+result["blank AO draws no engagement bar"] = [
+  sym(UNIT, { engagementBar: "   " }).bbox.y1,
+  sym(UNIT).bbox.y1
+];
+result["blank direction Q draws no arrow"] = [
+  sym(UNIT, { direction: " " }).asSVG(),
+  sym(UNIT).asSVG()
+];
+result["blank value is not trimmed away from real text"] = [
+  texts(sym(UNIT, { staffComments: " x " })),
+  [" x "]
+];
+result["the caller's options object is not modified"] = (() => {
+  const given = { quantity: "  ", staffComments: " " };
+  sym(EQUIPMENT, given);
+  return [given, { quantity: "  ", staffComments: " " }];
+})();
 
 ms.reset();
 export default { "MIL-STD-2525C modifiers": result };
