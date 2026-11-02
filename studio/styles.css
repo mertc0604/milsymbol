@@ -712,7 +712,13 @@ a.support-note {
   grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
 }
 .status-chips {
-  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+}
+/* APP-6D status names are long ("Present/Fully capable"): wrap inside the chip. */
+.status-chips .chip > span:not(.chip-glyph) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: left;
 }
 .chip {
   display: flex;
