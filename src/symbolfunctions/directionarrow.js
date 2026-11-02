@@ -12,7 +12,10 @@ export default function directionarrow(ms) {
     this.colors.iconColor[this.metadata.affiliation] ||
     this.colors.iconColor["Friend"];
   let arrow;
-  if (this.style.infoFields) {
+  if (
+    this.style.infoFields &&
+    !(this.metadata.std2525c && this.metadata.symbolClass == "installation")
+  ) {
     if (
       typeof this.options.direction !== "undefined" &&
       // extra test to be backward compatible with legacy string type
