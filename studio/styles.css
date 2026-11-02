@@ -684,6 +684,13 @@ a.support-note {
   font-size: 11px;
   line-height: 1.5;
 }
+/* Non-blocking: the Studio changed or kept something the edition does not accept. */
+.field-note.warn {
+  color: var(--warn);
+  background: var(--warn-bg);
+  border-radius: 6px;
+  padding: 5px 8px;
+}
 .inline-select {
   display: flex;
   align-items: center;
@@ -733,6 +740,17 @@ a.support-note {
   border-color: var(--blue);
   background: var(--soft-blue);
   color: var(--blue-dark);
+}
+/* The current value the edition does not accept for this symbol (kept, flagged). */
+.chip.chip-invalid {
+  border-style: dashed;
+  border-color: var(--danger);
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+.chip-flag {
+  font-size: 10px;
+  font-weight: 600;
 }
 .chip-glyph {
   display: flex;

@@ -49,7 +49,19 @@ export function profileFieldStates(textModifiers, profile, sidc) {
         available: true,
         maxLength: definition.maxLength || null,
         choices: definition.choices || null,
-        reason: ""
+        reason: "",
+        // Metadata a profile may attach to a field; the Studio shows it.
+        kind: definition.kind || "text",
+        minLength: definition.minLength || null,
+        pattern: definition.pattern || null,
+        patternText: definition.patternText || "",
+        alternates: definition.alternates || null,
+        examples: definition.examples || null,
+        parts: definition.parts || null,
+        format: definition.format || "",
+        unresolved: definition.unresolved || "",
+        nonBlocking: Boolean(definition.nonBlocking),
+        requiresEchelonDivisionOrBelow: Boolean(definition.requiresEchelonDivisionOrBelow)
       };
     return { key, field, label, available: false, maxLength: null, choices: null, reason: profile.unavailableReason(key, sidc) || "Not available" };
   });

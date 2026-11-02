@@ -1,9 +1,34 @@
 import { app6aSymbolClass, app6aTextFields, getApp6aFields } from "./vendor/letter-metadata.js";
 import * as app6aRules from "./vendor/modifierprofiles/app6a.js";
 import { std2525cProfile } from "./vendor/modifierprofiles/std2525c.js";
-import { app6dProfile } from "./vendor/modifierprofiles/app6d.js";
+import {
+  app6dProfile,
+  app6dContexts,
+  app6dIdentityName,
+  app6dStatuses,
+  app6dEngagementError
+} from "./vendor/modifierprofiles/app6d.js";
+import * as app6dSectors from "./vendor/modifierprofiles/app6d-sectors.js";
 import { decodeEditorSidc, editImportedSidc, numericSidcEdition } from "./sidc-editor.js";
 import { modifierGroups, textModifiers, collectTextModifiers } from "./modifier-fields.js";
+import {
+  probeOffers,
+  patchSidc,
+  shortReason,
+  humanize,
+  classWords,
+  sectorChoices,
+  sectorStatusLabels,
+  parseEngagement,
+  composeEngagement,
+  engagementOptions,
+  fieldMeaning,
+  carryWarnings,
+  fieldRule,
+  explainUnavailable,
+  profileExtraFields,
+  profileDetailLines
+} from "./profile-controls.js";
 
 import { fieldStates, profileFieldStates, formatDtg, evaluationRating, sidcParts, pushRecent, placeholderOptions } from "./editor-helpers.js";
 import { fieldReference } from "./field-reference.js";
@@ -80,6 +105,21 @@ const profileNotes = {
 };
 const profileTitles = { app6a: "APP-6A Table III", "2525c": "MIL-STD-2525C Table IV", app6d: "APP-6D" };
 const activeProfile = () => profiles[state.standardId] || null;
+// Names come from the edition's own table when its profile has one: APP-6D
+// names Joker and Faker only with context 1 and calls status 2-5 "Present/...".
+function identityLabelFor(entry, context = state.context) {
+  const named = state.standardId === "app6d" && entry.numeric && app6dIdentityName(context, entry.numeric);
+  return named || identityLabel(entry, context);
+}
+function statusLabelFor(entry) {
+  const named = state.standardId === "app6d" && app6dStatuses.find((item) => item.digit === entry.numeric);
+  return named ? named.name : entry.label;
+}
+// "Exercise (US only)": the profile's note says where a context may be used.
+function contextLabelFor([value, label]) {
+  const context = state.standardId === "app6d" && app6dContexts.find((item) => item.digit === value);
+  return context ? `${context.name}${/\bUS\b/.test(context.note || "") ? " (US only)" : ""}` : label;
+}
 
 const statuses = [
   { value: "present", label: "Present", numeric: "0", legacy: "P" },
@@ -162,13 +202,16 @@ const dom = Object.fromEntries(
     "sidcStatus",
     "identityChips",
     "identityNote",
+    "identityAdjust",
     "statusChips",
     "statusMeta",
     "statusNote",
+    "statusAdjust",
     "designationMeta",
     "designationNote",
     "amplifierMeta",
     "amplifierNote",
+    "amplifierAdjust",
     "countryMeta",
     "flagSwatch",
     "editionMeta",
@@ -268,7 +311,13 @@ const state = {
   sidcMessage: null,
   showUnavailable: true,
   focusField: "",
-  recent: []
+  recent: [],
+  // Fallbacks the Studio made after the edition profile rejected a selection.
+  adjustments: {},
+  // Where free text was typed (key -> {meaning, where}); see carryWarnings().
+  textOrigins: {},
+  // Select values dropped because the edition does not define them (key -> text).
+  droppedChoices: {}
 };
 
 let catalog;
@@ -357,8 +406,117 @@ function flagCode() {
   );
 }
 
+// Position 11 of a letter SIDC, indexed by flagCode(): feint/dummy 1, HQ 2, task force 4.
+const legacyFlagLetters = ["-", "F", "A", "C", "E", "G", "B", "D"];
+
 function legacyFlagCharacter() {
-  return ["-", "F", "A", "C", "E", "G", "B", "D"][flagCode()];
+  return legacyFlagLetters[flagCode()];
+}
+
+// What the active edition profile accepts for this symbol. Each candidate value
+// is written into the SIDC and handed to profile.validate(); a value is
+// offered only when that adds no SIDC-level error (see profile-controls.js).
+// Returns null when the edition has no profile (or APP-6A, which keeps its
+// own Table III rules for these controls).
+const offerCache = new Map();
+function profileOffers(sidc) {
+  const profile = activeProfile();
+  if (!profile) return null;
+  const key = `${state.standardId}|${state.context}|${sidc}`;
+  if (offerCache.has(key)) return offerCache.get(key);
+  const standard = config();
+  const modern = standard.family === "modern";
+  const pad = modern ? "0" : "-";
+  const base = sidc.padEnd(modern ? 20 : 15, pad);
+  const at = modern ? { identity: 3, status: 6, flags: 7, amplifier: 8 } : { identity: 1, status: 3, flags: 10, amplifier: 10 };
+  const map = (rows, valueOf) => new Map(rows.map(({ item, offered, reason }) => [valueOf(item), { offered, reason }]));
+  const offers = {
+    identity: map(
+      probeOffers(profile, identityList(standard), (entry) => patchSidc(base, at.identity, identityCode(entry, standard, state.context), pad)),
+      (entry) => entry.value
+    ),
+    status: map(
+      probeOffers(profile, statusChoices(), (entry) => patchSidc(base, at.status, modern ? entry.numeric : entry.legacy, pad)),
+      (entry) => entry.value
+    )
+  };
+  if (state.standardId !== "app6a") {
+    // Flags and amplifiers are probed one at a time against a symbol that has none.
+    const clear = patchSidc(base, at.amplifier, modern ? "00" : "--", pad);
+    const flagsClear = patchSidc(base, at.flags, modern ? "0" : "--", pad);
+    const flagProbe = (code) => probeOffers(profile, [code], (value) => patchSidc(flagsClear, at.flags, modern ? String(value) : `${legacyFlagLetters[value]}-`, pad), flagsClear)[0];
+    offers.flags = { feintDummy: flagProbe(1), hq: flagProbe(2), taskForce: flagProbe(4) };
+    const amplifiers = [...echelons, ...mobilities].filter((item) => item[0] !== "");
+    offers.amplifier = map(
+      probeOffers(
+        profile,
+        amplifiers,
+        (item) => patchSidc(clear, at.amplifier, modern ? item[2] : echelons.includes(item) ? `-${item[3]}` : item[3], pad),
+        clear
+      ),
+      (item) => item[0]
+    );
+  }
+  if (offerCache.size > 300) offerCache.clear();
+  offerCache.set(key, offers);
+  return offers;
+}
+
+// Statuses of the edition as they are listed in the status select.
+function statusChoices() {
+  return state.standardId === "app6a" ? statuses.slice(0, 2) : statuses;
+}
+
+// A new symbol or standard can leave a selection the edition profile rejects
+// for it (a "damaged" status on a unit). Fall back to a value the profile
+// accepts and say so next to the control. An imported SIDC is never rewritten:
+// its rejected values stay, flagged, so the code the user pasted is kept.
+function reconcileSelections() {
+  if (state.customSidc) return;
+  const offers = profileOffers(buildSidc());
+  if (!offers) return;
+  const rejected = (kind, value) => {
+    const offer = offers[kind].get(value);
+    return offer && !offer.offered ? offer : null;
+  };
+  const firstOffered = (kind, preferred) =>
+    offers[kind].get(preferred)?.offered ? preferred : [...offers[kind]].find(([, offer]) => offer.offered)?.[0];
+  const note = (what, current, reason, next) => `${what} ${current} does not fit this symbol (${humanize(shortReason(reason))}); switched to ${next}.`;
+  let offer = rejected("identity", state.affiliation);
+  if (offer) {
+    const next = firstOffered("identity", "friend");
+    const label = (value) => identityLabelFor(identityList(config()).find((item) => item.value === value) || { label: value });
+    if (next) {
+      state.adjustments.identity = note("Identity", label(state.affiliation), offer.reason, label(next));
+      state.affiliation = next;
+    }
+  }
+  offer = rejected("status", state.status);
+  if (offer) {
+    const next = firstOffered("status", "present");
+    const label = (value) => statusLabelFor(statuses.find((item) => item.value === value) || { label: value });
+    if (next) {
+      state.adjustments.status = note("Status", label(state.status), offer.reason, label(next));
+      state.status = next;
+    }
+  }
+  if (offers.amplifier) {
+    offer = state.amplifierValue && offers.amplifier.get(state.amplifierValue);
+    if (offer && !offer.offered) {
+      const label = [...echelons, ...mobilities].find((item) => item[0] === state.amplifierValue)?.[1] || state.amplifierValue;
+      state.adjustments.amplifier = note("Amplifier", label, offer.reason, "unspecified");
+      state.amplifierValue = "";
+    }
+    // A mode with nothing to offer ("echelon" on equipment) moves to the other
+    // mode when that one has values, else to none. The value stays unspecified.
+    const hasOffer = (list) => list.some((item) => item[0] !== "" && offers.amplifier.get(item[0])?.offered);
+    const modes = { echelon: echelons, mobility: mobilities };
+    if (modes[state.amplifierMode] && !hasOffer(modes[state.amplifierMode])) {
+      const other = state.amplifierMode === "echelon" ? "mobility" : "echelon";
+      state.amplifierMode = hasOffer(modes[other]) ? other : "none";
+      state.amplifierValue = "";
+    }
+  }
 }
 
 function applyModernModifier(sidc, value, type) {
@@ -446,6 +604,7 @@ function setStandard(id) {
   const next = standards.find((item) => item.id === id);
   if (!next) return;
   state.standardId = id;
+  state.adjustments = {};
   loadRecent();
   const identity = convertIdentity({ value: state.affiliation, context: state.context }, next);
   state.affiliation = identity.value;
@@ -595,11 +754,25 @@ function populateAmplifier() {
   let source = state.amplifierMode === "mobility" ? mobilities : echelons;
   if (state.standardId === "app6a")
     source = source.filter((item) => !["N", "NS", "NL"].includes(item[3]));
+  // Edition profiles list only the echelons, mobilities and towed arrays the
+  // symbol may carry; a current value they reject stays, flagged.
+  const offers = profileOffers(state.customSidc || buildSidc());
+  const rejected = new Map();
+  if (offers && offers.amplifier)
+    source = source.filter((item) => {
+      const offer = offers.amplifier.get(item[0]);
+      if (!offer || offer.offered) return true;
+      if (item[0] !== state.amplifierValue) return false;
+      rejected.set(item[0], offer.reason);
+      return true;
+    });
   dom.amplifierValue.disabled = state.amplifierMode === "none";
   dom.amplifierLabel.textContent =
     state.amplifierMode === "mobility" ? "Mobility" : "Echelon";
   dom.amplifierValue.innerHTML = source
-    .map((item) => option(item[0], item[1]))
+    .map((item) => rejected.has(item[0])
+      ? `<option value="${escapeHtml(item[0])}" title="${escapeHtml(rejected.get(item[0]))}">${escapeHtml(item[1])} (not valid here)</option>`
+      : option(item[0], item[1]))
     .join("");
   const exists = source.some((item) => item[0] === state.amplifierValue);
   if (!exists && state.amplifierValue.startsWith("code:"))
@@ -668,7 +841,27 @@ function syncModifiers() {
   if (app6a && ((state.amplifierMode === "echelon" && kind !== "unit") || (state.amplifierMode === "mobility" && kind !== "equipment"))) {
     state.amplifierMode = "none"; state.amplifierValue = ""; populateAmplifier();
   }
-  syncRuleNotes({ modern, app6a, kind, installation, tactical, prescribed: Boolean(prescribedAffiliation) });
+  // Editions with a profile (2525C, APP-6D) say which flags and amplifier
+  // modes the symbol may carry; every disabled control keeps the profile's reason.
+  const offers = app6a ? null : profileOffers(state.customSidc || buildSidc());
+  const flagReasons = {};
+  for (const control of [dom.feintDummy, dom.hq, dom.taskForce]) control.parentElement.title = "";
+  if (offers && offers.flags) {
+    for (const [key, offer] of Object.entries(offers.flags)) {
+      const control = { feintDummy: dom.feintDummy, hq: dom.hq, taskForce: dom.taskForce }[key];
+      if (offer.offered) continue;
+      control.disabled = true;
+      control.parentElement.title = offer.reason;
+      flagReasons[key] = offer.reason;
+    }
+    const hasOffer = (list) => list.some((item) => item[0] !== "" && offers.amplifier.get(item[0])?.offered);
+    for (const button of dom.amplifierMode.querySelectorAll("button")) {
+      const list = { echelon: echelons, mobility: mobilities }[button.dataset.mode];
+      if (list && !hasOffer(list)) button.disabled = true;
+    }
+  }
+  if (offers) populateAmplifier();
+  syncRuleNotes({ modern, app6a, kind, installation, tactical, prescribed: Boolean(prescribedAffiliation), flagReasons });
   syncApp6aTextFields();
   document.getElementById("legacyNote").textContent = installation
     ? "Installation modifier H is applied automatically. Feint / dummy changes it to HB; unit echelon and headquarters flags do not apply."
@@ -699,18 +892,29 @@ function syncModifiers() {
 const kindLabels = { unit: "Unit", equipment: "Equipment", installation: "Installation", point: "Tactical point", nuclear: "Nuclear point" };
 
 // Explain every rule that disables a control, next to the control.
-function syncRuleNotes({ modern, app6a, kind, installation, tactical, prescribed }) {
+function syncRuleNotes({ modern, app6a, kind, installation, tactical, prescribed, flagReasons = {} }) {
+  const profile = activeProfile();
   const contextNote = {
     1: `Exercise: an X is drawn beside the frame; suspect and hostile become Joker (J) and Faker (K).${modern ? "" : " Position 2 uses the exercise letters G, W, M, D, L, J and K."}`,
     2: "Simulation: an S is drawn beside the frame."
   }[app6a ? "0" : state.context];
-  const identityNote = prescribed ? "This symbol prescribes its identity, so the identity is fixed." : contextNote || "";
+  // APP-6D marks Exercise and Simulation as US-only; the note comes from its table.
+  const usOnly = state.standardId === "app6d" && app6dContexts.find((item) => item.digit === state.context && item.note);
+  const identityNote = prescribed
+    ? "This symbol prescribes its identity, so the identity is fixed."
+    : [contextNote, usOnly && `${usOnly.name} is ${shortReason(usOnly.note).replace(/^US use only/, "for US use only")}.`].filter(Boolean).join(" ");
   dom.identityNote.hidden = !identityNote;
   dom.identityNote.textContent = identityNote;
+  for (const [key, element] of [["identity", dom.identityAdjust], ["status", dom.statusAdjust], ["amplifier", dom.amplifierAdjust]]) {
+    element.hidden = !state.adjustments[key];
+    element.textContent = state.adjustments[key] || "";
+  }
   dom.statusMeta.textContent = modern ? "Position 7" : "Position 4";
   dom.statusNote.textContent = app6a
     ? "APP-6A defines Present and Planned. Fully capable, damaged, destroyed and full to capacity appear in the other editions."
-    : "";
+    : profile
+      ? `Only the statuses ${profileTitles[state.standardId]} allows for this symbol are listed.`
+      : "";
   dom.designationMeta.textContent = modern ? "Position 8" : "Position 11";
   const reasons = [];
   if (installation) reasons.push("Installations carry the installation modifier, so headquarters and task force do not apply.");
@@ -719,6 +923,8 @@ function syncRuleNotes({ modern, app6a, kind, installation, tactical, prescribed
     if (app6a && state.amplifierMode === "mobility") reasons.push("Mobility uses positions 11–12, so headquarters is off.");
     if (app6a && kind !== "unit") reasons.push("Task force applies to units only.");
   }
+  const flagNames = { hq: "Headquarters", taskForce: "Task force", feintDummy: "Feint / dummy" };
+  for (const [key, reason] of Object.entries(flagReasons)) reasons.push(`${flagNames[key]}: ${humanize(shortReason(reason))}.`);
   dom.designationNote.textContent = reasons.join(" ") || (modern
     ? "Writes one combined code to position 8 of the SIDC."
     : "Writes one combined code to position 11, for example A for headquarters or E for task force.");
@@ -729,7 +935,7 @@ function syncRuleNotes({ modern, app6a, kind, installation, tactical, prescribed
       ? "Units take an echelon above the frame. Mobility is for equipment."
       : app6a && kind === "equipment"
         ? "Equipment takes a mobility amplifier below the frame. Echelon is for units."
-        : "Echelon is drawn above the frame; mobility below it.";
+        : `Echelon is drawn above the frame; mobility below it.${profile && !app6a ? ` Only the values ${profileTitles[state.standardId]} allows for this symbol are listed.` : ""}`;
   dom.countryMeta.textContent = countrySidcField(state.standardId)?.description || "";
   dom.editionMeta.textContent = modern
     ? (config().version === "13" ? "Edition E" : "Edition D")
@@ -945,6 +1151,7 @@ function applyImportedSidc(value) {
   const edition = config().family === "modern" && numericSidcEdition(value);
   if (edition && edition !== (config().version === "13" ? "e" : "d"))
     setStandard(`${state.standardId.startsWith("app6") ? "app6" : "2525"}${edition}`);
+  state.adjustments = {};
   const parsed = decodeEditorSidc(value, { ...config(), icons: dataset().icons });
   const modern = config().family === "modern";
   const encoding = modern ? "numeric" : "legacy";
@@ -972,7 +1179,7 @@ function applyImportedSidc(value) {
 // Exercise relabels suspect and hostile as Joker and Faker.
 function populateIdentityOptions() {
   dom.affiliation.innerHTML = identityList(config())
-    .map((item) => option(item.value, identityLabel(item, state.context)))
+    .map((item) => option(item.value, identityLabelFor(item)))
     .join("");
   selectImportedValue(dom.affiliation, state.affiliation);
 }
@@ -984,13 +1191,11 @@ function syncStandardControls() {
   // Validate after removing publication whitespace, not while pasting it.
   dom.sidcInput.removeAttribute("maxlength");
   populateIdentityOptions();
-  dom.status.innerHTML = (
-    state.standardId === "app6a" ? statuses.slice(0, 2) : statuses
-  )
-    .map((item) => option(item.value, item.label))
+  dom.status.innerHTML = statusChoices()
+    .map((item) => option(item.value, statusLabelFor(item)))
     .join("");
   selectImportedValue(dom.status, state.status);
-  dom.context.innerHTML = contexts.map(([value, label]) => option(value, label)).join("");
+  dom.context.innerHTML = contexts.map((item) => option(item[0], contextLabelFor(item))).join("");
   if (contexts.length) selectImportedValue(dom.context, state.context);
   populateAmplifier();
   syncModifiers();
@@ -1011,7 +1216,7 @@ function describePart(key, value, sidc) {
     case "identity": {
       const identity = decodeIdentity(modern ? value[1] : value, config(), modern ? value[0] : "0");
       const entry = identity && identityList(config()).find((item) => item.value === identity.value);
-      const label = entry ? identityLabel(entry, identity.context) : "";
+      const label = entry ? identityLabelFor(entry, identity.context) : "";
       if (modern) return [contextNames[value[0]] || "Context " + value[0], label].filter(Boolean).join(" · ");
       return identity?.context === "1" ? `Exercise · ${label}` : label;
     }
@@ -1030,7 +1235,8 @@ function describePart(key, value, sidc) {
       return [legacyFlagNames[value[0]], echelon?.[1]].filter(Boolean).join(" · ") || "None";
     }
     case "amplifier": {
-      const status = statuses.find((item) => item.numeric === value[0])?.label;
+      const statusEntry = statuses.find((item) => item.numeric === value[0]);
+      const status = statusEntry && statusLabelFor(statusEntry);
       const flags = ["", "Feint / dummy", "Headquarters", "HQ · feint", "Task force", "TF · feint", "Task force HQ", "TF HQ · feint"][Number(value[1])];
       const amplifier = [...echelons, ...mobilities].find((item) => item[2] === value.slice(2) && item[2] !== "00")?.[1];
       return [status, flags, amplifier].filter(Boolean).join(" · ");
@@ -1076,23 +1282,39 @@ function renderChips(sidc) {
   if (modern) base = base.padEnd(20, "0").slice(0, 7) + "000" + base.padEnd(20, "0").slice(10);
   else if (base[10] !== "H") base = base.padEnd(15, "-").slice(0, 10) + "--" + base.padEnd(15, "-").slice(12);
   const variant = (position, code) => base.slice(0, position) + code + base.slice(position + 1);
-  const chip = (select, value, label, code, position) =>
-    `<button type="button" class="chip" data-value="${escapeHtml(value)}" aria-pressed="${select.value === value}"${select.disabled ? " disabled" : ""}><span class="chip-glyph">${code ? chipSvg(variant(position, code)) : ""}</span><span>${escapeHtml(label)}</span></button>`;
+  // A chip the edition profile does not offer stays only while it is the
+  // current value, flagged, so the problem line and the chip agree.
+  const chip = (select, value, label, code, position, flag) =>
+    `<button type="button" class="chip${flag ? " chip-invalid" : ""}" data-value="${escapeHtml(value)}" aria-pressed="${select.value === value}"${flag ? ` title="${escapeHtml(flag)}"` : ""}${select.disabled ? " disabled" : ""}><span class="chip-glyph">${code ? chipSvg(variant(position, code)) : ""}</span><span>${escapeHtml(label)}</span>${flag ? '<small class="chip-flag">not valid here</small>' : ""}</button>`;
   const standard = config();
   const identities = identityList(standard);
+  const offers = profileOffers(sidc);
+  // Returns "" to show the chip, null to hide it, or the reason to flag it.
+  const offerFlag = (select, kind, value, importedReason) => {
+    if (value.startsWith("code:")) return importedReason || "This code is not defined in this edition.";
+    const offer = offers && offers[kind].get(value);
+    if (!offer || offer.offered) return "";
+    return select.value === value ? offer.reason || "Not valid for this symbol." : null;
+  };
   // Re-rendering replaces the buttons; keep keyboard focus on the same chip.
   const focused = document.activeElement?.closest?.(".chip");
   const focusedGroup = focused && (dom.identityChips.contains(focused) ? dom.identityChips : dom.statusChips.contains(focused) ? dom.statusChips : null);
   const focusedValue = focusedGroup && focused.dataset.value;
+  const importedIdentityReason = (value) =>
+    state.standardId === "app6a" ? app6aRules.app6aIdentity(value.replace(/^code:/, ""), sidc[2]).reason : "";
   dom.identityChips.innerHTML = [...dom.affiliation.options].map((item) => {
     const entry = identities.find((candidate) => candidate.value === item.value);
+    const flag = offerFlag(dom.affiliation, "identity", item.value, importedIdentityReason(item.value));
+    if (flag === null) return "";
     const code = entry ? identityCode(entry, standard, state.context) : item.value.replace(/^code:/, "");
-    return chip(dom.affiliation, item.value, entry ? identityLabel(entry, state.context) : item.textContent, code, modern ? 3 : 1);
+    return chip(dom.affiliation, item.value, entry ? identityLabelFor(entry) : item.textContent, code, modern ? 3 : 1, flag);
   }).join("");
   dom.statusChips.innerHTML = [...dom.status.options].map((item) => {
     const entry = statuses.find((candidate) => candidate.value === item.value);
+    const flag = offerFlag(dom.status, "status", item.value);
+    if (flag === null) return "";
     const code = entry ? entry[modern ? "numeric" : "legacy"] : item.value.replace(/^code:/, "");
-    return chip(dom.status, item.value, entry ? entry.label : item.textContent, code, modern ? 6 : 3);
+    return chip(dom.status, item.value, entry ? statusLabelFor(entry) : item.textContent, code, modern ? 6 : 3, flag);
   }).join("");
   if (focusedGroup)
     [...focusedGroup.querySelectorAll(".chip")].find((item) => item.dataset.value === focusedValue)?.focus({ preventScroll: true });
@@ -1200,6 +1422,8 @@ function renderAll() {
   const icon = selectedIcon();
   if (!icon) return;
   state.selectedId = icon.id;
+  reconcileSelections();
+  if ([...dom.status.options].some((item) => item.value === state.status)) dom.status.value = state.status;
   syncModifiers();
   const sidc = state.customSidc || buildSidc(icon);
   const countryCode = countryCodeForFlag(dom.countryFlag.value, state.standardId);
@@ -1269,6 +1493,7 @@ function updateSidcAndRender(field, { rerenderCatalog = false } = {}) {
 
 function selectSymbol(id) {
   state.selectedId = id;
+  state.adjustments = {};
   rememberRecent(id);
   state.modifier1 = "";
   state.modifier2 = "";
@@ -1362,7 +1587,10 @@ function resetControls() {
     importedIcon: null,
     outline: false,
     sidcDirty: false,
-    sidcMessage: null
+    sidcMessage: null,
+    adjustments: {},
+    textOrigins: {},
+    droppedChoices: {}
   });
   for (const select of document.querySelectorAll("[data-rating-part]")) select.value = "";
   for (const id of ["fillColorOn", "monoColorOn", "infoColorOn", "infoBackgroundOn"]) dom[id].checked = false;
@@ -1529,27 +1757,32 @@ function bindEvents() {
   });
 
   dom.affiliation.addEventListener("change", () => {
+    delete state.adjustments.identity;
     state.affiliation = dom.affiliation.value;
     updateSidcAndRender("affiliation", { rerenderCatalog: true });
   });
   dom.context.addEventListener("change", () => {
+    delete state.adjustments.identity;
     state.context = dom.context.value;
     populateIdentityOptions();
     updateSidcAndRender("context");
   });
   dom.status.addEventListener("change", () => {
+    delete state.adjustments.status;
     state.status = dom.status.value;
     updateSidcAndRender("status", { rerenderCatalog: true });
   });
   dom.amplifierMode.addEventListener("click", (event) => {
     const button = event.target.closest("[data-mode]");
     if (!button || button.disabled || button.dataset.mode === state.amplifierMode) return;
+    delete state.adjustments.amplifier;
     state.amplifierMode = button.dataset.mode;
     state.amplifierValue = "";
     populateAmplifier();
     updateSidcAndRender("amplifier");
   });
   dom.amplifierValue.addEventListener("change", () => {
+    delete state.adjustments.amplifier;
     state.amplifierValue = dom.amplifierValue.value;
     updateSidcAndRender("amplifier");
   });
