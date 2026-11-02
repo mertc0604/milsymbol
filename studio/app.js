@@ -1114,6 +1114,8 @@ function renderProblem() {
     imported(dom.affiliation, modern ? 3 : 1, modern ? 4 : 2, "an identity"),
     imported(dom.status, modern ? 6 : 3, modern ? 7 : 4, "a status"),
     imported(dom.amplifierValue, modern ? 8 : 10, modern ? 10 : 12, "an echelon or mobility code"),
+    ...(detail.sidcErrors || []),
+    ...(detail.identityErrors || []),
     ...(detail.modifierErrors || []),
     detail.icon === false ? "Unknown function code for this standard." : "",
     detail.affiliation === "undefined" ? "Unknown identity." : "",
