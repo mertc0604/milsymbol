@@ -1022,6 +1022,10 @@ function renderChips(sidc) {
   const chip = (select, value, label, code, position) =>
     `<button type="button" class="chip" data-value="${escapeHtml(value)}" aria-pressed="${select.value === value}"${select.disabled ? " disabled" : ""}><span class="chip-glyph">${code ? chipSvg(variant(position, code)) : ""}</span><span>${escapeHtml(label)}</span></button>`;
   const identities = state.standardId === "app6a" ? app6aAffiliations : affiliations;
+  // Re-rendering replaces the buttons; keep keyboard focus on the same chip.
+  const focused = document.activeElement?.closest?.(".chip");
+  const focusedGroup = focused && (dom.identityChips.contains(focused) ? dom.identityChips : dom.statusChips.contains(focused) ? dom.statusChips : null);
+  const focusedValue = focusedGroup && focused.dataset.value;
   dom.identityChips.innerHTML = [...dom.affiliation.options].map((item) => {
     const entry = identities.find((candidate) => candidate.value === item.value);
     const code = entry ? entry[modern ? "numeric" : "legacy"] : item.value.replace(/^code:/, "");
@@ -1032,6 +1036,8 @@ function renderChips(sidc) {
     const code = entry ? entry[modern ? "numeric" : "legacy"] : item.value.replace(/^code:/, "");
     return chip(dom.status, item.value, entry ? entry.label : item.textContent, code, modern ? 6 : 3);
   }).join("");
+  if (focusedGroup)
+    [...focusedGroup.querySelectorAll(".chip")].find((item) => item.dataset.value === focusedValue)?.focus({ preventScroll: true });
 }
 
 // Name the SIDC position when an imported code is outside this edition.
@@ -1437,6 +1443,10 @@ function bindEvents() {
     }
   });
   dom.searchLauncher.addEventListener("click", openSearch);
+  // The search panel is modal: keep focus inside it while it is open.
+  document.addEventListener("focusin", (event) => {
+    if (state.searchOpen && !dom.searchPanel.contains(event.target)) dom.symbolSearch.focus();
+  });
   for (const element of document.querySelectorAll("[data-close-search]"))
     element.addEventListener("click", closeSearch);
   dom.identityChips.addEventListener("click", (event) => {
