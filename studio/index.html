@@ -77,6 +77,10 @@
               <button id="applySidc" class="apply-button" type="button">Apply</button>
             </div>
             <p id="sidcStatus" class="sidc-status" role="status" data-kind="idle"></p>
+            <div id="profileDetails" class="profile-details" hidden>
+              <ul id="profileIssues" class="profile-issues"></ul>
+              <details id="profileNotesBox"><summary id="profileNotesSummary"></summary><ul id="profileNotesList"></ul></details>
+            </div>
             <div id="sidcSegments" class="sidc-segments" aria-label="Code breakdown"></div>
             <div class="sidc-footer">
               <span>Paste a code from a publication. * keeps the current identity or status.</span>
@@ -122,6 +126,10 @@
                 <select id="affiliation" class="visually-hidden" tabindex="-1" aria-hidden="true"></select>
                 <p class="field-note" id="identityNote" hidden></p>
                 <p class="field-note warn" id="identityAdjust" role="status" hidden></p>
+                <label id="uncertaintyField" class="inline-select" hidden><span>Uncertainty mark ("?")</span><select id="uncertaintyMarker" aria-describedby="uncertaintyNote">
+                  <option value="table">Publication default</option><option value="field">In field E</option><option value="frame">Inside the frame</option>
+                </select></label>
+                <p class="field-note" id="uncertaintyNote" hidden></p>
               </section>
 
               <div class="card-grid">
@@ -190,7 +198,9 @@
                 </div>
               </div>
               <p id="app6aFieldNote" class="field-note" hidden>APP-6A Table III (pp. 19–21). Only applicable fields are editable; limits follow the publication.</p>
+              <div id="carryNotes" class="carry-notes" role="status" aria-live="polite" hidden></div>
               <div id="app6aTextFields" class="text-groups"></div>
+              <section id="profileExtras" class="profile-extras" aria-label="Fields this symbol defines that the editor cannot set" hidden></section>
               <p class="field-note">Text amplifiers are included in SVG / PNG exports, separately from the SIDC. Placement depends on the symbol set.</p>
             </div>
 

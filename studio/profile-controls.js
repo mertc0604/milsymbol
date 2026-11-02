@@ -98,9 +98,7 @@ export function explainUnavailable(state, extras = []) {
   );
   const short = humanize(shortReason(full)) || "Not available";
   return {
-    short: same
-      ? `${short}. ${same.field} here is ${same.label.toLowerCase()}: ${humanize(same.reason)}`
-      : short,
+    short: same ? `${short}. ${humanize(same.reason)}` : short,
     full: same ? `${full} | ${same.reason}` : full
   };
 }
@@ -294,7 +292,7 @@ export function carryWarnings({ states, values, origins, extras = [] }) {
       warnings.push({
         ...base,
         kind: "changed",
-        message: `Typed under ${origin.where}, where ${change}. Check that it still fits.`
+        message: `Typed for ${origin.where}; here ${change}. Check that it still fits.`
       });
   }
   return warnings;

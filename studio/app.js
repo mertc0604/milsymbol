@@ -25,7 +25,6 @@ import {
   fieldMeaning,
   carryWarnings,
   fieldRule,
-  explainUnavailable,
   profileExtraFields,
   profileDetailLines
 } from "./profile-controls.js";
@@ -203,6 +202,9 @@ const dom = Object.fromEntries(
     "identityChips",
     "identityNote",
     "identityAdjust",
+    "uncertaintyField",
+    "uncertaintyMarker",
+    "uncertaintyNote",
     "statusChips",
     "statusMeta",
     "statusNote",
@@ -216,6 +218,13 @@ const dom = Object.fromEntries(
     "flagSwatch",
     "editionMeta",
     "textSummary",
+    "carryNotes",
+    "profileExtras",
+    "profileDetails",
+    "profileIssues",
+    "profileNotesBox",
+    "profileNotesSummary",
+    "profileNotesList",
     "toggleUnavailable",
     "clearText",
     "textFilledBadge",
@@ -394,6 +403,8 @@ function currentOptions(minimal = false) {
     hqStaffLength: minimal ? 0 : Number(dom.hqStaffLength.value),
     stack: minimal || app6a ? 0 : Number(dom.stack.value)
   };
+  // APP-6A 503.1a lets the "?" of pending, assumed friend and suspect sit in field E or in the frame.
+  if (app6a && !minimal && dom.uncertaintyMarker.value !== "table") options.uncertaintyMarker = dom.uncertaintyMarker.value;
   if (app6a && app6aSymbolClass(sidc) === "point") options.direction = undefined;
   return options;
 }
@@ -750,6 +761,14 @@ function renderCatalog() {
   if (focusedId && dom.searchPanel.contains(document.activeElement)) [...dom.symbolGrid.querySelectorAll("[data-symbol-id]")].find(card=>card.dataset.symbolId === focusedId)?.focus({preventScroll:true});
 }
 
+function mobilityNameFor(offers) {
+  if (!offers || !offers.amplifier) return "Mobility";
+  const offered = mobilities.filter((item) => item[0] !== "" && offers.amplifier.get(item[0])?.offered);
+  const arrays = offered.filter((item) => ["shortArray", "longArray"].includes(item[0]));
+  if (!arrays.length) return "Mobility";
+  return arrays.length === offered.length ? "Towed array" : "Mobility / towed array";
+}
+
 function populateAmplifier() {
   let source = state.amplifierMode === "mobility" ? mobilities : echelons;
   if (state.standardId === "app6a")
@@ -767,8 +786,11 @@ function populateAmplifier() {
       return true;
     });
   dom.amplifierValue.disabled = state.amplifierMode === "none";
+  // Where a profile offers only towed arrays (APP-6D sea surface) name them as such.
+  const mobilityName = mobilityNameFor(offers);
+  dom.amplifierMode.querySelector('[data-mode="mobility"]').textContent = mobilityName;
   dom.amplifierLabel.textContent =
-    state.amplifierMode === "mobility" ? "Mobility" : "Echelon";
+    state.amplifierMode === "mobility" ? mobilityName : "Echelon";
   dom.amplifierValue.innerHTML = source
     .map((item) => rejected.has(item[0])
       ? `<option value="${escapeHtml(item[0])}" title="${escapeHtml(rejected.get(item[0]))}">${escapeHtml(item[1])} (not valid here)</option>`
@@ -875,6 +897,24 @@ function syncModifiers() {
     state.modifier2 = "";
     return;
   }
+  if (state.standardId === "app6d") {
+    // APP-6D lists only the sector codes its Annex A tables define.
+    const first = populateSectorSelect(dom.modifier1, 1, state.modifier1);
+    const second = populateSectorSelect(dom.modifier2, 2, state.modifier2);
+    state.modifier1 = first.value;
+    state.modifier2 = second.value;
+    const blocked = [...first.choices.entries, ...second.choices.entries].filter((entry) => !entry.offered);
+    dom.modifierNote.textContent = [
+      first.choices.dictionary || second.choices.dictionary
+        ? `Sector modifiers follow APP-6D ${[first.choices, second.choices].filter((item) => item.dictionary).map((item) => item.table).join(" and ")}. Only defined codes are listed.`
+        : "APP-6D defines no sector modifiers for this symbol set.",
+      blocked.length ? `${blocked.length} listed codes are disabled for this entity, for example: ${humanize(shortReason(blocked[0].reason))}.` : ""
+    ].filter(Boolean).join(" ");
+    return;
+  }
+  dom.modifier1.previousElementSibling.textContent = "Icon modifier 1";
+  dom.modifier2.previousElementSibling.textContent = "Icon modifier 2";
+  dom.modifier1.disabled = dom.modifier2.disabled = false;
   state.modifier1 = populateModifierSelect(
     dom.modifier1,
     "modifier1",
@@ -887,6 +927,30 @@ function syncModifiers() {
   );
   const setName = selectedIcon()?.category || "symbol set";
   dom.modifierNote.textContent = `${setName} and common modifiers for this edition.`;
+}
+
+const sectorPlaces = { top: "above the symbol", bottom: "below the symbol", left: "left of the symbol", right: "right of the symbol" };
+
+// Sector 1 / sector 2 select from the APP-6D dictionary for this symbol set.
+// A code the entity may not use is listed but disabled; a current code the
+// dictionary does not define (imported) stays, flagged.
+function populateSectorSelect(select, sector, selected) {
+  const sidc = state.customSidc || buildSidc();
+  const current = selected.startsWith("set:") ? selected.slice(4) : "";
+  const choices = sectorChoices({ profile: app6dProfile, sectors: app6dSectors, sidc, set: sidc.slice(4, 6), sector, start: sector === 1 ? 16 : 18, current });
+  select.previousElementSibling.textContent = `Sector ${sector} modifier (${sectorPlaces[choices.placement]})`;
+  select.innerHTML =
+    option("", choices.dictionary ? "Unspecified" : "None defined for this symbol set") +
+    choices.entries
+      .map((entry) => `<option value="set:${entry.code}"${entry.offered ? "" : ` disabled title="${escapeHtml(entry.reason)}"`}>${entry.code} — ${escapeHtml(entry.name)}${entry.offered ? "" : " (not for this entity)"}</option>`)
+      .join("");
+  if (selected && ![...select.options].some((item) => item.value === selected)) {
+    const label = sectorStatusLabels[choices.status];
+    select.insertAdjacentHTML("beforeend", option(selected, `SIDC: ${current || selected}${label ? ` — ${label}` : ""}`));
+  }
+  select.disabled = !choices.dictionary && !current;
+  select.value = selected;
+  return { value: select.value, choices };
 }
 
 const kindLabels = { unit: "Unit", equipment: "Equipment", installation: "Installation", point: "Tactical point", nuclear: "Nuclear point" };
@@ -908,6 +972,13 @@ function syncRuleNotes({ modern, app6a, kind, installation, tactical, prescribed
   for (const [key, element] of [["identity", dom.identityAdjust], ["status", dom.statusAdjust], ["amplifier", dom.amplifierAdjust]]) {
     element.hidden = !state.adjustments[key];
     element.textContent = state.adjustments[key] || "";
+  }
+  // The "?" placement choice applies only where the profile's identity table has one.
+  const marked = app6a && app6aRules.app6aIdentities[(state.customSidc || buildSidc())[1]];
+  dom.uncertaintyField.hidden = dom.uncertaintyNote.hidden = !(marked && marked.marker === "?");
+  if (marked) {
+    const table = marked.placement === "frame" ? "inside the frame" : "in field E";
+    dom.uncertaintyNote.textContent = `${marked.name}: the publication default puts the ? ${table}. APP-6A 503.1a allows field E or the frame. A symbol without a frame always uses field E.`;
   }
   dom.statusMeta.textContent = modern ? "Position 7" : "Position 4";
   dom.statusNote.textContent = app6a
@@ -979,15 +1050,18 @@ function createTextFields() {
       ${field.choices
         ? `<select id="${field.id}" data-modifier-field="${field.key}" aria-labelledby="label-${field.id}" aria-describedby="help-${field.id}">${field.choices.map(([value, label]) => option(value, label)).join("")}</select>`
         : `<input id="${field.id}" data-modifier-field="${field.key}" aria-labelledby="label-${field.id}" aria-describedby="help-${field.id}" placeholder="${escapeHtml(field.placeholder)}" />`}</label>
-      ${fieldTools(field)}
+      ${field.key === "engagementBar" ? engagementBuilderHtml() : ""}${fieldTools(field)}
+      <div class="field-warn" data-field-warn role="status" hidden></div>
       <div class="field-help"><span class="modifier-description" id="help-${field.id}">${escapeHtml(field.description)}</span>${fieldReferenceHtml(field.key)}</div>
     </div>`).join("")}
     </div><div class="unavailable-list" data-unavailable></div></section>`).join("");
   container.addEventListener("input", (event) => {
-    if (event.target.matches("[data-rating-part]")) return;
+    if (event.target.matches("[data-rating-part], [data-ao-part]")) return;
+    recordTextOrigin(event.target);
     renderAll();
   });
   container.addEventListener("change", (event) => {
+    if (event.target.matches("[data-ao-part]")) return composeEngagementInput(event.target);
     if (!event.target.matches("[data-rating-part]")) return;
     const tools = event.target.closest(".text-field");
     const value = evaluationRating(
@@ -1011,6 +1085,76 @@ function createTextFields() {
     const wrapper = event.target.closest("[data-field-wrapper]");
     if (wrapper) setFocusField(wrapper.dataset.fieldWrapper);
   });
+  dom.carryNotes.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-clear-field]");
+    const field = button && textModifiers.find((item) => item.key === button.dataset.clearField);
+    if (!field) return;
+    const input = document.getElementById(field.id);
+    input.value = "";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+}
+
+// Remember what a text field meant where the user typed it, so a later change
+// of edition or symbol can warn when the same text is read differently.
+function recordTextOrigin(input) {
+  const key = input.dataset.modifierField;
+  if (!key) return;
+  delete state.droppedChoices[key];
+  const definition = input.value && currentFieldStates().find((item) => item.key === key);
+  if (definition && definition.available) state.textOrigins[key] = { meaning: fieldMeaning(definition), where: describeWhere() };
+  else delete state.textOrigins[key];
+}
+
+function describeWhere(sidc = state.customSidc || buildSidc()) {
+  const profile = activeProfile();
+  const kind = profile && classWords(profile.symbolClass(sidc));
+  return kind ? `${config().label} ${kind}` : config().label;
+}
+
+// AO "A:BBB-CC" (APP-6D): three dropdowns compose the text that is sent.
+const engagementSourceNames = { R: "remote", B: "local and remote" };
+function engagementBuilderHtml() {
+  const part = (name, caption) => `<label class="ao-part"><span>${caption}</span><select data-ao-part="${name}" aria-label="Engagement bar ${caption}"></select></label>`;
+  return `<div class="ao-builder" data-ao-builder hidden>${part("a", "A source")}${part("b", "BBB stage")}${part("c", "CC weapon or count")}<p class="ao-preview" data-ao-preview></p></div>`;
+}
+
+function composeEngagementInput(select) {
+  const wrapper = select.closest("[data-field-wrapper]");
+  const value = (name) => wrapper.querySelector(`[data-ao-part="${name}"]`).value;
+  const parts = { a: value("a"), b: value("b"), c: value("c") };
+  // The list behind CC changes with the stage (weapons, or counts for MLT).
+  if (select.dataset.aoPart === "b" && (parts.b === "MLT") !== (parseEngagement(wrapper.querySelector("[data-modifier-field]").value).b === "MLT")) parts.c = "";
+  const input = wrapper.querySelector("[data-modifier-field]");
+  input.value = composeEngagement(parts);
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+function syncEngagementBuilder(wrapper, definition, input) {
+  const builder = wrapper.querySelector("[data-ao-builder]");
+  if (!builder) return;
+  const composite = Boolean(definition && definition.parts);
+  builder.hidden = !composite;
+  input.hidden = composite;
+  if (!composite) return;
+  const options = engagementOptions(definition.parts, app6dEngagementError);
+  const parts = parseEngagement(input.value);
+  const fill = (name, list, value, blank, label) => {
+    const select = builder.querySelector(`[data-ao-part="${name}"]`);
+    select.innerHTML =
+      option("", blank) +
+      list.map(([code, text]) => option(code, label(code, text))).join("") +
+      (value && !list.some(([code]) => code === value) ? option(value, `${value} (not defined)`) : "");
+    select.value = value;
+    select.disabled = name !== "b" && !parts.b;
+  };
+  fill("a", options.sources, parts.a, "(local)", (code) => `${code} — ${engagementSourceNames[code] || code}`);
+  fill("b", options.stages, parts.b, "(none)", (code, text) => `${code} — ${text}`);
+  fill("c", parts.b === "MLT" ? options.counts : options.weapons, parts.c, "(none)", (code, text) => `${code} — ${text}`);
+  const message = parts.b || input.value ? app6dEngagementError(input.value) : "";
+  const preview = builder.querySelector("[data-ao-preview]");
+  preview.textContent = input.value ? `${input.value}${message ? ` — ${message}` : ""}` : `Format ${definition.format}: choose the stage (BBB) first.`;
+  preview.classList.toggle("problem", Boolean(message));
 }
 
 function setFocusField(key) {
@@ -1038,18 +1182,28 @@ function profiledFieldKeys(sidc) {
 }
 
 // Offer a profile's literal values: rebuild a select, or suggest via a datalist.
-function applyFieldChoices(field, input, profileChoices) {
+function applyFieldChoices(field, input, profileChoices, alternates) {
   // Profiles may list plain literals; the form uses [value, label] pairs.
   const choices = profileChoices && profileChoices.map((choice) => (Array.isArray(choice) ? choice : [String(choice), String(choice)]));
   if (field.choices) {
-    const list = choices ? [["", field.choices[0][1]], ...choices.filter(([code]) => code !== "")] : field.choices;
+    let list = choices ? [["", field.choices[0][1]], ...choices.filter(([code]) => code !== "")] : field.choices;
+    // A form the profile accepts besides its own list (APP-6D F "(+)") stays selectable.
+    const dropped = state.droppedChoices[field.key];
+    const wanted = input.value || dropped || "";
+    if (wanted && !list.some(([code]) => code === wanted) && (alternates || []).includes(wanted)) list = [...list, [wanted, `${wanted} (alternate form)`]];
     const signature = JSON.stringify(list);
     if (input.dataset.choices === signature) return;
-    const value = input.value;
     input.innerHTML = list.map(([code, label]) => option(code, label)).join("");
     input.dataset.choices = signature;
-    // A value this edition does not define is dropped rather than reinterpreted.
-    input.value = list.some(([code]) => code === value) ? value : "";
+    // A value this edition does not define is not reinterpreted: it is cleared,
+    // reported next to the form, and comes back when a list defines it again.
+    if (wanted && list.some(([code]) => code === wanted)) {
+      input.value = wanted;
+      delete state.droppedChoices[field.key];
+    } else {
+      input.value = "";
+      if (wanted) state.droppedChoices[field.key] = wanted;
+    }
     return;
   }
   const id = `choices-${field.id}`;
@@ -1076,23 +1230,43 @@ function syncApp6aTextFields() {
   fieldNote.textContent = profileNotes[state.standardId] || "";
   const container = document.getElementById("app6aTextFields");
   const states = new Map(currentFieldStates(sidc).map((item) => [item.key, item]));
+  const extras = profile ? profileExtraFields(profile, sidc, textModifiers.map((field) => field.key)) : [];
+  const values = Object.fromEntries(textModifiers.map(({ key, id }) => [key, document.getElementById(id).value]));
+  for (const key of Object.keys(state.textOrigins)) if (!values[key]) delete state.textOrigins[key];
+  const carried = new Map(carryWarnings({ states: [...states.values()], values, origins: state.textOrigins, extras }).map((item) => [item.key, item]));
   for (const field of textModifiers) {
     const input = document.getElementById(field.id);
     const definition = states.get(field.key);
     const wrapper = input.closest("[data-field-wrapper]");
     wrapper.hidden = !definition.available;
     input.disabled = !definition.available;
+    const warning = wrapper.querySelector("[data-field-warn]");
+    const lines = [];
     if (definition.available) {
       wrapper.querySelector("[data-field-label]").textContent = definition.label;
       wrapper.querySelector("[data-field-code]").textContent = definition.field || "–";
-      applyFieldChoices(field, input, definition.choices || null);
+      applyFieldChoices(field, input, definition.choices || definition.examples || null, definition.alternates);
+      syncEngagementBuilder(wrapper, definition, input);
       if (!field.choices) {
         if (definition.maxLength) input.maxLength = definition.maxLength;
         else input.removeAttribute("maxlength");
         input.placeholder = active && definition.maxLength ? `Max. ${definition.maxLength} characters · ${definition.field}` : field.placeholder;
       }
+      // Rules the profile attaches to the field: format, length, source tensions.
+      const rule = fieldRule(definition, input.value);
+      const help = [field.description];
+      if (rule.hint) help.push(`Format: ${rule.hint}.`);
+      if (definition.requiresEchelonDivisionOrBelow) help.push("Used at division level and below.");
+      if (definition.unresolved) help.push(`${definition.nonBlocking ? "Source note" : "Unresolved in the source"}: ${definition.unresolved}.`);
+      wrapper.querySelector(".modifier-description").textContent = help.join(" ");
+      if (rule.problem) lines.push(`${definition.field} ${rule.problem}.`);
+      if (definition.unresolved && !definition.nonBlocking && input.value) lines.push("Unresolved in the source: the symbol is reported as not valid while this field is filled.");
+      if (carried.has(field.key)) lines.push(carried.get(field.key).message);
     }
+    warning.hidden = !lines.length;
+    warning.innerHTML = lines.map(escapeHtml).join("<br>");
   }
+  renderCarryNotes([...carried.values()], extras, states);
   let available = 0;
   for (const group of container.querySelectorAll(".modifier-group")) {
     const fields = modifierGroups[Number(group.dataset.group)].fields;
@@ -1106,7 +1280,7 @@ function syncApp6aTextFields() {
       : `${fields.length} fields`;
     group.querySelector("[data-unavailable]").innerHTML = groupStates
       .filter((item) => !item.available)
-      .map((item) => `<div class="unavailable-row" title="${escapeHtml(fields.find((field) => field.key === item.key).description)}"><span><span class="field-code">${escapeHtml(item.field || "–")}</span><span>${escapeHtml(item.label)}</span></span><small>${escapeHtml(item.reason)}</small></div>`)
+      .map((item) => `<div class="unavailable-row" title="${escapeHtml(fields.find((field) => field.key === item.key).description)}"><span><span class="field-code">${escapeHtml(item.field || "–")}</span><span>${escapeHtml(item.label)}</span></span><small title="${escapeHtml(item.reason)}">${escapeHtml(humanize(shortReason(item.reason)))}</small></div>`)
       .join("");
   }
   const unavailable = textModifiers.length - available;
@@ -1131,7 +1305,7 @@ function syncApp6aTextFields() {
     }
   }
   dom.textSummary.textContent = active
-    ? `${profileTitles[state.standardId]} · ${available} of ${textModifiers.length} fields apply to ${({ unit: "units", equipment: "equipment", installation: "installations", point: "tactical points", nuclear: "nuclear points" })[kind] || "this symbol"} · ${filled} filled`
+    ? `${profileTitles[state.standardId]} · ${available} of ${textModifiers.length} fields apply to ${({ unit: "units", equipment: "equipment", installation: "installations", point: "tactical points", nuclear: "nuclear points" })[kind] || (kind ? `${classWords(kind)} symbols` : "this symbol")} · ${filled} filled`
     : `${textModifiers.length} text amplifiers · ${filled} filled · placement follows the renderer's symbol-set rules`;
   dom.textFilledBadge.hidden = !filled;
   dom.textFilledBadge.textContent = `${filled} filled`;
@@ -1139,6 +1313,27 @@ function syncApp6aTextFields() {
   dom.speedLeader.disabled = dom.direction.disabled;
   dom.directionNumber.disabled = dom.direction.disabled;
   dom.stack.disabled = state.standardId === "app6a";
+}
+
+// Non-blocking list above the text fields: text that is kept but not drawn,
+// text now read under a different meaning, and select values cleared because
+// the edition does not define them. Nothing here changes what the user typed.
+function renderCarryNotes(warnings, extras, states) {
+  const rows = warnings.map((item) => ({ ...item, clearable: true }));
+  for (const [key, value] of Object.entries(state.droppedChoices)) {
+    const definition = states.get(key);
+    if (definition) rows.push({ key, field: definition.field, label: definition.label, value, kind: "dropped", message: `"${value}" is not a defined value in ${config().label}, so the choice is cleared. It returns if a symbol or edition defines it again.` });
+  }
+  dom.carryNotes.hidden = !rows.length;
+  dom.carryNotes.innerHTML = rows.length
+    ? `<h4>Check these entries (${rows.length})</h4>` +
+      rows.map((item) => `<div class="carry-row" data-kind="${item.kind}"><span class="field-code">${escapeHtml(item.field || "–")}</span><div><b>${escapeHtml(item.label)}</b>${item.kind === "dropped" ? "" : ` <q>${escapeHtml(item.value)}</q>`}<span>${escapeHtml(item.message)}</span></div>${item.clearable ? `<button type="button" class="quiet-button" data-clear-field="${escapeHtml(item.key)}">Clear</button>` : ""}</div>`).join("")
+    : "";
+  dom.profileExtras.hidden = !extras.length;
+  dom.profileExtras.innerHTML = extras.length
+    ? `<h4>Defined for this symbol, not editable here</h4>` +
+      extras.map((item) => `<div class="unavailable-row"><span><span class="field-code">${escapeHtml(item.field || "–")}</span><span>${escapeHtml(item.label)}</span></span><small>${escapeHtml(humanize(item.reason))}</small></div>`).join("")
+    : "";
 }
 
 function selectImportedValue(select, value) {
@@ -1372,6 +1567,18 @@ function renderSidcStatus(sidc) {
   dom.sidcInput.style.height = `${dom.sidcInput.scrollHeight + 2}px`;
 }
 
+// What the edition profile reports besides errors: unresolved source conflicts
+// and Version Extension Flags are shown outright; notes sit in a fold-out.
+function renderProfileDetails() {
+  const lines = currentSymbol ? profileDetailLines(currentSymbol.isValid(true)) : { notes: [], unresolved: [], versionExtension: [] };
+  const issues = [...lines.unresolved.map((text) => `Unresolved source conflict. ${text}`), ...lines.versionExtension];
+  dom.profileIssues.innerHTML = issues.map((text) => `<li>${escapeHtml(text)}</li>`).join("");
+  dom.profileNotesBox.hidden = !lines.notes.length;
+  dom.profileNotesSummary.textContent = `${lines.notes.length} note${lines.notes.length === 1 ? "" : "s"} from ${profileTitles[state.standardId] || "the edition profile"}`;
+  dom.profileNotesList.innerHTML = lines.notes.map((text) => `<li>${escapeHtml(text)}</li>`).join("");
+  dom.profileDetails.hidden = !issues.length && !lines.notes.length;
+}
+
 let positionCodes = {};
 
 function markFieldTags() {
@@ -1477,6 +1684,7 @@ function renderAll() {
   auditLink.href = `audit/symbols/index.html?symbol=${encodeURIComponent(icon.id)}`;
   updateSegments(sidc);
   renderSidcStatus(sidc);
+  renderProfileDetails();
   renderChips(sidc);
   renderFlagSwatch();
   syncGraphicsControls();
@@ -1607,6 +1815,7 @@ function resetControls() {
   dom.colorMode.value = "Light";
   for (const id of ["hq", "taskForce", "feintDummy"]) dom[id].checked = false;
   for (const id of ["speedLeader", "hqStaffLength", "stack", "frameShape"]) dom[id].value = "0";
+  dom.uncertaintyMarker.value = "table";
   dom.direction.value = -1;
   dom.fill.checked =
     dom.frame.checked =
@@ -1643,7 +1852,8 @@ function openField(key) {
   activateTab(document.getElementById("tab-text"));
   setFocusField(key);
   input.scrollIntoView({ block: "center" });
-  input.focus({ preventScroll: true });
+  // The AO text is composed from dropdowns; focus the first one when the text is hidden.
+  (input.hidden ? input.closest("[data-field-wrapper]").querySelector('[data-ao-part="b"]') : input).focus({ preventScroll: true });
 }
 
 function moveCardFocus(card, step) {
@@ -1805,6 +2015,7 @@ function bindEvents() {
     renderAll();
   });
   dom.frameShape.addEventListener("change", () => updateSidcAndRender("frameShape"));
+  dom.uncertaintyMarker.addEventListener("change", renderAll);
   for (const id of ["speedLeader", "hqStaffLength", "stack"])
     dom[id].addEventListener("input", renderAll);
   for (const id of ["showFlag", "fillColorOn", "monoColorOn", "infoColorOn", "infoBackgroundOn"])
@@ -1835,6 +2046,8 @@ function bindEvents() {
     renderAll();
   });
   dom.clearText.addEventListener("click", () => {
+    state.textOrigins = {};
+    state.droppedChoices = {};
     for (const input of document.querySelectorAll("[data-modifier-field]")) input.value = "";
     for (const select of document.querySelectorAll("[data-rating-part]")) select.value = "";
     renderAll();

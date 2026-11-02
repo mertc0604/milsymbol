@@ -1565,3 +1565,118 @@ dialog p {
     transition: none !important;
   }
 }
+
+/* Edition profile controls */
+.field-warn {
+  color: var(--warn);
+  background: var(--warn-bg);
+  border-radius: 6px;
+  padding: 4px 7px;
+  font-size: 11px;
+  line-height: 1.45;
+}
+.ao-builder {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.ao-part {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.ao-part select {
+  min-width: 0;
+}
+.ao-preview {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+.ao-preview.problem {
+  color: var(--danger);
+}
+.carry-notes,
+.profile-extras {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+}
+.carry-notes {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+.carry-notes h4,
+.profile-extras h4 {
+  margin: 0;
+  font-size: 12px;
+}
+.carry-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.carry-row > div {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 6px;
+  line-height: 1.45;
+}
+.carry-row > div > span {
+  flex-basis: 100%;
+}
+.carry-row q {
+  font-family: var(--mono);
+}
+.profile-extras {
+  border: 1px dashed #d5dde5;
+  background: #fafbfc;
+  gap: 2px;
+}
+.profile-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+}
+.profile-issues {
+  margin: 0;
+  padding: 7px 9px 7px 24px;
+  border-radius: 7px;
+  color: var(--warn);
+  background: var(--warn-bg);
+  line-height: 1.45;
+}
+.profile-issues:empty {
+  display: none;
+}
+.profile-details details {
+  border-radius: 7px;
+  background: #f6f8fa;
+  padding: 6px 9px;
+  color: #3d4a57;
+}
+.profile-details summary {
+  cursor: pointer;
+  color: var(--blue-dark);
+}
+.profile-details details ul {
+  margin: 6px 0 0;
+  padding-left: 16px;
+  line-height: 1.45;
+}
+.unavailable-row small {
+  max-width: 55%;
+  text-align: right;
+}
