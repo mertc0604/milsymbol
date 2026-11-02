@@ -1,9 +1,63 @@
 //Affiliation and dimension addons to base geometries ####################################
+import strWidth from "./string-width.js";
 export default function affliationdimension(ms) {
   const drawArray1 = [];
   const drawArray2 = [];
   let bbox = this.metadata.baseGeometry.bbox;
   const frameColor = this.colors.frameColor[this.metadata.affiliation];
+  // APP-6A S symbols: the derived identity mark of Table I / field E.
+  const app6aMarker = this.metadata.app6a ? this.metadata.affiliationMarker : null;
+  let markerBbox = null;
+  if (app6aMarker && app6aMarker.placement == "frame" && frameColor) {
+    // Embedded in the frame (503.1a, Table I): centred without an icon,
+    // otherwise in the free upper part of the frame so the icon stays intact.
+    const frame = this.metadata.baseGeometry.bbox;
+    const height = frame.y2 - frame.y1;
+    const hasIcon =
+      this.style.icon && !/^-*$/.test(this.metadata.functionid || "");
+    drawArray2.push({
+      type: "text",
+      text: app6aMarker.text,
+      x: 100,
+      y: hasIcon ? frame.y1 + height * 0.25 : frame.y1 + height / 2,
+      fill: frameColor,
+      fontfamily: this.style.fontfamily,
+      fontsize: hasIcon ? 35 : 60,
+      fontweight: "bold",
+      textanchor: "middle",
+      alignmentBaseline: "middle"
+    });
+  } else if (
+    app6aMarker &&
+    app6aMarker.placement == "field" &&
+    !this.style.infoFields &&
+    bbox.x2
+  ) {
+    // Field E, first of row E/F (Figure 2a). With text fields on, the text
+    // layout draws it in front of field F instead; never both.
+    const fontSize = this.style.infoSize;
+    const stack = this.options.stack ? this.options.stack * 15 : 0;
+    drawArray2.push({
+      type: "text",
+      text: app6aMarker.text,
+      x: bbox.x2 + 20 + stack,
+      y: 100 - 1.5 * fontSize,
+      fill:
+        (typeof this.style.infoColor === "object"
+          ? this.style.infoColor[this.metadata.affiliation]
+          : this.style.infoColor) ||
+        this.colors.iconColor[this.metadata.affiliation] ||
+        this.colors.iconColor["Friend"],
+      fontfamily: this.style.fontfamily,
+      fontsize: fontSize,
+      stroke: false,
+      textanchor: "start"
+    });
+    markerBbox = {
+      x2: bbox.x2 + strWidth(app6aMarker.text, fontSize, 20 + stack),
+      y1: 100 - 2.5 * fontSize
+    };
+  }
   //Draws the a question mark for some unknown or other dimension symbols
   if (this.metadata.dimensionUnknown && frameColor) {
     drawArray2.push({
@@ -74,7 +128,12 @@ export default function affliationdimension(ms) {
       bbox = { x2: bbox.x2 + spacing + 22, y1: 40 - 25 };
     }
     // APP-6A Table I: uncertainty is a question mark, not a dashed present frame.
-    if (this.metadata.app6a && ["P", "A", "S"].includes(this.options.sidc[1])) {
+    // (S symbols use the profile marker above; G points keep this mark.)
+    if (
+      this.metadata.app6a &&
+      this.options.sidc[0] !== "S" &&
+      ["P", "A", "S"].includes(this.options.sidc[1])
+    ) {
       drawArray2.push({ type: "text", text: "?", x: bbox.x2 + spacing, y: 40,
         fill: frameColor, fontfamily: this.style.fontfamily, fontsize: 35,
         fontweight: "bold", textanchor: "start", alignmentBaseline: "middle" });
@@ -108,5 +167,5 @@ export default function affliationdimension(ms) {
           : this.style.outlineColor
       )
     );
-  return { pre: drawArray1, post: drawArray2, bbox: bbox };
+  return { pre: drawArray1, post: drawArray2, bbox: markerBbox || bbox };
 }

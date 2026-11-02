@@ -8,7 +8,11 @@ export default function engagement(ms) {
   let y1 = bbox.y1;
   const y2 = bbox.y2;
 
-  if (this.options.engagementBar !== "") {
+  // APP-6A Table III has no engagement bar field (AO is a later edition).
+  if (
+    this.options.engagementBar !== "" &&
+    !(this.metadata.app6a && this.options.sidc[0] === "S")
+  ) {
     y1 -= 6;
     const fontFamily = this.style.fontfamily;
     const fontColor =
