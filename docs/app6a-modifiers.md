@@ -145,6 +145,11 @@ tests share one decoder.
 - A non-land arrow (from the centre, length one frame height) can cross a text row near the arrow tip
   (for example direction 90 and the H or V row). 505.1a and Figure 2a show the same crossing; 506.2 (PDF 32 /
   26) allows fields to be offset or dropped. Not changed.
+- Seen in the PNG review (`output/tactical-modifier-research/visual/app6a/`): with an icon the pending `?` sits in
+  the free upper quarter of the frame (Table I shows it centred only for empty frames) and touches the nose of
+  the air icon; a nine-character quantity C (top, centred) runs into the W (date-time) row when both are long;
+  the land arrow stem crosses the mobility glyph (both start at the bottom centre) and, pointing left, ends
+  at the staff base. None of these is prescribed by the source; nothing was changed.
 - The bounding box is the symbol geometry; the SVG viewBox adds the stroke width on every side. "Contains every
   drawn part" is checked against that viewBox with half the stroke added to each stroked part
   (`test/draw-extents.js`); the arrowhead of a land arrow pointing sideways sticks out of the bare bbox by one
