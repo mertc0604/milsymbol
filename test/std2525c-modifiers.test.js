@@ -4,6 +4,7 @@
 // 5.4.4 (PDF 40, printed 34) of MIL-STD-2525C, not from current output.
 import { ms, std2525c } from "../index.mjs";
 import { joinFields } from "../src/modifierprofiles/common.js";
+import { drawExtents, viewBoxOf, outside } from "./draw-extents.js";
 import {
   std2525cProfile,
   std2525cTableIV,
@@ -561,6 +562,246 @@ result["interleaved standards stay stable"] = [
 result["2525 unit with status C keeps its bar"] = [
   new ms.Symbol("SFGCUCI-----", { standard: "2525" }).metadata.condition,
   "FullyCapable"
+];
+
+// AL operational condition (Table IV AL: equipment and installations; 5.3.4.12,
+// PDF 37 / 31). Table III-2 (PDF 25 / 19) alternate: a coloured bar under the
+// symbol, green fully capable, yellow damaged, red destroyed, blue full to
+// capacity. The colours were sampled from the page render of the PDF: (0,255,0),
+// (255,255,0), (255,0,0) and (0,176,240); a tolerance of 6 per channel covers
+// raster sampling. The bar is as wide as the frame (measured 92-100% of the
+// symbol width on the page) and sits below it. Table III-1 (PDF 24-25 / 18-19)
+// static: damaged is a single slash, destroyed a cross, fully capable has no
+// mark and full to capacity is N/A.
+const rgb = (fill) => String(fill).match(/\d+/g).map(Number);
+const near = (fill, expected) =>
+  rgb(fill).every((value, i) => Math.abs(value - expected[i]) <= 6);
+const alDimensions = [
+  ["air", "SFA?MF------"],
+  ["space", "SFP?S-------"],
+  ["land equipment", "SFG?EWM-----"],
+  ["land installation", "SFG?IB------"],
+  ["sea surface", "SFS?CL------"],
+  ["subsurface", "SFU?S-------"]
+];
+const alColours = {
+  C: [0, 255, 0],
+  D: [255, 255, 0],
+  X: [255, 0, 0],
+  F: [0, 176, 240]
+};
+const alParts = (symbol) =>
+  visit(symbol.drawInstructions).filter(
+    (part) => part.type === "path" && !part.icon
+  );
+const alBars = (symbol) =>
+  alParts(symbol).filter((part) =>
+    /^M-?[\d.]+,-?[\d.]+ l[\d.]+,0 0,25 /.test(part.d || "")
+  );
+const alSlashes = (symbol) =>
+  alParts(symbol).filter((part) =>
+    /^M(150,20 L50,180|50,20 L150,180)$/.test(part.d || "")
+  );
+alDimensions.forEach(([name, template]) => {
+  "CDXF".split("").forEach((status) => {
+    const sidc = template.replace("?", status);
+    const label = name + " status " + status;
+    const symbol = sym(sidc);
+    const bars = alBars(symbol);
+    const frameBox = symbol.metadata.baseGeometry.bbox;
+    const view = viewBoxOf(symbol.asSVG());
+    result[label + ": one bar in the Table III-2 colour"] = [
+      [bars.length, bars.length === 1 && near(bars[0].fill, alColours[status])],
+      [1, true]
+    ];
+    if (bars.length === 1) {
+      const m = /^M(-?[\d.]+),(-?[\d.]+) l([\d.]+),0 0,(\d+)/.exec(bars[0].d);
+      const x = parseFloat(m[1]);
+      const y = parseFloat(m[2]);
+      const width = parseFloat(m[3]);
+      result[label + ": bar is below the frame and as wide as the frame"] = [
+        [
+          y >= frameBox.y2,
+          width / frameBox.width() >= 0.92,
+          width / frameBox.width() <= 1.0001,
+          x >= frameBox.x1 - 0.001
+        ],
+        [true, true, true, true]
+      ];
+    }
+    result[label + ": bar lies inside the SVG viewBox"] = [
+      drawExtents(symbol.drawInstructions, symbol.style.strokeWidth)
+        .filter((e) => outside(e.outer, view))
+        .map((e) => e.part.d || e.part.text),
+      []
+    ];
+    const plain = sym(sidc, { simpleStatusModifier: true });
+    const slashes = alSlashes(plain);
+    result[label + ": static modifier (Table III-1) draws no bar"] = [
+      alBars(plain).length,
+      0
+    ];
+    const expected = { C: 0, D: 1, X: 2, F: 0 }[status];
+    result[label + ": static modifier has " + expected + " slash(es)"] = [
+      slashes.length,
+      expected
+    ];
+    const staticView = viewBoxOf(plain.asSVG());
+    result[label + ": static slashes lie inside the SVG viewBox"] = [
+      drawExtents(plain.drawInstructions, plain.style.strokeWidth)
+        .filter((e) => outside(e.outer, staticView))
+        .map((e) => e.part.d || e.part.text),
+      []
+    ];
+  });
+  ["P", "A"].forEach((status) => {
+    const symbol = sym(template.replace("?", status));
+    result[name + " status " + status + ": no AL bar and no slash"] = [
+      [
+        alBars(symbol).length,
+        alSlashes(
+          sym(template.replace("?", status), { simpleStatusModifier: true })
+        ).length
+      ],
+      [0, 0]
+    ];
+  });
+});
+// Damaged is "/" (lower left to upper right); destroyed adds the other diagonal.
+const damaged = alSlashes(
+  sym("SFGDEWM-----", { simpleStatusModifier: true })
+)[0];
+result["static damaged slash rises to the right"] = [
+  damaged.d
+    .replace(/^M/, "")
+    .split(" L")
+    .map((point) => point.split(",").map(Number)),
+  [
+    [150, 20],
+    [50, 180]
+  ]
+];
+result["destroyed draws both diagonals"] = [
+  alSlashes(sym("SFGXEWM-----", { simpleStatusModifier: true }))
+    .map((p) => p.d)
+    .sort(),
+  ["M150,20 L50,180", "M50,20 L150,180"]
+];
+// Units have no AL: no bar and no slash, in either representation.
+["C", "D", "X", "F"].forEach((status) => {
+  ["SFG?UCI-----", "SFF?A-------"].forEach((template) => {
+    const sidc = template.replace("?", status);
+    result["unit " + sidc + " draws no AL in any representation"] = [
+      [
+        alBars(sym(sidc)).length,
+        alSlashes(sym(sidc, { simpleStatusModifier: true })).length
+      ],
+      [0, 0]
+    ];
+  });
+});
+result["AL is a Studio-visible fact: unit status C is an error"] = [
+  std2525cValidate("SFGCUCI-----").details.modifierErrors.length,
+  1
+];
+result["Table III-1: full to capacity is N/A in the static form (note kept)"] =
+  [
+    std2525cValidate("SFGFEWM-----").details.notes.some((note) =>
+      /Table III-1 shows N\/A/.test(note)
+    ),
+    true
+  ];
+
+// AG towed sonar array (Table IV AG, PDF 30 / 24: a graphic modifier for equipment
+// only, U and I are dashes; 5.3.4.4, PDF 33 / 27: "only used for towed equipment";
+// Table VII, PDF 34 / 28: short and long shown on a submarine; Table A-II, PDF 60 /
+// 54: NS short, NL long). The source names no further class or dimension, so
+// every equipment symbol accepts it and units and installations do not.
+const arrays = { NS: "Short towed array", NL: "Long towed Array" };
+const equipmentBases = [
+  ["land equipment", "SFGPEWM---"],
+  ["air", "SFAPMF----"],
+  ["space", "SFPPS-----"],
+  ["sea surface", "SFSPCL----"],
+  ["subsurface", "SFUPS-----"]
+];
+Object.keys(arrays).forEach((code) => {
+  equipmentBases.forEach(([name, base]) => {
+    const symbol = sym(base + code);
+    result["towed array " + code + " on " + name + " is accepted and drawn"] = [
+      [ok(base + code), symbol.metadata.mobility],
+      [true, arrays[code]]
+    ];
+  });
+  [
+    ["unit", "SFGPUCI---"],
+    ["installation", "SFGPIB----"],
+    ["SOF unit", "SFFPA-----"]
+  ].forEach(([name, base]) => {
+    const symbol = sym(base + code);
+    result[
+      "towed array " + code + " on " + name + " is an error and not drawn"
+    ] = [
+      [
+        ok(base + code),
+        symbol.metadata.mobility,
+        errors(base + code).some((e) => /^AG /.test(e))
+      ],
+      [false, "", true]
+    ];
+  });
+  result[
+    "towed array " + code + " on an unknown-class symbol is not rejected"
+  ] = [ok("SFZPS-----" + code), true];
+});
+// Short = 3 markers (both ends and the middle), long = 5 (ends and every
+// quarter), joined by a line below the symbol (Table VII, PDF 34 / 28). The
+// marker glyph itself (a square with a tick in the PDF, a diamond here for the
+// inner markers) is a drawing detail that is not compared.
+const arrayPath = (symbol) =>
+  visit(symbol.drawInstructions).filter(
+    (part) => part.type === "path" && /^M 50,5 l 100,0/.test(part.d || "")
+  );
+result["towed array short has 3 markers on a 100 unit line"] = [
+  arrayPath(sym("SFUPS-----NS")).map((p) => (p.d.match(/z/g) || []).length),
+  [3]
+];
+result["towed array long has 5 markers on a 100 unit line"] = [
+  arrayPath(sym("SFUPS-----NL")).map((p) => (p.d.match(/z/g) || []).length),
+  [5]
+];
+result["towed array is drawn below the symbol and inside the viewBox"] =
+  (() => {
+    const symbol = sym("SFUPS-----NL");
+    const view = viewBoxOf(symbol.asSVG());
+    const frameBox = symbol.metadata.baseGeometry.bbox;
+    const shapes = drawExtents(
+      symbol.drawInstructions,
+      symbol.style.strokeWidth
+    );
+    const array = shapes.filter((e) =>
+      /^M 50,5 l 100,0/.test(e.part.d || "")
+    )[0];
+    return [
+      [
+        array.box.y1 >= frameBox.y2,
+        shapes.filter((e) => outside(e.outer, view)).length
+      ],
+      [true, 0]
+    ];
+  })();
+result["towed array SIDC code letters only: NX is not an array code"] = [
+  [ok("SFUPS-----NX"), !!sym("SFUPS-----NX").metadata.mobility],
+  [false, false]
+];
+result["towed array: no MO..MY mobility is drawn for NS/NL"] = [
+  sym("SFUPS-----NS").metadata.mobility !==
+    sym("SFUPS-----MS").metadata.mobility,
+  true
+];
+result["towed array does not apply with an array text option"] = [
+  ok(EQUIPMENT, { auxiliaryEquipmentIndicator: "NS" }),
+  false
 ];
 
 // Whitespace-only text is empty: no row, no reserved separator, not "present"

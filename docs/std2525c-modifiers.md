@@ -116,6 +116,23 @@ A planned (dashed frame); P present, "Units only"; C, D, X, F equipment and
 installations only (units are an error, the renderer draws no AL on units).
 P on equipment/installation is allowed and recorded as a note (decision 5).
 
+**AL operational condition, checked against the PDF (Tables III-1 and III-2, PDF 24-25 / 18-19;
+5.3.4.12, PDF 37 / 31).** Alternate form (default, `simpleStatusModifier` off, filled):
+a bar under the symbol, as wide as the frame (the PDF shows 92-100% of the symbol
+width), green fully capable (C), yellow damaged (D), red destroyed (X), blue full to
+capacity (F). The colours sampled from the PDF page render are (0,255,0), (255,255,0),
+(255,0,0) and (0,176,240); the renderer uses (0,255,0), (255,255,0), (255,0,0) and
+(0,180,240), so full-to-capacity differs by 4 in one channel and was not changed (a raster
+sample is not a normative value). Static form (`simpleStatusModifier`, monochrome or
+unfilled): a slash rising to the right for damaged, a cross for destroyed, nothing for
+fully capable (Table III-1 note 1: "fully capable ... or when the operational condition
+is unknown"), and nothing for full to capacity (N/A in III-1; a note records it).
+Applies to air, space, land equipment, land installations, sea surface and subsurface;
+never to units or the F (SOF) unit class. Planned A and present P draw no bar or slash.
+The P-on-equipment reading "rendered using the applicable operational condition modifier"
+(Table III, PDF 24 / 18) would give a green bar in the alternate form; the profile keeps the
+SIDC as given and records it as decision 5 instead of inventing a bar for P.
+
 ## Identities (Tables I/II, A-I)
 
 All 14 codes P U A F N S H G W M D L J K are accepted. Joker and Faker use the
@@ -133,8 +150,19 @@ echelon, task force, mobility and array are neither drawn nor accepted. For
 equipment and installations only `-`, `A`, `C`, `F`, `H-`, `HB` (HQ and
 feint/dummy, U/E/I per Table IV S and AB) are valid with an empty second
 character; echelon letters and task-force codes (B, D, E, G) are unit-only.
-Mobility is equipment-only and not intrinsic to the icon. Towed array on
-non-sonar equipment is not further restricted.
+Mobility is equipment-only and not intrinsic to the icon.
+
+**Towed array (AG, `NS` short, `NL` long).** Source: Table IV AG (PDF 30 / 24): "a
+graphic modifier for equipment" with U and I as dashes; 5.3.4.4 (PDF 33 / 27): "only
+used for towed equipment"; Table VII (PDF 34 / 28): short and long arrays drawn
+on a submarine in every identity; Table A-II (PDF 60 / 54): `NS`, `NL`. Enforced:
+equipment class only (units, installations and the SOF unit class get an AG error and
+draw nothing; an unknown-class symbol, dimension Z or X, is not rejected because its
+class cannot be told). Not enforced, because the source says nothing: restriction
+to sonar, subsurface or sea symbols (Table VII shows only a submarine, which is an
+example, not a rule). Short draws 3 markers and long 5 on a 100 unit line below the
+symbol, as Table VII. The inner marker glyph differs (the PDF shows a square with a
+tick, the renderer a diamond); it was not changed.
 
 ## Layout (Figure 2, PDF 27 / 21; 5.4.4, PDF 40 / 34)
 
