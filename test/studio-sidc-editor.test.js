@@ -22,6 +22,7 @@ export default {
     "known legacy installations retain their H modifier for editing": [decodeEditorSidc("SFGPI-----HBTU-", { ...legacy, icons: [{ id: "S-G-I-----", name: "Installation" }] }).icon.defaultModifier, "HB"],
     "E identity, context, flags, echelon and extensions decode": [[e.identity, e.context, e.hq, e.taskForce, e.feintDummy, e.echelon, e.modifier1, e.modifier2, e.frameShape], ["6", "1", true, true, true, "18", "common:201", "common:102", "8"]],
     "changing identity preserves the imported tank, mobility, country and OOB": [editImportedSidc("SFGPEVAT--MQTUG", "SHGPUCI--------", "affiliation", legacy), "SHGPEVAT--MQTUG"],
+    "changing letter context rewrites only the identity letter": [editImportedSidc("SFGPEVAT--MQTUG", "SDGPUCI--------", "context", legacy), "SDGPEVAT--MQTUG"],
     "changing status preserves all other fields": [editImportedSidc("SFGPEVAT--MQTUG", "SHGAUCI--------", "status", legacy), "SFGAEVAT--MQTUG"],
     "editing short SIDCs only extends through the changed field": [editImportedSidc("SFGPUCI---", "SFGPUCI----F---", "amplifier", legacy), "SFGPUCI----F"],
     "D modifier edits preserve originator and national extension": [editImportedSidc("100310001612110102037921234567", "100310001612110104000000000000", "modifier1", { ...modern, version: "10" }), "100310001612110104037921234567"],

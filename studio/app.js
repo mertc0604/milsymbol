@@ -4,6 +4,7 @@ import { modifierGroups, textModifiers, collectTextModifiers } from "./modifier-
 
 import { fieldStates, formatDtg, evaluationRating, sidcParts, pushRecent, placeholderOptions } from "./editor-helpers.js";
 import { fieldReference } from "./field-reference.js";
+import { app6aIdentities, contextOptions, convertIdentity, decodeIdentity, identityCode, identityLabel, identityList } from "./identities.js";
 import { createCountryFlagPart } from "./country-flags.js";
 import { countryCodeForFlag, countryFlagFromSidc, countrySidcField, withCountryFlag } from "./country-codes.js";
 
@@ -65,20 +66,6 @@ const standards = [
     version: "13"
   }
 ];
-
-const affiliations = [
-  { value: "friend", label: "Friend", numeric: "3", legacy: "F" },
-  { value: "hostile", label: "Hostile", numeric: "6", legacy: "H" },
-  { value: "neutral", label: "Neutral", numeric: "4", legacy: "N" },
-  { value: "unknown", label: "Unknown", numeric: "0", legacy: "U" }
-];
-const app6aAffiliations = affiliations.concat([
-  { value: "pending", label: "Pending (?)", legacy: "P" },
-  { value: "assumed", label: "Assumed friend (?)", legacy: "A" },
-  { value: "suspect", label: "Suspect (?)", legacy: "S" },
-  { value: "joker", label: "Joker (J)", legacy: "J" },
-  { value: "faker", label: "Faker (K)", legacy: "K" }
-]);
 
 const statuses = [
   { value: "present", label: "Present", numeric: "0", legacy: "P" },
@@ -377,9 +364,12 @@ function applyModernModifier(sidc, value, type) {
 function buildSidc(icon = selectedIcon(), minimal = false) {
   if (!icon) return "";
   const standard = config();
-  const affiliation = (standard.id === "app6a" ? app6aAffiliations : affiliations).find(
+  const affiliation = identityList(standard).find(
     (item) => item.value === (minimal ? "friend" : state.affiliation)
-  ) || { legacy: state.affiliation.split(":").at(-1), numeric: state.affiliation.split(":").at(-1) };
+  );
+  const identity = affiliation
+    ? identityCode(affiliation, standard, minimal ? "0" : state.context)
+    : state.affiliation.split(":").at(-1);
   const status = statuses.find(
     (item) => item.value === (minimal ? "present" : state.status)
   ) || { legacy: state.status.split(":").at(-1), numeric: state.status.split(":").at(-1) };
@@ -402,14 +392,14 @@ function buildSidc(icon = selectedIcon(), minimal = false) {
     }
     if (state.standardId === "app6a" && icon.codingScheme === "G")
       amplifier = ["-", "-"];
-    const sidc = `${icon.codingScheme || "S"}${icon.prescribedAffiliation || affiliation.legacy}${icon.battleDimension || "G"}${icon.prescribedStatus || status.legacy}${icon.code || "------"}${amplifier.join("")}---`;
+    const sidc = `${icon.codingScheme || "S"}${icon.prescribedAffiliation || identity}${icon.battleDimension || "G"}${icon.prescribedStatus || status.legacy}${icon.code || "------"}${amplifier.join("")}---`;
     return minimal ? sidc : withCountryFlag(sidc, dom.countryFlag.value, state.standardId);
   }
 
   const sidc = Array(30).fill("0");
   sidc.splice(0, 2, ...standard.version);
   sidc[2] = minimal ? "0" : state.context;
-  sidc[3] = affiliation.numeric;
+  sidc[3] = identity;
   sidc.splice(4, 2, ...(icon.symbolSet || "10").padStart(2, "0"));
   sidc[6] = status.numeric;
   sidc[7] = minimal ? "0" : String(flagCode());
@@ -443,7 +433,9 @@ function setStandard(id) {
   if (!next) return;
   state.standardId = id;
   loadRecent();
-  if (id !== "app6a" && !affiliations.some(item => item.value === state.affiliation)) state.affiliation = "friend";
+  const identity = convertIdentity({ value: state.affiliation, context: state.context }, next);
+  state.affiliation = identity.value;
+  state.context = identity.context;
   state.selectedId = null;
   state.category = "all";
   state.visible = 40;
@@ -646,7 +638,7 @@ function syncModifiers() {
   const app6a = state.standardId === "app6a";
   const prescribedAffiliation = app6a && selectedIcon()?.prescribedAffiliation;
   dom.affiliation.disabled = Boolean(prescribedAffiliation);
-  dom.affiliation.value = prescribedAffiliation ? app6aAffiliations.find(a => a.legacy === prescribedAffiliation).value : state.affiliation;
+  dom.affiliation.value = prescribedAffiliation ? app6aIdentities.find(a => a.legacy === prescribedAffiliation).value : state.affiliation;
   const kind = app6a ? app6aSymbolClass(state.customSidc || buildSidc()) : "";
   const installation =
     !modern && selectedIcon()?.defaultModifier?.startsWith("H");
@@ -694,8 +686,13 @@ const kindLabels = { unit: "Unit", equipment: "Equipment", installation: "Instal
 
 // Explain every rule that disables a control, next to the control.
 function syncRuleNotes({ modern, app6a, kind, installation, tactical, prescribed }) {
-  dom.identityNote.hidden = !prescribed;
-  dom.identityNote.textContent = prescribed ? "This symbol prescribes its identity, so the identity is fixed." : "";
+  const contextNote = {
+    1: `Exercise: an X is drawn beside the frame; suspect and hostile become Joker (J) and Faker (K).${modern ? "" : " Position 2 uses the exercise letters G, W, M, D, L, J and K."}`,
+    2: "Simulation: an S is drawn beside the frame."
+  }[app6a ? "0" : state.context];
+  const identityNote = prescribed ? "This symbol prescribes its identity, so the identity is fixed." : contextNote || "";
+  dom.identityNote.hidden = !identityNote;
+  dom.identityNote.textContent = identityNote;
   dom.statusMeta.textContent = modern ? "Position 7" : "Position 4";
   dom.statusNote.textContent = app6a
     ? "APP-6A defines Present and Planned. Fully capable, damaged, destroyed and full to capacity appear in the other editions."
@@ -893,7 +890,7 @@ function applyImportedSidc(value) {
   const parsed = decodeEditorSidc(value, { ...config(), icons: dataset().icons });
   const modern = config().family === "modern";
   const encoding = modern ? "numeric" : "legacy";
-  const identities = state.standardId === "app6a" ? app6aAffiliations : affiliations;
+  const identity = decodeIdentity(parsed.identity, config(), parsed.context);
   const source = parsed.mobility ? mobilities : echelons;
   const amplifier = parsed.mobility || parsed.echelon;
   const amplifierValue = source.find(item => item[modern ? 2 : 3] === amplifier)?.[0];
@@ -901,9 +898,9 @@ function applyImportedSidc(value) {
     customSidc: value,
     importedIcon: parsed.icon,
     selectedId: parsed.icon.id,
-    affiliation: identities.find(item => item[encoding] === parsed.identity)?.value || `code:${parsed.identity}`,
+    affiliation: identity?.value || `code:${parsed.identity}`,
     status: statuses.find(item => item[encoding] === parsed.status)?.value || `code:${parsed.status}`,
-    context: parsed.context,
+    context: identity?.context || parsed.context,
     amplifierMode: parsed.mobility ? "mobility" : ["-", "00"].includes(amplifier) ? "none" : "echelon",
     amplifierValue: amplifierValue ?? `code:${amplifier}`,
     modifier1: parsed.modifier1,
@@ -914,27 +911,29 @@ function applyImportedSidc(value) {
   syncStandardControls();
 }
 
+// Exercise relabels suspect and hostile as Joker and Faker.
+function populateIdentityOptions() {
+  dom.affiliation.innerHTML = identityList(config())
+    .map((item) => option(item.value, identityLabel(item, state.context)))
+    .join("");
+  selectImportedValue(dom.affiliation, state.affiliation);
+}
+
 function syncStandardControls() {
-  const modern = config().family === "modern";
-  dom.contextField.hidden = !modern;
+  const contexts = contextOptions(config());
+  dom.contextField.hidden = !contexts.length;
   dom.frameShapeField.hidden = config().version !== "13";
   // Validate after removing publication whitespace, not while pasting it.
   dom.sidcInput.removeAttribute("maxlength");
-  dom.affiliation.innerHTML = (state.standardId === "app6a" ? app6aAffiliations : affiliations)
-    .map((item) => option(item.value, item.label))
-    .join("");
-  selectImportedValue(dom.affiliation, state.affiliation);
+  populateIdentityOptions();
   dom.status.innerHTML = (
     state.standardId === "app6a" ? statuses.slice(0, 2) : statuses
   )
     .map((item) => option(item.value, item.label))
     .join("");
   selectImportedValue(dom.status, state.status);
-  dom.context.innerHTML =
-    option("0", "Reality") +
-    option("1", "Exercise") +
-    option("2", "Simulation");
-  selectImportedValue(dom.context, state.context);
+  dom.context.innerHTML = contexts.map(([value, label]) => option(value, label)).join("");
+  if (contexts.length) selectImportedValue(dom.context, state.context);
   populateAmplifier();
   syncModifiers();
 }
@@ -942,7 +941,6 @@ function syncStandardControls() {
 const schemeNames = { S: "Warfighting", G: "Tactical graphic", W: "Weather", I: "Intelligence", O: "Stability operations", E: "Emergency management" };
 const dimensionNames = { P: "Space", A: "Air", G: "Ground", S: "Sea surface", U: "Subsurface", F: "Special operations", X: "Other", Z: "Unknown" };
 const contextNames = { 0: "Reality", 1: "Exercise", 2: "Simulation" };
-const numericIdentityNames = { 0: "Pending", 1: "Unknown", 2: "Assumed friend", 3: "Friend", 4: "Neutral", 5: "Suspect", 6: "Hostile" };
 const legacyFlagNames = { "-": "", F: "Feint / dummy", A: "Headquarters", C: "HQ · feint", E: "Task force", G: "Task force · feint", B: "Task force HQ", D: "Task force HQ · feint" };
 let flagNames = new Map();
 
@@ -952,12 +950,13 @@ function describePart(key, value, sidc) {
   const flagName = (code) => (code && flagNames.get(code)) || "";
   switch (key) {
     case "scheme": return schemeNames[value] || "";
-    case "identity":
-      if (modern) {
-        const identity = affiliations.find((item) => item.numeric === value[1])?.label || numericIdentityNames[value[1]] || "";
-        return `${contextNames[value[0]] || "Context " + value[0]} · ${identity}`;
-      }
-      return app6aAffiliations.find((item) => item.legacy === value)?.label || "";
+    case "identity": {
+      const identity = decodeIdentity(modern ? value[1] : value, config(), modern ? value[0] : "0");
+      const entry = identity && identityList(config()).find((item) => item.value === identity.value);
+      const label = entry ? identityLabel(entry, identity.context) : "";
+      if (modern) return [contextNames[value[0]] || "Context " + value[0], label].filter(Boolean).join(" · ");
+      return identity?.context === "1" ? `Exercise · ${label}` : label;
+    }
     case "dimension": return dimensionNames[value] || "";
     case "status": return statuses.find((item) => item.legacy === value)?.label || "";
     case "function":
@@ -1021,15 +1020,16 @@ function renderChips(sidc) {
   const variant = (position, code) => base.slice(0, position) + code + base.slice(position + 1);
   const chip = (select, value, label, code, position) =>
     `<button type="button" class="chip" data-value="${escapeHtml(value)}" aria-pressed="${select.value === value}"${select.disabled ? " disabled" : ""}><span class="chip-glyph">${code ? chipSvg(variant(position, code)) : ""}</span><span>${escapeHtml(label)}</span></button>`;
-  const identities = state.standardId === "app6a" ? app6aAffiliations : affiliations;
+  const standard = config();
+  const identities = identityList(standard);
   // Re-rendering replaces the buttons; keep keyboard focus on the same chip.
   const focused = document.activeElement?.closest?.(".chip");
   const focusedGroup = focused && (dom.identityChips.contains(focused) ? dom.identityChips : dom.statusChips.contains(focused) ? dom.statusChips : null);
   const focusedValue = focusedGroup && focused.dataset.value;
   dom.identityChips.innerHTML = [...dom.affiliation.options].map((item) => {
     const entry = identities.find((candidate) => candidate.value === item.value);
-    const code = entry ? entry[modern ? "numeric" : "legacy"] : item.value.replace(/^code:/, "");
-    return chip(dom.affiliation, item.value, entry ? entry.label : item.textContent, code, modern ? 3 : 1);
+    const code = entry ? identityCode(entry, standard, state.context) : item.value.replace(/^code:/, "");
+    return chip(dom.affiliation, item.value, entry ? identityLabel(entry, state.context) : item.textContent, code, modern ? 3 : 1);
   }).join("");
   dom.statusChips.innerHTML = [...dom.status.options].map((item) => {
     const entry = statuses.find((candidate) => candidate.value === item.value);
@@ -1472,6 +1472,7 @@ function bindEvents() {
   });
   dom.context.addEventListener("change", () => {
     state.context = dom.context.value;
+    populateIdentityOptions();
     updateSidcAndRender("context");
   });
   dom.status.addEventListener("change", () => {
@@ -1592,8 +1593,10 @@ function bindEvents() {
       // Publication templates leave identity/status open. Resolve those using
       // the editor selections; unspecified optional fields remain empty.
       const characters = [...value];
-      if (characters[1] === "*")
-        characters[1] = app6aAffiliations.find(item => item.value === state.affiliation)?.legacy || state.affiliation.replace(/^code:/, "");
+      if (characters[1] === "*") {
+        const identity = identityList(config()).find(item => item.value === state.affiliation);
+        characters[1] = identity ? identityCode(identity, config(), state.context) : state.affiliation.replace(/^code:/, "");
+      }
       if (characters[3] === "*")
         characters[3] = statuses.find(item => item.value === state.status)?.legacy || state.status.replace(/^code:/, "");
       value = characters.join("").replace(/\*/g, "-");

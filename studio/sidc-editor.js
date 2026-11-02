@@ -58,7 +58,8 @@ export function editImportedSidc(original, generated, field, { family, version }
     modifier2: [[18, 20], ...(extended ? [[21, 22]] : [])],
     frameShape: extended ? [[22, 23]] : []
   } : {
-    affiliation: [[1, 2]], status: [[3, 4]],
+    // Letter SIDCs write the exercise context into the identity letter.
+    affiliation: [[1, 2]], context: [[1, 2]], status: [[3, 4]],
     flags: [[10, 12]], amplifier: [[10, 12]]
   };
   let result = original;
