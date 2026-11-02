@@ -1202,6 +1202,15 @@ function validate(sidc, options) {
         );
     }
   }
+  if (
+    cls === "unknown" &&
+    p.context === "1" &&
+    p.identity !== "0" &&
+    p.identity !== "1"
+  )
+    notes.push(
+      "Exercise context with the Unknown dimension draws no frame unless the identity is Pending or Unknown: the renderer keeps the MIL-STD-2525(D) rule, and this edition leaves exercise frames to 2525(D) (Table A-2 note 1 and A.6 item 3 PDF 718-719/A-4..A-5)"
+    );
   if (cls === "unknown")
     notes.push(
       "Unknown dimension: no source layout or field matrix (Figure 1-4 PDF 34/1-10 has unlabeled cells); legacy rows kept, no field restrictions (policy)"

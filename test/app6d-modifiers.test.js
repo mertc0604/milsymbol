@@ -1103,6 +1103,96 @@ export default {
       ],
       ["circle", true]
     ],
+    // Table A-3 PDF 719/A-5: Pending and Unknown share the Unknown frame, Friend
+    // and Assumed Friend the Friend frame, Hostile/Faker and Suspect/Joker the
+    // Hostile frame.
+    "frame group per standard identity (Table A-3 PDF 719/A-5)": [
+      "0123456"
+        .split("")
+        .map(
+          (i) =>
+            new ms.Symbol(sidc({ id: i }), { standard: "APP6" }).metadata
+              .affiliation
+        ),
+      [
+        "Unknown",
+        "Unknown",
+        "Friend",
+        "Friend",
+        "Neutral",
+        "Hostile",
+        "Hostile"
+      ]
+    ],
+    // Table 1-2 PDF 33/1-9 and section 1.2.1 item c: present = solid, planned =
+    // dashed, but never shown on an uncertain (Pending, Assumed Friend, Suspect)
+    // identity whose frame is dotted. 4,4 is the library's dotted pattern and
+    // 8,12 its dashed pattern.
+    "frame line style per identity and status (Table 1-2 PDF 33/1-9)": [
+      ["0", "1"].map((st) =>
+        "0123456"
+          .split("")
+          .map(
+            (i) =>
+              new ms.Symbol(sidc({ id: i, st: st }), { standard: "APP6" })
+                .metadata.notpresent
+          )
+      ),
+      [
+        ["4,4", "", "4,4", "", "", "4,4", ""],
+        ["4,4", "8,12", "4,4", "8,12", "8,12", "4,4", "8,12"]
+      ]
+    ],
+    // Table 1-3 PDF 35/1-11: Fully capable is the plain frame, Damaged one slash,
+    // Destroyed an X; Land Unit is N/A. Table 1-4 replaces them by coloured bars.
+    "operational condition: slash and X in monochrome, none for Land Unit (Table 1-3 PDF 35/1-11)":
+      [
+        ["15", "10"].map((set) =>
+          ["2", "3", "4", "5"].map((st) => {
+            const svg = svgOf(
+              { set: set, st: st, ent: set === "10" ? "121100" : "130200" },
+              { simpleStatusModifier: true }
+            );
+            return (
+              (svg.indexOf("M150,20 L50,180") >= 0 ? 1 : 0) +
+              (svg.indexOf("M50,20 L150,180") >= 0 ? 1 : 0)
+            );
+          })
+        ),
+        [
+          [0, 1, 2, 0],
+          [0, 0, 0, 0]
+        ]
+      ],
+    "operational condition names for the Table 1-4 colour bar": [
+      ["2", "3", "4", "5"].map(
+        (st) =>
+          new ms.Symbol(sidc({ set: "15", st: st }), { standard: "APP6" })
+            .metadata.condition
+      ),
+      ["FullyCapable", "Damaged", "Destroyed", "FullToCapacity"]
+    ],
+    // Exercise frames are left to MIL-STD-2525(D) (A.6 item 3 PDF 719/A-5); the
+    // renderer keeps its 2525(D) rule that an Exercise Unknown-dimension symbol
+    // exists only for Pending and Unknown.
+    "Exercise Unknown dimension draws a frame only for Pending and Unknown, with a note":
+      [
+        [
+          ["0", "1", "3", "5", "6"].map(
+            (i) => svgOf({ set: "00", ctx: "1", id: i }).indexOf("<path") >= 0
+          ),
+          check({ set: "00", ctx: "1", id: "3" }).details.notes.some((n) =>
+            /draws no frame/.test(n)
+          ),
+          check({ set: "00", ctx: "1", id: "1" }).details.notes.some((n) =>
+            /draws no frame/.test(n)
+          ),
+          check({ set: "00", ctx: "0", id: "3" }).details.notes.some((n) =>
+            /draws no frame/.test(n)
+          )
+        ],
+        [[true, true, false, false, false], true, false, false]
+      ],
     "Land Unit draws no operational condition bar": [
       [
         new ms.Symbol(sidc({ set: "10", st: "3" }), { standard: "APP6" })
