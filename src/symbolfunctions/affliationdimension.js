@@ -28,7 +28,15 @@ export default function affliationdimension(ms) {
     ) {
       spacing = -10;
     }
-    if (this.metadata.context == "Exercise") {
+    // 2525C: when the E/F text row is drawn, the descriptor is its first token.
+    const layout = this.metadata.textLayout;
+    const descriptorInText =
+      this.metadata.std2525c &&
+      layout &&
+      this.style.infoFields &&
+      this.options.reinforcedReduced &&
+      (layout.right[1] || []).indexOf("reinforcedReduced") > -1;
+    if (this.metadata.context == "Exercise" && !descriptorInText) {
       if (!(this.metadata.joker || this.metadata.faker)) {
         drawArray2.push({
           type: "text",

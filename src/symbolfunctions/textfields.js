@@ -552,14 +552,18 @@ export default function textfieldsMod(ms) {
     }
 
     if (layout) {
+      // A profile may supply derived values (2525C frame descriptor X/J/K).
+      const layoutOptions = layout.derived
+        ? Object.assign({}, this.options, layout.derived)
+        : this.options;
       for (let row = 0; row <= 5; row++) {
         gStrings["L" + row] = joinFields(
-          this.options,
+          layoutOptions,
           (layout.left || [])[row],
           layout.separator
         );
         gStrings["R" + row] = joinFields(
-          this.options,
+          layoutOptions,
           (layout.right || [])[row],
           layout.separator
         );
