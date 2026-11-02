@@ -89,8 +89,12 @@ export const modifierGroups = [
         "signatureEquipment",
         "L",
         "Signature equipment",
-        "e.g. !",
-        "Electronic signature / detectable equipment indicator."
+        "",
+        "Electronic signature / detectable equipment indicator.",
+        [
+          ["", "Not applicable"],
+          ["!", "! (electronic signature)"]
+        ]
       ],
       [
         "hostile",
