@@ -721,6 +721,75 @@ export default {
         ["mobility", "defined", true, true]
       ]
   },
+  "Rendering behind the APP-6D guard": {
+    "Joker and Faker keep the Hostile group frame under APP-6D (Table A-3 PDF 719/A-5), not under 2525":
+      [
+        [
+          new ms.Symbol(sidc({ ctx: "1", id: "5" }), { standard: "APP6" })
+            .metadata.affiliation,
+          new ms.Symbol(sidc({ ctx: "1", id: "6" }), { standard: "APP6" })
+            .metadata.affiliation,
+          new ms.Symbol(sidc({ ctx: "1", id: "5" }), { standard: "2525" })
+            .metadata.affiliation
+        ],
+        ["Hostile", "Hostile", "Friend"]
+      ],
+    "uncertain identity frames are dotted and planned adds no dash (section 1.2.1 c(3))":
+      [
+        [
+          new ms.Symbol(sidc({ id: "0", st: "1" }), { standard: "APP6" })
+            .metadata.notpresent,
+          new ms.Symbol(sidc({ id: "2", st: "1" }), { standard: "APP6" })
+            .metadata.notpresent,
+          new ms.Symbol(sidc({ id: "3", st: "1" }), { standard: "APP6" })
+            .metadata.notpresent,
+          new ms.Symbol(sidc({ id: "3", st: "0" }), { standard: "APP6" })
+            .metadata.notpresent
+        ],
+        ["4,4", "4,4", "8,12", ""]
+      ],
+    "Unknown dimension Friend is a circle with a question mark": [
+      [
+        new ms.Symbol(sidc({ set: "00" }), { standard: "APP6" }).metadata
+          .baseGeometry.g.type,
+        new ms.Symbol(sidc({ set: "00" }), { standard: "APP6" }).metadata
+          .dimensionUnknown
+      ],
+      ["circle", true]
+    ],
+    "Land Unit draws no operational condition bar": [
+      [
+        new ms.Symbol(sidc({ set: "10", st: "3" }), { standard: "APP6" })
+          .metadata.condition,
+        new ms.Symbol(sidc({ set: "15", st: "3" }), { standard: "APP6" })
+          .metadata.condition
+      ],
+      ["", "Damaged"]
+    ],
+    "reserved sector codes and local-track sectors are not drawn": [
+      [
+        new ms.Symbol(sidc({ set: "02", ent: "110000", s2: "06" }), {
+          standard: "APP6"
+        }).asSVG() ===
+          new ms.Symbol(sidc({ set: "02", ent: "110000" }), {
+            standard: "APP6"
+          }).asSVG(),
+        new ms.Symbol(sidc({ set: "30", ent: "170000", s1: "02" }), {
+          standard: "APP6"
+        }).asSVG() ===
+          new ms.Symbol(sidc({ set: "30", ent: "170000" }), {
+            standard: "APP6"
+          }).asSVG(),
+        new ms.Symbol(sidc({ set: "02", ent: "110000", s2: "05" }), {
+          standard: "APP6"
+        }).asSVG() ===
+          new ms.Symbol(sidc({ set: "02", ent: "110000" }), {
+            standard: "APP6"
+          }).asSVG()
+      ],
+      [true, true, false]
+    ]
+  },
   "Entity and identity restrictions": {
     "Own Ship is Friend only (Table 5-4 PDF 316/5-28)": [
       [

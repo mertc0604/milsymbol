@@ -123,6 +123,9 @@ export function metadata(ms, metadata, mapping) {
   //Should it have a Condition Bar
   if (status == "2" || status == "3" || status == "4" || status == "5")
     metadata.condition = mapping.status[parseInt(status)];
+  // APP-6(D) Tables 1-3/1-4 (PDF 35/1-11): operational condition is N/A for Land Unit.
+  if (metadata.edition === "D" && !metadata.STD2525 && symbolSet == "10")
+    metadata.condition = "";
 
   //First save the dimensionType and affiliationType before we modifies it...
   metadata.baseDimension = metadata.dimension;
@@ -133,7 +136,12 @@ export function metadata(ms, metadata, mapping) {
     metadata.joker = true;
   if (standardIdentity2 == "6" && standardIdentity1 == "1")
     metadata.faker = true;
-  if (metadata.joker || metadata.faker) {
+  // APP-6(D) Table A-3 (PDF 719/A-5): identities 5 and 6 belong to the Hostile group,
+  // so Joker/Faker keep the hostile frame (no Friend-shaped 2525 frame).
+  if (
+    (metadata.joker || metadata.faker) &&
+    !(metadata.edition === "D" && !metadata.STD2525)
+  ) {
     metadata.affiliation = mapping.affiliation[1];
   }
 
