@@ -16,7 +16,11 @@ export default function icon(ms) {
   //Boundingboxes other than normal
   let specialbbox = [];
 
-  if (this.style.icon) {
+  // APP-6A: an identity without a Table I frame (O) draws no icon either.
+  if (
+    this.style.icon &&
+    !(this.metadata.app6a && this.metadata.affiliation === "none")
+  ) {
     const fillColor = this.colors.fillColor[this.metadata.affiliation];
     //So we don't happend to use civilian colors
     const neutralColor = this.colors.fillColor.Neutral;

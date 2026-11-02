@@ -222,9 +222,14 @@ export default function textfieldsMod(ms) {
   const layout = this.metadata.textLayout;
   const allowed = (position, key) =>
     !layout || (layout[position] || []).includes(key);
+  // Values a layout joins: the options plus identity-derived fields (APP-6A E).
+  const values =
+    layout && this.metadata.derivedFields
+      ? Object.assign({}, this.options, this.metadata.derivedFields)
+      : this.options;
   //Check that we have some texts to print
   const textFields =
-    (layout && layoutKeys(layout).some((key) => this.options[key])) ||
+    (layout && layoutKeys(layout).some((key) => values[key])) ||
     this.options.quantity ||
     this.options.reinforcedReduced ||
     this.options.staffComments ||
@@ -554,12 +559,12 @@ export default function textfieldsMod(ms) {
     if (layout) {
       for (let row = 0; row <= 5; row++) {
         gStrings["L" + row] = joinFields(
-          this.options,
+          values,
           (layout.left || [])[row],
           layout.separator
         );
         gStrings["R" + row] = joinFields(
-          this.options,
+          values,
           (layout.right || [])[row],
           layout.separator
         );

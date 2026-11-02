@@ -1,7 +1,10 @@
 //import { ms } from "../ms.js";
 import {
+  app6aIdentity,
+  app6aProfile,
   app6aSymbolClass,
   app6aTextFields,
+  decodeApp6aSizeMobility,
   getApp6aFields,
   validateApp6aOptions
 } from "../modifierprofiles/app6a.js";
@@ -395,11 +398,16 @@ export function metadata(ms, metadata, mapping) {
 
   if (metadata.app6a) {
     const standard = isApp6aSidc(this.options.sidc);
-    const modifierErrors = validateApp6aOptions(this.options.sidc, this.options);
-    metadata.validation = {
-      valid: standard && modifierErrors.length === 0,
-      details: { standard, modifierErrors }
-    };
+    applyProfile(app6aProfile, this.options.sidc, this.options, metadata);
+    metadata.validation.details.standard = standard;
+    metadata.validation.valid = standard && metadata.validation.valid;
+    if (codingscheme == "S")
+      applyApp6aWarfighting.call(this, metadata, mapping, {
+        affiliation,
+        battledimension,
+        status,
+        functionid
+      });
   }
 
   if (metadata.std2525c) {
@@ -408,6 +416,62 @@ export function metadata(ms, metadata, mapping) {
   }
 
   return metadata;
+}
+
+// APP-6A S symbols: identity, status and Table B-II graphics come from the
+// profile and replace what the generic letter logic above guessed.
+function applyApp6aWarfighting(metadata, mapping, parts) {
+  const framed = !!(this.style.frame && metadata.frame);
+  const identity = app6aIdentity(
+    parts.affiliation,
+    parts.battledimension,
+    this.options.uncertaintyMarker,
+    framed
+  );
+  const sizeMobility = decodeApp6aSizeMobility(this.options.sidc);
+  // Table II: present and planned only; no condition bars from other editions.
+  metadata.condition = "";
+  // The exercise context belongs to later editions; J and K are field E marks.
+  metadata.context = mapping.context[0];
+  metadata.dimensionUnknown = false;
+  metadata.joker = parts.affiliation == "J";
+  metadata.faker = parts.affiliation == "K";
+  metadata.affiliationMarker = null;
+  if (identity.defined) {
+    const geometry = { Hostile: 0, Friend: 1, Neutral: 2, Unknown: 3 };
+    metadata.affiliation = mapping.affiliation[geometry[identity.frame]];
+    metadata.baseAffilation = metadata.affiliation;
+    if (identity.marker)
+      metadata.affiliationMarker = {
+        text: identity.marker,
+        placement: identity.placement
+      };
+  } else {
+    // No frame is defined for this identity: draw none, never Unknown/Friend.
+    metadata.affiliation = "none";
+    metadata.baseAffilation = "none";
+  }
+  if (metadata.affiliationMarker && metadata.affiliationMarker.placement == "field")
+    metadata.derivedFields = { affiliationMarker: metadata.affiliationMarker.text };
+  metadata.headquarters =
+    sizeMobility.headquarters ||
+    (parts.battledimension == "G" && parts.functionid == "UH----");
+  metadata.locationOffset = sizeMobility.staffRole == "locationOffset";
+  metadata.taskForce = sizeMobility.taskForce;
+  metadata.feintDummy = sizeMobility.feintDummy;
+  metadata.installation = sizeMobility.installation;
+  metadata.echelon = sizeMobility.echelonKey
+    ? mapping.echelonMobility[sizeMobility.echelonKey]
+    : "";
+  metadata.mobility = sizeMobility.valid
+    ? sizeMobility.mobilityKey
+      ? mapping.echelonMobility[sizeMobility.mobilityKey]
+      : ""
+    : undefined;
+  if (parts.status == "A" && !framed)
+    metadata.validation.details.notes.push(
+      "Table II: planned status cannot be shown for an unframed or dot symbol; the SIDC status is kept"
+    );
 }
 
 // APP-6A edition vocabulary and modifier rules live with letter SIDC metadata.
@@ -562,22 +626,8 @@ export function isApp6aSidc(value) {
   const entry = prescribed.get(`${sidc[0]}-${sidc[2]}-${sidc.slice(4, 10)}`);
   if (entry?.affiliation && sidc[1] !== entry.affiliation) return false;
   if (entry?.status && sidc[3] !== entry.status) return false;
-  const modifier = sidc.padEnd(15, "-").slice(10, 12);
-  if (
-    sidc[0] === "S" &&
-    sidc[2] === "G" &&
-    sidc[4] === "I" &&
-    modifier[0] !== "H"
-  )
-    return false;
-  if (!/^(?:[-A-G][-A-M]|H[-B]|K-|M[-O-Y])$/.test(modifier)) return false;
-  const kind = app6aSymbolClass(sidc);
-  if (modifier[0] === "M" && kind !== "equipment") return false;
-  if ("BDEG".includes(modifier[0]) && kind !== "unit") return false;
-  if (modifier[0] === "H" && kind !== "installation") return false;
-  if (modifier[0] !== "H" && modifier[0] !== "M" && /[A-M]/.test(modifier[1]) && kind !== "unit") return false;
-  if (modifier[0] === "K" && kind !== "nuclear") return false;
-  if (sidc[0] === "G" && modifier !== "--" && !(kind === "nuclear" && modifier === "K-")) return false;
+  // Table B-II size/mobility rules live in the APP-6A profile.
+  if (!decodeApp6aSizeMobility(sidc).valid) return false;
   const orderOfBattle = sidc.padEnd(15, "-")[14];
   return "-AECGNSX".includes(orderOfBattle);
 }
