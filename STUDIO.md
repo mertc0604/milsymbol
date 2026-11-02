@@ -1,6 +1,6 @@
 # Military Symbol Studio
 
-The repository includes an English military symbol editor in `studio/`, with a light interface, a searchable library, tabbed configuration, and a persistent export preview.
+The repository includes an English military symbol editor in `studio/`, with a light interface, a search panel, tabbed configuration, and a persistent preview with an always-visible SIDC console.
 
 ## Run locally
 
@@ -13,6 +13,20 @@ npm run studio:serve
 Open `http://127.0.0.1:4173`.
 
 The build creates `dist/studio/`, including a normalized searchable catalog generated from the standard data packages already used by milsymbol. The site offers MIL-STD-2525C/D/E and APP-6A/B/D/E views. APP-6E uses a compatibility catalog. FM 1-02.2 is not offered in the editor; the underlying library is unchanged. Symbols can be exported as SVG or PNG.
+
+## Layout
+
+- **Top bar:** standard selector, Help and the search launcher. Click it or press `/` to open the symbol search panel. The panel holds the symbol set list with counts, Recently used (the last 8 symbols per standard, stored in `localStorage`), and result tiles with mini previews. In the panel, `↑`/`↓` move between results, `Enter` selects, and `Esc` clears the search and then closes the panel. A full SIDC typed into the search finds its symbol.
+- **Left column (sticky):**
+  - Preview card: name, path, class badge (Unit, Equipment, Installation, Tactical point on APP-6A), render state, preview stage, and the Field positions, Grid and Outline toggles. Field positions draws every empty applicable text amplifier as a tag at its real position; clicking a tag opens that field. Exports always use the normal render.
+  - Downloads: SVG, PNG and Copy SVG.
+  - SIDC console: Apply, `Enter` to apply, `Esc` to return to the current code. Messages appear inline: applied, wildcard and standard-switch notes, and errors that name the SIDC position. The code breakdown is always visible and shows each part's meaning.
+- **Right column:** three tabs.
+  - **Symbol:** identity and status chips drawn by the renderer for the current symbol, context (D/E), unit designation, echelon or mobility, country or organization flag, and edition-specific icon modifiers and frame shape. Every disabled control states its reason.
+  - **Text amplifiers:** all 27 fields with field codes and character counters. On APP-6A, fields that do not apply are listed with a reason ("Equipment only", "Units only", "Hostile or suspect only", "Not in APP-6A") and can be hidden. The focused field shows its guidance and, where useful, a reference table (evaluation rating, engagement bar codes, DTG and location formats). The DTG field has "Now (UTC)"; the evaluation rating has reliability and credibility pickers; signature equipment is a choice of "!".
+  - **Graphics and display:** direction of movement (dial, slider, degrees and N/E/S/W/Off), speed leader and HQ staff length, display switches (fill, frame, icon, text labels, country flag), palette, stack, size and stroke, and advanced style options: custom fill color, monochrome, fill opacity, text color, size and background, and outline width and color. None of the style options change the SIDC.
+
+Below 1100 px the two columns stack, and the compact symbol in the tab bar links to the preview.
 
 The Text amplifiers tab provides 27 controls grouped by purpose: identity and
 organization, information and assessment, time/location/movement, equipment and

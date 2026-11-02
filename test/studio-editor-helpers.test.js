@@ -125,7 +125,7 @@ export default {
     ],
     "reference tables cover the rating, engagement, DTG and location fields": [
       ["evaluationRating", "engagementBar", "dtg", "location"].every(
-        (key) => fieldReference[key]?.rows.length > 0
+        (key) => Boolean(fieldReference[key]) && fieldReference[key].rows.length > 0
       ),
       true
     ],
