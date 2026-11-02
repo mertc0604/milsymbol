@@ -129,8 +129,26 @@ tests share one decoder.
 | Character count | not defined | product policy: Unicode code points, no normalization |
 | Whitespace-only text | not defined | product policy: a value that is only whitespace is empty. It creates no row, reserves no separator and is not "present" for validation (so an inapplicable or out-of-range field with a blank value is no error). Non-blank text is not trimmed. Implemented once in `src/modifierprofiles/common.js` (`isBlank`, `joinFields`, `clearBlankText`, which `applyProfile` runs on the symbol's own options) |
 | Q units | not defined | `direction` stays degrees (existing API); not source-defined |
+| Q ground arrow with a headquarters staff | 505.1a (PDF 30 / 24): "for land symbols ... bent arrow extending downward from the bottom center of the frame or icon"; Figure 2a (PDF 28 / 22) shows S (staff at the left edge) and Q (GROUND) together, the arrow starting at the bottom centre; 506.3 (PDF 33 / 27): the staff base marks the location | APP-6A land symbols always draw the arrow from the bottom centre of the frame, also for headquarters and offset-location symbols (`src/symbolfunctions/directionarrow.js`, guarded by `metadata.app6a`). The legacy 2525B/APP-6B habit of starting the arrow at the staff end is kept for those editions. The symbol anchor stays at the staff base. Non-land symbols: arrow from the centre (505.1a) |
+| Staff length | Annex C.4.1c (PDF 124 / 118): "one frame height below the bottom of the frame" | the existing staff length (one frame height) is kept; tests assert it |
+| Engagement bar AO | not an APP-6A Table III field | not drawn, no space reserved (tested for bbox equality) |
 | Catalogue image errors (Annex D PDF 136, 154, 163-167 / printed 130, 148, 157-161, 261) | duplicated SIDC columns, wrong frames in UF rows, `modifier c` wording for installations | unresolved and unchanged; no icon or restriction derived from them |
 | Faker defined as an aircraft (302.9) vs Table I other dimensions | Table I shows K in all five columns | K is not restricted to air |
+
+## Known visual limits (not source-defined, left unchanged)
+
+- The task force bracket (field D) and the widest echelon glyph (observed for Region `M`) are wider than the
+  frame (the bracket spans 215 units for Region, the frame 150). They can reach 5-13 units into the first
+  text rows on both sides. Figure 3 (PDF 29 / 23) draws a bracket that is narrower than the frame and Annex
+  C gives no numeric width, so the width is a geometry question, not a text-placement rule; it was not
+  changed. Tests exclude `milsymbol-echelon` and `milsymbol-taskforce` from the "rows clear of graphics" check.
+- A non-land arrow (from the centre, length one frame height) can cross a text row near the arrow tip
+  (for example direction 90 and the H or V row). 505.1a and Figure 2a show the same crossing; 506.2 (PDF 32 /
+  26) allows fields to be offset or dropped. Not changed.
+- The bounding box is the symbol geometry; the SVG viewBox adds the stroke width on every side. "Contains every
+  drawn part" is checked against that viewBox with half the stroke added to each stroked part
+  (`test/draw-extents.js`); the arrowhead of a land arrow pointing sideways sticks out of the bare bbox by one
+  unit and stays inside the viewBox.
 
 ## Coverage limits
 
@@ -139,7 +157,7 @@ tests share one decoder.
   mobility shapes (129-132) were not re-compared against the SVG paths.
 - Not done: image audit of catalogue cells against identity/frame, Annex D framing (F/FO/UF) metadata,
   Canvas execution in tests (Canvas and SVG share the same draw instructions; only SVG output
-  is asserted), visual comparison of HQ + offset + arrow + engagement clipping, bounding-box tests
-  for every graphic combination.
+  is asserted). Bounding-box and row-placement tests now cover 38 S combinations of HQ/offset staff,
+  task force, feint/dummy, echelon A-M subsets, mobility, and nine direction angles each.
 - The Studio still reads the legacy `getApp6aFields` shape; use `app6aProfile.fields()` for graphics,
   derived E and choice fields.

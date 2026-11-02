@@ -76,7 +76,9 @@ export default function directionarrow(ms) {
           this.metadata.baseDimension == "Ground" ||
           this.metadata.baseDimension == ""
         ) {
-          if (!this.metadata.headquarters) {
+          // APP-6A 505.1a (PDF 30 / 24) and Figure 2a (PDF 28 / 22): the land
+          // arrow extends from the bottom center of the frame, with a staff too.
+          if (!this.metadata.headquarters || this.metadata.app6a) {
             // For all symbols not headquarters
             arrow = [
               { type: "translate", x: 0, y: bbox.y2, draw: arrow },
