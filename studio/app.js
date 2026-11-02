@@ -1,8 +1,11 @@
 import { app6aSymbolClass, app6aTextFields, getApp6aFields } from "./vendor/letter-metadata.js";
+import * as app6aRules from "./vendor/modifierprofiles/app6a.js";
+import { std2525cProfile } from "./vendor/modifierprofiles/std2525c.js";
+import { app6dProfile } from "./vendor/modifierprofiles/app6d.js";
 import { decodeEditorSidc, editImportedSidc, numericSidcEdition } from "./sidc-editor.js";
 import { modifierGroups, textModifiers, collectTextModifiers } from "./modifier-fields.js";
 
-import { fieldStates, formatDtg, evaluationRating, sidcParts, pushRecent, placeholderOptions } from "./editor-helpers.js";
+import { fieldStates, profileFieldStates, formatDtg, evaluationRating, sidcParts, pushRecent, placeholderOptions } from "./editor-helpers.js";
 import { fieldReference } from "./field-reference.js";
 import { app6aIdentities, contextOptions, convertIdentity, decodeIdentity, identityCode, identityLabel, identityList } from "./identities.js";
 import { createCountryFlagPart } from "./country-flags.js";
@@ -46,7 +49,7 @@ const standards = [
     label: "MIL‑2525C",
     detail: "15 CHAR",
     family: "legacy",
-    standard: "2525",
+    standard: "2525C",
     version: ""
   },
   {
@@ -66,6 +69,17 @@ const standards = [
     version: "13"
   }
 ];
+
+// Edition modifier profiles shared with the renderer. APP-6A falls back to its
+// Table III helpers until the edition exports a profile object.
+const profiles = { app6a: app6aRules.app6aProfile, "2525c": std2525cProfile, app6d: app6dProfile };
+const profileNotes = {
+  app6a: "APP-6A Table III (pp. 19–21). Only applicable fields are editable; limits follow the publication.",
+  "2525c": "MIL-STD-2525C Table IV (pp. 22–24) for warfighting (S) symbols. Only applicable fields are editable; limits follow the publication.",
+  app6d: "APP-6D amplifier tables of this symbol set. Only applicable fields are editable; limits appear only where the publication sets one."
+};
+const profileTitles = { app6a: "APP-6A Table III", "2525c": "MIL-STD-2525C Table IV", app6d: "APP-6D" };
+const activeProfile = () => profiles[state.standardId] || null;
 
 const statuses = [
   { value: "present", label: "Present", numeric: "0", legacy: "P" },
@@ -325,7 +339,7 @@ function currentOptions(minimal = false) {
     infoColor: !minimal && dom.infoColorOn.checked ? dom.infoColor.value : "",
     infoSize: minimal ? 40 : Number(dom.infoSize.value),
     infoBackground: !minimal && dom.infoBackgroundOn.checked ? dom.infoBackground.value : "",
-    ...collectTextModifiers(values, app6a ? getApp6aFields(sidc).map(field => field.key) : null),
+    ...collectTextModifiers(values, profiledFieldKeys(sidc)),
     direction: minimal || direction < 0 ? undefined : direction,
     speedLeader: minimal ? 0 : Number(dom.speedLeader.value),
     hqStaffLength: minimal ? 0 : Number(dom.hqStaffLength.value),
@@ -802,16 +816,57 @@ function setFocusField(key) {
 }
 
 function currentFieldStates(sidc = state.customSidc || buildSidc()) {
+  const profile = activeProfile();
+  if (profile) return profileFieldStates(textModifiers, profile, sidc);
   return fieldStates(textModifiers, state.standardId === "app6a"
     ? { available: getApp6aFields(sidc), table: app6aTextFields, kind: app6aSymbolClass(sidc), identity: sidc[1] }
     : null);
 }
 
+// Keys the edition allows for this SIDC; null when every field applies.
+function profiledFieldKeys(sidc) {
+  const profile = activeProfile();
+  if (profile && !profile.fields(sidc)) return null;
+  if (!profile && state.standardId !== "app6a") return null;
+  return currentFieldStates(sidc).filter((item) => item.available).map((item) => item.key);
+}
+
+// Offer a profile's literal values: rebuild a select, or suggest via a datalist.
+function applyFieldChoices(field, input, choices) {
+  if (field.choices) {
+    const list = choices || field.choices;
+    const signature = JSON.stringify(list);
+    if (input.dataset.choices === signature) return;
+    const value = input.value;
+    input.innerHTML = list.map(([code, label]) => option(code, label)).join("");
+    input.dataset.choices = signature;
+    // A value this edition does not define is dropped rather than reinterpreted.
+    input.value = list.some(([code]) => code === value) ? value : "";
+    return;
+  }
+  const id = `choices-${field.id}`;
+  let datalist = document.getElementById(id);
+  if (!choices) {
+    input.removeAttribute("list");
+    return;
+  }
+  if (!datalist) {
+    datalist = document.createElement("datalist");
+    datalist.id = id;
+    input.after(datalist);
+  }
+  datalist.innerHTML = choices.map(([code, label]) => option(code, label)).join("");
+  input.setAttribute("list", id);
+}
+
 function syncApp6aTextFields() {
-  const active = state.standardId === "app6a";
-  document.getElementById("app6aFieldNote").hidden = !active;
-  const container = document.getElementById("app6aTextFields");
   const sidc = state.customSidc || buildSidc();
+  const profile = activeProfile();
+  const active = profile ? Boolean(profile.fields(sidc)) : state.standardId === "app6a";
+  const fieldNote = document.getElementById("app6aFieldNote");
+  fieldNote.hidden = !active;
+  fieldNote.textContent = profileNotes[state.standardId] || "";
+  const container = document.getElementById("app6aTextFields");
   const states = new Map(currentFieldStates(sidc).map((item) => [item.key, item]));
   for (const field of textModifiers) {
     const input = document.getElementById(field.id);
@@ -822,10 +877,11 @@ function syncApp6aTextFields() {
     if (definition.available) {
       wrapper.querySelector("[data-field-label]").textContent = definition.label;
       wrapper.querySelector("[data-field-code]").textContent = definition.field || "–";
+      applyFieldChoices(field, input, definition.choices || null);
       if (!field.choices) {
         if (definition.maxLength) input.maxLength = definition.maxLength;
         else input.removeAttribute("maxlength");
-        input.placeholder = active ? `Max. ${definition.maxLength} characters · ${definition.field}` : field.placeholder;
+        input.placeholder = active && definition.maxLength ? `Max. ${definition.maxLength} characters · ${definition.field}` : field.placeholder;
       }
     }
   }
@@ -851,7 +907,7 @@ function syncApp6aTextFields() {
   dom.toggleUnavailable.textContent = state.showUnavailable ? `Hide ${unavailable} unavailable` : `Show ${unavailable} unavailable`;
   dom.toggleUnavailable.setAttribute("aria-pressed", String(!state.showUnavailable));
   dom.toggleUnavailable.classList.toggle("active", !state.showUnavailable);
-  const kind = active ? app6aSymbolClass(sidc) : "";
+  const kind = !active ? "" : profile ? profile.symbolClass(sidc) : app6aSymbolClass(sidc);
   const filled = textModifiers.filter((field) => {
     const input = document.getElementById(field.id);
     return !input.disabled && input.value;
@@ -867,14 +923,14 @@ function syncApp6aTextFields() {
     }
   }
   dom.textSummary.textContent = active
-    ? `APP-6A Table III · ${available} of ${textModifiers.length} fields apply to ${({ unit: "units", equipment: "equipment", installation: "installations", point: "tactical points", nuclear: "nuclear points" })[kind] || "this symbol"} · ${filled} filled`
+    ? `${profileTitles[state.standardId]} · ${available} of ${textModifiers.length} fields apply to ${({ unit: "units", equipment: "equipment", installation: "installations", point: "tactical points", nuclear: "nuclear points" })[kind] || "this symbol"} · ${filled} filled`
     : `${textModifiers.length} text amplifiers · ${filled} filled · placement follows the renderer's symbol-set rules`;
   dom.textFilledBadge.hidden = !filled;
   dom.textFilledBadge.textContent = `${filled} filled`;
-  dom.direction.disabled = active && app6aSymbolClass(sidc) === "point";
+  dom.direction.disabled = state.standardId === "app6a" && app6aSymbolClass(sidc) === "point";
   dom.speedLeader.disabled = dom.direction.disabled;
   dom.directionNumber.disabled = dom.direction.disabled;
-  dom.stack.disabled = active;
+  dom.stack.disabled = state.standardId === "app6a";
 }
 
 function selectImportedValue(select, value) {
@@ -1094,7 +1150,8 @@ let positionCodes = {};
 
 function markFieldTags() {
   for (const text of dom.symbolPreview.querySelectorAll("text")) {
-    const key = text.textContent.split("/").map((part) => positionCodes[part]).find(Boolean);
+    // Legacy rows join with "/", edition profiles with a space.
+    const key = text.textContent.split(/[/ ]+/).map((part) => positionCodes[part]).find(Boolean);
     if (!key) continue;
     text.classList.add("field-tag");
     text.dataset.field = key;
@@ -1167,7 +1224,8 @@ function renderAll() {
     const valid = Boolean(currentSymbol.isValid());
     dom.renderState.classList.toggle("invalid", !valid);
     dom.renderState.innerHTML = `<i></i>${valid ? "Rendered" : "Check code / modifiers"}`;
-    dom.renderState.title = currentSymbol.isValid(true).modifierErrors?.join("; ") || "";
+    const detail = currentSymbol.isValid(true);
+    dom.renderState.title = [...(detail.modifierErrors || []), ...(detail.notes || [])].join("; ");
   } catch (error) {
     currentSymbol = null;
     currentSvg = "";

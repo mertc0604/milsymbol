@@ -34,6 +34,27 @@ export function fieldStates(textModifiers, app6a) {
   });
 }
 
+// Field states from an edition modifier profile (src/modifierprofiles). A
+// profile whose fields() returns null leaves every field available.
+export function profileFieldStates(textModifiers, profile, sidc) {
+  const available = profile ? profile.fields(sidc) : null;
+  if (!available) return fieldStates(textModifiers, null);
+  return textModifiers.map(({ key, field, label }) => {
+    const definition = available.find((item) => item.key === key);
+    if (definition)
+      return {
+        key,
+        field: definition.field || field,
+        label: definition.label || label,
+        available: true,
+        maxLength: definition.maxLength || null,
+        choices: definition.choices || null,
+        reason: ""
+      };
+    return { key, field, label, available: false, maxLength: null, choices: null, reason: profile.unavailableReason(key, sidc) || "Not available" };
+  });
+}
+
 const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
 const twoDigits = (value) => String(value).padStart(2, "0");
 
