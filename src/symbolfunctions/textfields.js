@@ -269,12 +269,18 @@ export default function textfieldsMod(ms) {
       !this.metadata.dismounted &&
       allowed("top", "quantity")
     ) {
+      // APP-6(D): C shares the B/C/D cell above the frame (Figure 3-3 PDF
+      // 84/3-4); modifier.js sets quantityTop above the task force and echelon.
+      const quantityTop =
+        this.metadata.quantityTop !== undefined
+          ? this.metadata.quantityTop
+          : bbox.y1;
       //geometry
       drawArray2.push({
         type: "text",
         text: this.options.quantity,
         x: 100,
-        y: bbox.y1 - 10,
+        y: quantityTop - 10,
         textanchor: "middle",
         fontsize: fontSize,
         fontfamily: fontFamily,
@@ -282,7 +288,7 @@ export default function textfieldsMod(ms) {
         stroke: false,
         cssClass: cssClass
       });
-      gbbox.y1 = bbox.y1 - 10 - fontSize;
+      gbbox.y1 = quantityTop - 10 - fontSize;
     }
     if (
       this.options.headquartersElement &&

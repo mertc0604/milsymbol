@@ -13,7 +13,23 @@ export default function engagement(ms) {
     this.options.engagementBar !== "" &&
     !(this.metadata.app6a && this.options.sidc[0] === "S")
   ) {
-    y1 -= 6;
+    // APP-6(D): AO sits above the B/C/D cell, so above a quantity text
+    // (Figure 3-3 PDF 84/3-4, Figure 3-14 PDF 161/3-81).
+    let aoLift = 0;
+    if (
+      this.metadata.app6d &&
+      this.style.infoFields &&
+      this.options.quantity &&
+      this.metadata.quantityTop !== undefined &&
+      ((this.metadata.textLayout || {}).top || []).indexOf("quantity") >= 0
+    )
+      aoLift = Math.max(
+        0,
+        bbox.y1 -
+          (this.metadata.quantityTop - 10 - this.style.infoSize * 0.75) -
+          1
+      );
+    y1 -= 6 + aoLift;
     const fontFamily = this.style.fontfamily;
     const fontColor =
       this.colors.iconColor[this.metadata.affiliation] ||
@@ -23,7 +39,7 @@ export default function engagement(ms) {
       type: "text",
       text: this.options.engagementBar,
       x: 100,
-      y: bbox.y1 - 11,
+      y: bbox.y1 - 11 - aoLift,
       textanchor: "middle",
       fontsize: 22,
       fontfamily: fontFamily,

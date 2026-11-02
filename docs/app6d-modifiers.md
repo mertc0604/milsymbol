@@ -23,23 +23,23 @@ Unknown dimension 00: Friend is the circle with `?` (Sea Friend geometry plus th
 | Class | Left | Right | Top / inner / bottom | Source |
 |---|---|---|---|---|
 | Air, Air Missile | none | T; P (IFF/SIF); V; Z X; G H | AO | Fig 2-2 PDF 54/2-4, Table 2-2 PDF 55-56/2-5..2-6 |
-| Land Unit | AR W; X Y; V AD AE; T; Z | F; G; H AF; M; J K P | AO, AA inner, AH bottom | Fig 3-3 PDF 84/3-4, Table 3-2 PDF 85-88/3-5..3-8 |
+| Land Unit | AR W; X Y; V AD AE; T; Z | F; G; H AF; M; J K P | C top (B/C/D cell above the echelon), AO, AA inner, AH bottom | Fig 3-3 PDF 84/3-4, Table 3-2 PDF 85-88/3-5..3-8 |
 | Land Equipment | W; X Y; V AD AF; T; Z | AC; G; H AE; M; J K L N P | C top | Fig 3-14 PDF 161/3-81, Table 3-16 PDF 162-164/3-82..3-84 |
 | Land Installation | W; X Y; AI; T | AC; G; H AE; M; J K | none | Fig 3-18 PDF 216/3-136, Table 3-22 PDF 217-219/3-137..3-139 |
 | Sea Surface | AQ AR | T; V; P (AIS); G H; Y Z | AO | Fig 5-3 PDF 293/5-5, Table 5-2 PDF 294-295/5-6..5-7 |
 | Subsurface, Mine Warfare | AR | T; V; X (depth); G; H | AO | Fig 5-6 / Table 5-9 PDF 326-327/5-38..5-39; Table A-5 PDF 722/A-8 |
-| Space | none | T; V; X; G | AO | Fig 6-2 PDF 361/6-4, Table 6-2 PDF 362-363/6-5..6-6 |
+| Space | none | T; V; Z X; G H | AO | Fig 6-2 PDF 361/6-4, Table 6-2 PDF 362-363/6-5..6-6, section 6.2.4 item 2; shared cells from Air Fig 2-2 PDF 54/2-4 (product policy, D-SPACE) |
 | 00 Unknown | no source layout | | | Fig 1-4 PDF 34/1-10 has unlabeled cells; legacy rows kept, no field restriction (policy) |
 
 Field semantics per class (not shared letters): AC is the installation graphic block on Land Unit (no option; `country` is rejected) and a three-letter country text on Equipment/Installation (STANAG 1059 reference; character set not given beyond letters). K is FO/SO/MO/NO/UNK on units, the four long descriptions on equipment, free capacity text on installations. P is IFF/SIF except AIS on Sea Surface. X is altitude, height in feet (equipment/installation) or depth (subsurface). Y has the 22-character limit on Land Unit only. W is `DDHHMM[SS]ZMONYYYY` on units and `...YY` on equipment/installations, or `O/O`. J is one letter A-F and one digit 1-6 (all 36 pairs). F is `+ - ±` (Table 3-9) with the parenthesised Table 3-2 forms accepted and noted; only at echelon 11-18/21 (or unspecified). L `!` and N `ENY` only on hostile-group equipment (Table 3-16 PDF 163/3-83). AQ is exactly `BG`, AR `NRT`/`SIG` on Sea Surface/Subsurface (free text with examples on Land Unit). AO is `A:BBB-CC` with the closed Table 1-5/1-6 dictionaries (PDF 40-41/1-16..1-17). The separator for shared positions is one space (product policy, the source gives none).
 
-Fields not in a class table are errors (no other-edition borrowing): e.g. quantity on Air/Land Unit, DTG on Air/Sea, R2 SIGINT and AG anywhere.
+Fields not in a class table are errors (no other-edition borrowing): e.g. quantity on Air/Installation, DTG on Air/Sea, R2 SIGINT and AG anywhere. Quantity C is defined on Land Unit and Land Equipment only (Land Unit: D-UNIT-C below). Space accepts H and Z like any other field (D-SPACE).
 
 ## Sector modifiers (Annex A PDF 735-815; printed = physical - 714)
 
 All 15 dictionaries (Tables A-11, A-12, A-14, A-15, A-17, A-18, A-20, A-21, A-26, A-28, A-29, A-35, A-36, A-38, A-39) are in `app6d-sectors.js` with 00, reserved ranges and 99 VEF. Air Missile sectors are left/right (PDF 76-79), all others top/bottom. Land Equipment has no sector 2 (section 3.4.7 PDF 210/3-130), Mine Warfare and Unknown have no dictionary.
 
-Entity constraints (validation; the renderer also draws only defined codes and none on local tracks): Air 38/39 rotary-wing entities 1102xx/1202xx (Table 2-5 PDF 73/2-23); Air Missile sector 2 07-11 only with sector 1 08 (PDF 78-79); Space sector 2 01-04 only with satellite entities (Table 6-5 PDF 372/6-15; "Antisatellite Weapon" is not treated as a satellite: policy); Subsurface sector 1 02, 03, 08-18 and sector 2 01-13 submarine entity type 1101xx, sector 2 14-16 AUV/UUV 1104xx/1202xx (Tables 5-11/5-12 PDF 331-336); sector 1 code 19 is `unresolved` D-SUB19 (accepted only with Torpedo 1301xx or Submarine, flagged); local tracks 30/160000, 30/170000, 35/140000, 35/150000, 35/160000 allow no sector modifier but still allow outer text amplifiers (PDF 316/5-28, 336-337/5-48..5-49); Own Ship 30/150000 Friend only, fused and ETC/POSCON Pending, IED 35/130200 Hostile only (Suspect does not substitute); Sea Surface sector 1 code 01 Own Ship is separate data. Installation remarks (Electric Power, Telecommunication, CRBN) are noted, not enforced.
+Entity constraints (validation; the renderer also draws only defined codes and none on local tracks): Air 38/39 rotary-wing entities 1102xx/1202xx (Table 2-5 PDF 73/2-23); Air Missile sector 2 07-11 only with sector 1 08 (PDF 78-79); Space sector 2 01-04 only with satellite entities (Table 6-5 PDF 372/6-15; "Antisatellite Weapon" is not treated as a satellite: policy); Subsurface sector 1 02, 03, 08-18 and sector 2 01-13 submarine entity type 1101xx, sector 2 14-16 AUV/UUV 1104xx/1202xx (Tables 5-11/5-12 PDF 331-336); sector 1 code 19 is valid with a Torpedo 1301xx or a Submarine 1101xx entity and carries a D-SUB19 note (product policy, any other entity is an error); local tracks 30/160000, 30/170000, 35/140000, 35/150000, 35/160000 allow no sector modifier but still allow outer text amplifiers (PDF 316/5-28, 336-337/5-48..5-49); Own Ship 30/150000 Friend only, fused and ETC/POSCON Pending, IED 35/130200 Hostile only (Suspect does not substitute); Sea Surface sector 1 code 01 Own Ship is separate data. Installation remarks (Electric Power, Telecommunication, CRBN) are noted, not enforced.
 
 ## Decision record (appendix section 9)
 
@@ -49,11 +49,12 @@ Entity constraints (validation; the renderer also draws only defined codes and n
 | D-UNIT-AL | Fig 3-3/Table 3-2 vs Tables 1-3/1-4 | status 2-5 is an error on Land Unit; no bar drawn |
 | D-EQ-AO | Fig 3-14 vs Table 3-16 | AO accepted on Equipment with a note |
 | D-INST-AE | Fig 3-18 vs Table 3-22 | AE rendered in the figure position with a note; equipment semantics not assumed |
-| D-SPACE | Fig 6-2/Table 6-2/section 6.2.4 PDF 361-363 | layout is T; V; X; G; H and Z are `unresolved` (valid=false), not rendered; Air rows not copied |
+| D-SPACE | Fig 6-2/Table 6-2/section 6.2.4 PDF 361-363, Air Fig 2-2 PDF 54/2-4 | **Product policy (Decision 3).** Table 6-2 lists G, H, T, V, X, Z; Figure 6-2 draws only T, V, X, G and section 6.2.4 item 2 says "fields 1 through 5" on the right. The Air figure of the same edition gives the right column T; P; V; Z/X; G/H and the Space figure is that column without P, so Z and H share the X and G cells. H and Z are ordinary valid fields (no `unresolved`, `valid` does not depend on them), right rows T; V; Z X; G H (speed before altitude, staff comments before additional information), with a D-SPACE note when used |
 | D-F | Table 3-2 PDF 85 vs Table 3-9 PDF 149 | both literal forms accepted, note; no `R`/`D` glyph generated |
 | D-W | Tables 3-2/3-16/3-22 | per-class DTG pattern |
 | D-AO-TYPO | Table 3-2 PDF 88 | `A:BBB-CC` used |
-| D-SUB19 | Table 5-11 PDF 334 vs A-38 PDF 814 | `unresolved`, never reported conforming |
+| D-SUB19 | Table 5-11 PDF 334/5-46 vs A-38 PDF 814/A-100 | **Product policy (Decision 4).** Table 5-11 says "Used with TORPEDO entity type only", Table A-38 says "Used with SUBMARINE entity type only"; each normative table permits one entity, so rejecting either would invalidate a symbol the other allows. Sector 1 code 19 is valid with a TORPEDO (1301xx) or a SUBMARINE (1101xx) entity, with a note and no `unresolved`; any other entity is an error |
+| D-UNIT-C | Fig 3-3 PDF 84/3-4, Table 3-2 PDF 85/3-5 | **Source reading (Decision 5).** Figure 3-3 draws the B/C/D cell above the frame and Table 3-2 has a C (Quantity) row, so Land Unit accepts C (`top: ["quantity"]`). The row description reads "A text amplifier in an equipment symbol", the generic wording repeated in the field tables, so a note is emitted when C is used on a Land Unit. Rendering: C is drawn above the echelon and task force bracket (the B/C/D cell), AO above C (Fig 3-3, Fig 3-14 PDF 161/3-81) |
 | D-EXT | Fig A-1 PDF 717 vs A.12 PDF 730 | only the 20-digit base is validated; 30 digits get a note |
 | D-OFFSET | section 1.2.1.6 PDF 36 vs 3.3.9 PDF 151 | not changed in this iteration (renderer keeps its anchors) |
 | D-K-EQ | Table 3-2 vs 3-16 | per-class K dictionaries |
