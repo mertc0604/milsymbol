@@ -1,7 +1,9 @@
-import { app6aSymbolClass, getApp6aFields } from "./vendor/letter-metadata.js";
+import { app6aSymbolClass, app6aTextFields, getApp6aFields } from "./vendor/letter-metadata.js";
 import { decodeEditorSidc, editImportedSidc, numericSidcEdition } from "./sidc-editor.js";
 import { modifierGroups, textModifiers, collectTextModifiers } from "./modifier-fields.js";
 
+import { fieldStates, formatDtg, evaluationRating, sidcParts, pushRecent, placeholderOptions } from "./editor-helpers.js";
+import { fieldReference } from "./field-reference.js";
 import { createCountryFlagPart } from "./country-flags.js";
 import { countryCodeForFlag, countryFlagFromSidc, countrySidcField, withCountryFlag } from "./country-codes.js";
 
@@ -137,7 +139,13 @@ const dom = Object.fromEntries(
     "standardSelect",
     "symbolSearch",
     "clearSearch",
-    "categoryFilter",
+    "searchLauncher",
+    "searchPanel",
+    "searchResults",
+    "categoryList",
+    "recentSection",
+    "recentGrid",
+    "resultHeading",
     "symbolGrid",
     "resultCount",
     "loadMore",
@@ -147,6 +155,48 @@ const dom = Object.fromEntries(
     "stage",
     "gridToggle",
     "outlineToggle",
+    "positionsToggle",
+    "previewHint",
+    "symbolClass",
+    "sidcStatus",
+    "identityChips",
+    "identityNote",
+    "statusChips",
+    "statusMeta",
+    "statusNote",
+    "designationMeta",
+    "designationNote",
+    "amplifierMeta",
+    "amplifierNote",
+    "countryMeta",
+    "flagSwatch",
+    "editionMeta",
+    "textSummary",
+    "toggleUnavailable",
+    "clearText",
+    "textFilledBadge",
+    "graphicsBadge",
+    "directionNumber",
+    "directionDial",
+    "directionNeedle",
+    "directionNote",
+    "hqStaffNote",
+    "showFlag",
+    "fillColorOn",
+    "fillColor",
+    "monoColorOn",
+    "monoColor",
+    "infoColorOn",
+    "infoColor",
+    "infoBackgroundOn",
+    "infoBackground",
+    "fillOpacity",
+    "fillOpacityOutput",
+    "infoSize",
+    "infoSizeOutput",
+    "outlineWidth",
+    "outlineWidthOutput",
+    "outlineColor",
     "sidcInput",
     "applySidc",
     "copySidc",
@@ -210,10 +260,18 @@ const state = {
   modifier2: "",
   customSidc: "",
   importedIcon: null,
-  outline: false
+  outline: false,
+  positions: false,
+  searchOpen: false,
+  sidcDirty: false,
+  sidcMessage: null,
+  showUnavailable: true,
+  focusField: "",
+  recent: []
 };
 
 let catalog;
+let flagArtwork = new Map();
 let currentSymbol;
 let currentSvg = "";
 let toastTimer;
@@ -264,7 +322,7 @@ function currentOptions(minimal = false) {
   ));
   const options = {
     standard: config().standard,
-    countryFlag: minimal ? "" : dom.countryFlag.value,
+    countryFlag: minimal || !dom.showFlag.checked ? "" : dom.countryFlag.value,
     size: minimal ? 34 : Number(dom.symbolSize.value),
     strokeWidth: Number(dom.strokeWidth.value),
     colorMode: dom.colorMode.value,
@@ -272,8 +330,14 @@ function currentOptions(minimal = false) {
     frame: minimal ? true : dom.frame.checked,
     icon: minimal ? true : dom.icon.checked,
     infoFields: minimal ? false : dom.infoFields.checked,
-    outlineWidth: !minimal && state.outline ? 7 : 0,
-    outlineColor: "#ffffff",
+    outlineWidth: !minimal && state.outline ? Number(dom.outlineWidth.value) : 0,
+    outlineColor: dom.outlineColor.value,
+    fillColor: !minimal && dom.fillColorOn.checked ? dom.fillColor.value : "",
+    monoColor: !minimal && dom.monoColorOn.checked ? dom.monoColor.value : "",
+    fillOpacity: minimal ? 1 : Number(dom.fillOpacity.value) / 100,
+    infoColor: !minimal && dom.infoColorOn.checked ? dom.infoColor.value : "",
+    infoSize: minimal ? 40 : Number(dom.infoSize.value),
+    infoBackground: !minimal && dom.infoBackgroundOn.checked ? dom.infoBackground.value : "",
     ...collectTextModifiers(values, app6a ? getApp6aFields(sidc).map(field => field.key) : null),
     direction: minimal || direction < 0 ? undefined : direction,
     speedLeader: minimal ? 0 : Number(dom.speedLeader.value),
@@ -378,6 +442,7 @@ function setStandard(id) {
   const next = standards.find((item) => item.id === id);
   if (!next) return;
   state.standardId = id;
+  loadRecent();
   if (id !== "app6a" && !affiliations.some(item => item.value === state.affiliation)) state.affiliation = "friend";
   state.selectedId = null;
   state.category = "all";
@@ -409,13 +474,63 @@ function chooseInitialSymbol() {
 }
 
 function populateCategories() {
-  const categories = [
-    ...new Set(dataset().icons.map((icon) => icon.category))
-  ].sort((a, b) => a.localeCompare(b));
-  dom.categoryFilter.innerHTML =
-    option("all", "All symbol sets") +
-    categories.map((item) => option(item, item)).join("");
-  dom.categoryFilter.value = state.category;
+  const counts = new Map();
+  for (const icon of dataset().icons) counts.set(icon.category, (counts.get(icon.category) || 0) + 1);
+  const categories = [...counts.keys()].sort((a, b) => a.localeCompare(b));
+  const button = (value, label, count) =>
+    `<button type="button" data-category="${escapeHtml(value)}" aria-pressed="${value === state.category}"><span>${escapeHtml(label)}</span><small>${count.toLocaleString("en-US")}</small></button>`;
+  dom.categoryList.innerHTML =
+    button("all", "All symbol sets", dataset().icons.length) +
+    categories.map((item) => button(item, item, counts.get(item))).join("");
+}
+
+function recentKey() {
+  return `symbol-studio:recent:${state.standardId}`;
+}
+
+function loadRecent() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(recentKey()) || "[]");
+    state.recent = Array.isArray(stored) ? stored.filter((id) => typeof id === "string") : [];
+  } catch {
+    state.recent = [];
+  }
+}
+
+function rememberRecent(id) {
+  state.recent = pushRecent(state.recent, id);
+  try {
+    localStorage.setItem(recentKey(), JSON.stringify(state.recent));
+  } catch {}
+}
+
+function symbolCard(icon) {
+  return `
+    <button type="button" class="symbol-card ${icon.id === state.selectedId ? "active" : ""}" aria-pressed="${icon.id === state.selectedId}" data-symbol-id="${escapeHtml(icon.id)}" title="${escapeHtml(icon.name + (icon.categoryOnly ? " — Category: no separate illustration in APP-6A" : ""))}">
+      <span class="mini-symbol">${safeMiniSvg(icon)}</span>
+      <strong>${escapeHtml(icon.name)}${icon.categoryOnly ? ' <span class="category-badge">Category</span>' : ""}</strong>
+      <small>${escapeHtml(icon.category)} · ${escapeHtml(icon.code)}</small>
+    </button>`;
+}
+
+function openSearch() {
+  if (state.searchOpen) return dom.symbolSearch.focus();
+  state.searchOpen = true;
+  dom.searchPanel.hidden = false;
+  dom.searchLauncher.setAttribute("aria-expanded", "true");
+  document.body.style.overflow = "hidden";
+  renderCatalog();
+  dom.symbolSearch.focus();
+  dom.symbolSearch.select();
+}
+
+function closeSearch() {
+  if (!state.searchOpen) return;
+  state.searchOpen = false;
+  dom.searchPanel.hidden = true;
+  dom.searchLauncher.setAttribute("aria-expanded", "false");
+  document.body.style.overflow = "";
+  dom.searchLauncher.focus();
 }
 
 function filteredIcons() {
@@ -451,22 +566,23 @@ function renderCatalog() {
   const icons = filteredIcons();
   const visible = icons.slice(0, state.visible);
   dom.resultCount.textContent = icons.length.toLocaleString("en-US");
+  dom.resultHeading.textContent = state.search.trim()
+    ? `Results in ${state.category === "all" ? "all symbol sets" : state.category}`
+    : state.category === "all" ? "All symbol sets" : state.category;
   dom.clearSearch.hidden = !state.search;
+  for (const button of dom.categoryList.querySelectorAll("[data-category]"))
+    button.setAttribute("aria-pressed", String(button.dataset.category === state.category));
+  const recent = !state.search.trim() && state.category === "all"
+    ? state.recent.map((id) => dataset().icons.find((icon) => icon.id === id)).filter(Boolean)
+    : [];
+  dom.recentSection.hidden = !recent.length;
+  dom.recentGrid.innerHTML = recent.map(symbolCard).join("");
   dom.symbolGrid.innerHTML = visible.length
-    ? visible
-        .map(
-          (icon) => `
-    <button class="symbol-card ${icon.id === state.selectedId ? "active" : ""}" aria-pressed="${icon.id === state.selectedId}" data-symbol-id="${escapeHtml(icon.id)}" title="${escapeHtml(icon.name + (icon.categoryOnly ? " — Category: no separate illustration in APP-6A" : ""))}">
-      <span class="mini-symbol">${safeMiniSvg(icon)}</span>
-      <strong>${escapeHtml(icon.name)}${icon.categoryOnly ? ' <span class="category-badge">Category</span>' : ""}</strong>
-      <small>${escapeHtml(icon.category)} · ${escapeHtml(icon.code)}</small>
-    </button>`
-        )
-        .join("")
+    ? visible.map(symbolCard).join("")
     : `<div class="empty-state">No symbols found.<br>Try a different name, code, or symbol set.</div>`;
   dom.loadMore.hidden = icons.length <= state.visible;
   dom.loadMore.textContent = `Show more · ${icons.length - state.visible}`;
-  if (focusedId) [...dom.symbolGrid.querySelectorAll("[data-symbol-id]")].find(card=>card.dataset.symbolId === focusedId)?.focus({preventScroll:true});
+  if (focusedId && dom.searchPanel.contains(document.activeElement)) [...dom.symbolGrid.querySelectorAll("[data-symbol-id]")].find(card=>card.dataset.symbolId === focusedId)?.focus({preventScroll:true});
 }
 
 function populateAmplifier() {
@@ -546,6 +662,7 @@ function syncModifiers() {
   if (app6a && ((state.amplifierMode === "echelon" && kind !== "unit") || (state.amplifierMode === "mobility" && kind !== "equipment"))) {
     state.amplifierMode = "none"; state.amplifierValue = ""; populateAmplifier();
   }
+  syncRuleNotes({ modern, app6a, kind, installation, tactical, prescribed: Boolean(prescribedAffiliation) });
   syncApp6aTextFields();
   document.getElementById("legacyNote").textContent = installation
     ? "Installation modifier H is applied automatically. Feint / dummy changes it to HB; unit echelon and headquarters flags do not apply."
@@ -573,18 +690,124 @@ function syncModifiers() {
   dom.modifierNote.textContent = `${setName} and common modifiers for this edition.`;
 }
 
+const kindLabels = { unit: "Unit", equipment: "Equipment", installation: "Installation", point: "Tactical point", nuclear: "Nuclear point" };
+
+// Explain every rule that disables a control, next to the control.
+function syncRuleNotes({ modern, app6a, kind, installation, tactical, prescribed }) {
+  dom.identityNote.hidden = !prescribed;
+  dom.identityNote.textContent = prescribed ? "This symbol prescribes its identity, so the identity is fixed." : "";
+  dom.statusMeta.textContent = modern ? "Position 7" : "Position 4";
+  dom.statusNote.textContent = app6a
+    ? "APP-6A defines Present and Planned. Fully capable, damaged, destroyed and full to capacity appear in the other editions."
+    : "";
+  dom.designationMeta.textContent = modern ? "Position 8" : "Position 11";
+  const reasons = [];
+  if (installation) reasons.push("Installations carry the installation modifier, so headquarters and task force do not apply.");
+  else if (tactical) reasons.push("Tactical points take no headquarters or feint flag.");
+  else {
+    if (app6a && state.amplifierMode === "mobility") reasons.push("Mobility uses positions 11–12, so headquarters is off.");
+    if (app6a && kind !== "unit") reasons.push("Task force applies to units only.");
+  }
+  dom.designationNote.textContent = reasons.join(" ") || (modern
+    ? "Writes one combined code to position 8 of the SIDC."
+    : "Writes one combined code to position 11, for example A for headquarters or E for task force.");
+  dom.amplifierMeta.textContent = modern ? "Positions 9–10" : "Positions 11–12";
+  dom.amplifierNote.textContent = installation || tactical
+    ? "This symbol takes no echelon or mobility amplifier."
+    : app6a && kind === "unit"
+      ? "Units take an echelon above the frame. Mobility is for equipment."
+      : app6a && kind === "equipment"
+        ? "Equipment takes a mobility amplifier below the frame. Echelon is for units."
+        : "Echelon is drawn above the frame; mobility below it.";
+  dom.countryMeta.textContent = countrySidcField(state.standardId)?.description || "";
+  dom.editionMeta.textContent = modern
+    ? (config().version === "13" ? "Edition E" : "Edition D")
+    : "APP-6D / E · MIL-STD-2525D / E";
+  dom.modifierNote.hidden = !modern;
+  dom.symbolClass.hidden = false;
+  dom.symbolClass.textContent = app6a ? kindLabels[kind] || "Symbol" : selectedIcon()?.category || "Symbol";
+  dom.hqStaffLength.disabled = !dom.hq.checked || dom.hq.disabled;
+  dom.hqStaffNote.textContent = dom.hqStaffLength.disabled
+    ? "Turn on Headquarters in the Symbol tab to use it."
+    : "Length of the headquarters staff. 0 uses the default length.";
+}
+
+const reliabilityCodes = ["A", "B", "C", "D", "E", "F"];
+const credibilityCodes = ["1", "2", "3", "4", "5", "6"];
+
+function fieldTools(field) {
+  if (field.key === "dtg")
+    return `<div class="field-tools"><button type="button" data-dtg-now="${field.id}">Now (UTC)</button></div>`;
+  if (field.key === "evaluationRating")
+    return `<div class="field-tools"><select data-rating-part="reliability" aria-label="Source reliability">${option("", "Reliability")}${reliabilityCodes.map((code) => option(code, code)).join("")}</select><select data-rating-part="credibility" aria-label="Information credibility">${option("", "Credibility")}${credibilityCodes.map((code) => option(code, code)).join("")}</select></div>`;
+  return "";
+}
+
+function fieldReferenceHtml(key) {
+  const reference = fieldReference[key];
+  if (!reference) return "";
+  return `<details><summary>${escapeHtml(reference.title)}</summary><dl class="reference-table">${reference.rows
+    .map(([code, meaning]) => `<dt>${escapeHtml(code)}</dt><dd>${escapeHtml(meaning)}</dd>`)
+    .join("")}</dl><p>${escapeHtml(reference.note)}</p></details>`;
+}
+
 function createTextFields() {
   const container = document.getElementById("app6aTextFields");
   // All editions share one form; applicable APP-6A fields are filtered below.
-  container.innerHTML = modifierGroups.map(group => `<section class="modifier-group">
-    <h4>${escapeHtml(group.label)}</h4><div class="control-group two-col">
-    ${group.fields.map(field => `<label><span data-field-label id="label-${field.id}">${escapeHtml(field.label)} <small>${field.field}</small></span>
+  container.innerHTML = modifierGroups.map((group, index) => `<section class="modifier-group" data-group="${index}">
+    <div class="group-head"><h4>${escapeHtml(group.label)}</h4><span data-group-summary></span></div>
+    <div class="field-grid">
+    ${group.fields.map(field => `<div class="text-field" data-field-wrapper="${field.key}">
+      <label><span class="field-label"><span><span class="field-code" data-field-code>${escapeHtml(field.field || "–")}</span><span class="field-name" data-field-label id="label-${field.id}">${escapeHtml(field.label)}</span></span><span class="field-count" data-field-count></span></span>
       ${field.choices
         ? `<select id="${field.id}" data-modifier-field="${field.key}" aria-labelledby="label-${field.id}" aria-describedby="help-${field.id}">${field.choices.map(([value, label]) => option(value, label)).join("")}</select>`
-        : `<input id="${field.id}" data-modifier-field="${field.key}" aria-labelledby="label-${field.id}" aria-describedby="help-${field.id}" placeholder="${escapeHtml(field.placeholder)}" />`}
-      <span class="modifier-description" id="help-${field.id}">${escapeHtml(field.description)}</span></label>`).join("")}
-    </div></section>`).join("");
-  container.addEventListener("input", renderAll);
+        : `<input id="${field.id}" data-modifier-field="${field.key}" aria-labelledby="label-${field.id}" aria-describedby="help-${field.id}" placeholder="${escapeHtml(field.placeholder)}" />`}</label>
+      ${fieldTools(field)}
+      <div class="field-help"><span class="modifier-description" id="help-${field.id}">${escapeHtml(field.description)}</span>${fieldReferenceHtml(field.key)}</div>
+    </div>`).join("")}
+    </div><div class="unavailable-list" data-unavailable></div></section>`).join("");
+  container.addEventListener("input", (event) => {
+    if (event.target.matches("[data-rating-part]")) return;
+    renderAll();
+  });
+  container.addEventListener("change", (event) => {
+    if (!event.target.matches("[data-rating-part]")) return;
+    const tools = event.target.closest(".text-field");
+    const value = evaluationRating(
+      tools.querySelector('[data-rating-part="reliability"]').value,
+      tools.querySelector('[data-rating-part="credibility"]').value
+    );
+    if (!value) return;
+    const input = tools.querySelector("[data-modifier-field]");
+    input.value = value;
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  container.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-dtg-now]");
+    if (!button) return;
+    const input = document.getElementById(button.dataset.dtgNow);
+    input.value = formatDtg(new Date()).slice(0, input.maxLength > 0 ? input.maxLength : undefined);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.focus();
+  });
+  container.addEventListener("focusin", (event) => {
+    const wrapper = event.target.closest("[data-field-wrapper]");
+    if (wrapper) setFocusField(wrapper.dataset.fieldWrapper);
+  });
+}
+
+function setFocusField(key) {
+  if (state.focusField === key) return;
+  state.focusField = key;
+  for (const wrapper of document.querySelectorAll("[data-field-wrapper]"))
+    wrapper.classList.toggle("focused", wrapper.dataset.fieldWrapper === key);
+  if (state.positions) renderAll();
+}
+
+function currentFieldStates(sidc = state.customSidc || buildSidc()) {
+  return fieldStates(textModifiers, state.standardId === "app6a"
+    ? { available: getApp6aFields(sidc), table: app6aTextFields, kind: app6aSymbolClass(sidc), identity: sidc[1] }
+    : null);
 }
 
 function syncApp6aTextFields() {
@@ -592,26 +815,68 @@ function syncApp6aTextFields() {
   document.getElementById("app6aFieldNote").hidden = !active;
   const container = document.getElementById("app6aTextFields");
   const sidc = state.customSidc || buildSidc();
-  const fields = new Map(getApp6aFields(sidc).map(field => [field.key,field]));
+  const states = new Map(currentFieldStates(sidc).map((item) => [item.key, item]));
   for (const field of textModifiers) {
     const input = document.getElementById(field.id);
-    const definition = active ? fields.get(field.key) : field;
-    input.parentElement.hidden = !definition;
-    input.disabled = !definition;
-    const label = input.parentElement.querySelector("[data-field-label]");
-    if (definition) {
-      label.innerHTML = `${escapeHtml(definition.label)} <small>${definition.field}</small>`;
+    const definition = states.get(field.key);
+    const wrapper = input.closest("[data-field-wrapper]");
+    wrapper.hidden = !definition.available;
+    input.disabled = !definition.available;
+    if (definition.available) {
+      wrapper.querySelector("[data-field-label]").textContent = definition.label;
+      wrapper.querySelector("[data-field-code]").textContent = definition.field || "–";
       if (!field.choices) {
-        if (active) input.maxLength = definition.maxLength;
+        if (definition.maxLength) input.maxLength = definition.maxLength;
         else input.removeAttribute("maxlength");
         input.placeholder = active ? `Max. ${definition.maxLength} characters · ${definition.field}` : field.placeholder;
       }
     }
   }
-  for (const group of container.querySelectorAll(".modifier-group"))
-    group.hidden = ![...group.querySelectorAll("[data-modifier-field]")].some(input => !input.disabled);
+  let available = 0;
+  for (const group of container.querySelectorAll(".modifier-group")) {
+    const fields = modifierGroups[Number(group.dataset.group)].fields;
+    const groupStates = fields.map((field) => states.get(field.key));
+    const open = groupStates.filter((item) => item.available);
+    available += open.length;
+    group.classList.toggle("none-available", !open.length);
+    group.querySelector(".field-grid").hidden = !open.length;
+    group.querySelector("[data-group-summary]").textContent = active
+      ? `${open.length} of ${fields.length} apply`
+      : `${fields.length} fields`;
+    group.querySelector("[data-unavailable]").innerHTML = groupStates
+      .filter((item) => !item.available)
+      .map((item) => `<div class="unavailable-row" title="${escapeHtml(fields.find((field) => field.key === item.key).description)}"><span><span class="field-code">${escapeHtml(item.field || "–")}</span><span>${escapeHtml(item.label)}</span></span><small>${escapeHtml(item.reason)}</small></div>`)
+      .join("");
+  }
+  const unavailable = textModifiers.length - available;
+  container.classList.toggle("hide-unavailable", !state.showUnavailable);
+  dom.toggleUnavailable.hidden = !unavailable;
+  dom.toggleUnavailable.textContent = state.showUnavailable ? `Hide ${unavailable} unavailable` : `Show ${unavailable} unavailable`;
+  dom.toggleUnavailable.setAttribute("aria-pressed", String(!state.showUnavailable));
+  dom.toggleUnavailable.classList.toggle("active", !state.showUnavailable);
+  const kind = active ? app6aSymbolClass(sidc) : "";
+  const filled = textModifiers.filter((field) => {
+    const input = document.getElementById(field.id);
+    return !input.disabled && input.value;
+  }).length;
+  for (const field of textModifiers) {
+    const input = document.getElementById(field.id);
+    const counter = input.closest("[data-field-wrapper]").querySelector("[data-field-count]");
+    if (field.choices) counter.textContent = "";
+    else {
+      const max = input.maxLength > 0 ? input.maxLength : 0;
+      counter.textContent = max ? `${input.value.length} / ${max}` : input.value ? String(input.value.length) : "";
+      counter.classList.toggle("full", Boolean(max) && input.value.length >= max);
+    }
+  }
+  dom.textSummary.textContent = active
+    ? `APP-6A Table III · ${available} of ${textModifiers.length} fields apply to ${({ unit: "units", equipment: "equipment", installation: "installations", point: "tactical points", nuclear: "nuclear points" })[kind] || "this symbol"} · ${filled} filled`
+    : `${textModifiers.length} text amplifiers · ${filled} filled · placement follows the renderer's symbol-set rules`;
+  dom.textFilledBadge.hidden = !filled;
+  dom.textFilledBadge.textContent = `${filled} filled`;
   dom.direction.disabled = active && app6aSymbolClass(sidc) === "point";
   dom.speedLeader.disabled = dom.direction.disabled;
+  dom.directionNumber.disabled = dom.direction.disabled;
   dom.stack.disabled = active;
 }
 
@@ -674,41 +939,194 @@ function syncStandardControls() {
   syncModifiers();
 }
 
-function updateSegments(sidc) {
+const schemeNames = { S: "Warfighting", G: "Tactical graphic", W: "Weather", I: "Intelligence", O: "Stability operations", E: "Emergency management" };
+const dimensionNames = { P: "Space", A: "Air", G: "Ground", S: "Sea surface", U: "Subsurface", F: "Special operations", X: "Other", Z: "Unknown" };
+const contextNames = { 0: "Reality", 1: "Exercise", 2: "Simulation" };
+const numericIdentityNames = { 0: "Pending", 1: "Unknown", 2: "Assumed friend", 3: "Friend", 4: "Neutral", 5: "Suspect", 6: "Hostile" };
+const legacyFlagNames = { "-": "", F: "Feint / dummy", A: "Headquarters", C: "HQ · feint", E: "Task force", G: "Task force · feint", B: "Task force HQ", D: "Task force HQ · feint" };
+let flagNames = new Map();
+
+function describePart(key, value, sidc) {
   const modern = /^\d/.test(sidc);
+  const icon = selectedIcon();
+  const flagName = (code) => (code && flagNames.get(code)) || "";
+  switch (key) {
+    case "scheme": return schemeNames[value] || "";
+    case "identity":
+      if (modern) {
+        const identity = affiliations.find((item) => item.numeric === value[1])?.label || numericIdentityNames[value[1]] || "";
+        return `${contextNames[value[0]] || "Context " + value[0]} · ${identity}`;
+      }
+      return app6aAffiliations.find((item) => item.legacy === value)?.label || "";
+    case "dimension": return dimensionNames[value] || "";
+    case "status": return statuses.find((item) => item.legacy === value)?.label || "";
+    case "function":
+    case "entity": return icon?.name || "";
+    case "set": return icon?.category || "";
+    case "version": return /^1[012]/.test(value) ? "Edition D" : /^1[34]/.test(value) ? "Edition E" : "";
+    case "modifiers": {
+      if (modern) return value === "0000" ? "None" : "Icon modifiers";
+      if (value[0] === "H") return value === "HB" ? "Installation · feint" : "Installation";
+      const mobility = mobilities.find((item) => item[3] === value);
+      if (mobility) return mobility[1];
+      const echelon = echelons.find((item) => item[3] === value[1] && item[3] !== "-");
+      return [legacyFlagNames[value[0]], echelon?.[1]].filter(Boolean).join(" · ") || "None";
+    }
+    case "amplifier": {
+      const status = statuses.find((item) => item.numeric === value[0])?.label;
+      const flags = ["", "Feint / dummy", "Headquarters", "HQ · feint", "Task force", "TF · feint", "Task force HQ", "TF HQ · feint"][Number(value[1])];
+      const amplifier = [...echelons, ...mobilities].find((item) => item[2] === value.slice(2) && item[2] !== "00")?.[1];
+      return [status, flags, amplifier].filter(Boolean).join(" · ");
+    }
+    case "country":
+    case "originatorCountry": return flagName(countryFlagFromSidc(sidc, state.standardId)) || (/^[-0]+$/.test(value) ? "Not set" : "");
+    case "frameShape": return [...dom.frameShape.options].find((item) => item.value === value)?.textContent || "";
+    case "oob": return value === "-" ? "Not set" : "";
+    default: return "";
+  }
+}
+
+function updateSegments(sidc) {
   const dEdition = ["app6d", "2525d"].includes(state.standardId);
-  const parts = modern
-    ? [
-        ["Version", sidc.slice(0, 2)],
-        ["Identity", sidc.slice(2, 4)],
-        ["Set", sidc.slice(4, 6)],
-        ["Amplifier", sidc.slice(6, 10)],
-        ["Entity", sidc.slice(10, 16)],
-        ["Modifiers", sidc.slice(16, 20)],
-        ...(dEdition ? [
-          ["Originator country", sidc.slice(20, 23)],
-          ["Originator set", sidc.slice(23, 24)],
-          ["National data", sidc.slice(24, 30)]
-        ] : [
-          ["Ext.", sidc.slice(20, 22)],
-          ["Frame shape", sidc.slice(22, 23)],
-          ["Other ext.", sidc.slice(23, 27)],
-          ["Country", sidc.slice(27, 30)]
-        ])
-      ]
-    : [
-        ["Scheme", sidc.slice(0, 1)],
-        ["Identity", sidc.slice(1, 2)],
-        ["Dimension", sidc.slice(2, 3)],
-        ["Status", sidc.slice(3, 4)],
-        ["Function", sidc.slice(4, 10)],
-        ["Modifiers", sidc.slice(10, 12)],
-        ["Country", sidc.slice(12, 14)],
-        ["OOB", sidc.slice(14)]
-      ];
-  dom.sidcSegments.innerHTML = parts
-    .map(([label, value]) => `<span>${label} <b>${value || "—"}</b></span>`)
+  dom.sidcSegments.innerHTML = sidcParts(sidc, dEdition)
+    .map(({ key, label, value }) => {
+      const meaning = describePart(key, value, sidc);
+      return `<div title="${escapeHtml(meaning)}"><span>${escapeHtml(label)}</span><b>${escapeHtml(value || "—")}</b>${meaning ? `<small>${escapeHtml(meaning)}</small>` : ""}</div>`;
+    })
     .join("");
+}
+
+const chipCache = new Map();
+
+function chipSvg(sidc) {
+  const key = `${state.standardId}|${sidc}|${dom.colorMode.value}|${dom.strokeWidth.value}`;
+  if (!chipCache.has(key)) {
+    let svg = "";
+    try {
+      svg = new window.ms.Symbol(sidc, { ...currentOptions(true), size: 18, infoFields: false }).asSVG();
+    } catch {}
+    if (chipCache.size > 400) chipCache.clear();
+    chipCache.set(key, svg);
+  }
+  return chipCache.get(key);
+}
+
+// Chips are a visual front end for the identity and status selects, which
+// stay the single source of truth for import and edit logic.
+function renderChips(sidc) {
+  const modern = config().family === "modern";
+  let base = sidc;
+  if (modern) base = base.padEnd(20, "0").slice(0, 7) + "000" + base.padEnd(20, "0").slice(10);
+  else if (base[10] !== "H") base = base.padEnd(15, "-").slice(0, 10) + "--" + base.padEnd(15, "-").slice(12);
+  const variant = (position, code) => base.slice(0, position) + code + base.slice(position + 1);
+  const chip = (select, value, label, code, position) =>
+    `<button type="button" class="chip" data-value="${escapeHtml(value)}" aria-pressed="${select.value === value}"${select.disabled ? " disabled" : ""}><span class="chip-glyph">${code ? chipSvg(variant(position, code)) : ""}</span><span>${escapeHtml(label)}</span></button>`;
+  const identities = state.standardId === "app6a" ? app6aAffiliations : affiliations;
+  dom.identityChips.innerHTML = [...dom.affiliation.options].map((item) => {
+    const entry = identities.find((candidate) => candidate.value === item.value);
+    const code = entry ? entry[modern ? "numeric" : "legacy"] : item.value.replace(/^code:/, "");
+    return chip(dom.affiliation, item.value, entry ? entry.label : item.textContent, code, modern ? 3 : 1);
+  }).join("");
+  dom.statusChips.innerHTML = [...dom.status.options].map((item) => {
+    const entry = statuses.find((candidate) => candidate.value === item.value);
+    const code = entry ? entry[modern ? "numeric" : "legacy"] : item.value.replace(/^code:/, "");
+    return chip(dom.status, item.value, entry ? entry.label : item.textContent, code, modern ? 6 : 3);
+  }).join("");
+}
+
+// Name the SIDC position when an imported code is outside this edition.
+function renderProblem() {
+  if (!currentSymbol) return "This code cannot be rendered.";
+  if (currentSymbol.isValid()) return "";
+  const modern = config().family === "modern";
+  const detail = currentSymbol.isValid(true);
+  const sidc = state.customSidc || buildSidc();
+  // selectImportedValue() adds "SIDC: …" options for values this edition does not offer.
+  const imported = (select, start, end, what) =>
+    select.selectedOptions[0]?.textContent.startsWith("SIDC: ")
+      ? `Position ${end - start > 1 ? `${start + 1}–${end}` : start + 1}: "${sidc.slice(start, end)}" is not ${what} in this edition.`
+      : "";
+  const reasons = [
+    imported(dom.affiliation, modern ? 3 : 1, modern ? 4 : 2, "an identity"),
+    imported(dom.status, modern ? 6 : 3, modern ? 7 : 4, "a status"),
+    imported(dom.amplifierValue, modern ? 8 : 10, modern ? 10 : 12, "an echelon or mobility code"),
+    ...(detail.modifierErrors || []),
+    detail.icon === false ? "Unknown function code for this standard." : "",
+    detail.affiliation === "undefined" ? "Unknown identity." : "",
+    detail.mobility === false ? "Unknown echelon or mobility code." : ""
+  ].filter(Boolean);
+  return `Check code / modifiers. ${reasons.join(" ") || "The renderer could not validate this code."}`;
+}
+
+function renderSidcStatus(sidc) {
+  const message = state.sidcMessage;
+  let kind = "idle";
+  let text = "Valid code. It follows every change in the editor.";
+  if (state.sidcDirty) {
+    kind = message && ["error", "info"].includes(message.kind) ? message.kind : "pending";
+    text = kind === "pending" ? "Not applied yet. Press Enter or Apply; Esc returns to the current code." : message.text;
+  } else {
+    const problem = renderProblem();
+    if (message && message.sidc === sidc) ({ kind, text } = message);
+    if (problem) {
+      kind = "error";
+      text = message && message.sidc === sidc ? `${text} ${problem}` : problem;
+    }
+  }
+  dom.sidcStatus.dataset.kind = kind;
+  dom.sidcStatus.textContent = text;
+  dom.sidcInput.classList.toggle("dirty", state.sidcDirty && kind === "pending");
+  dom.sidcInput.classList.toggle("error", state.sidcDirty && kind === "error");
+  dom.applySidc.classList.toggle("ready", state.sidcDirty);
+  const length = dom.sidcInput.value.replace(/\s/g, "").length;
+  dom.sidcLength.textContent = `${length} characters`;
+  dom.sidcInput.style.height = "auto";
+  dom.sidcInput.style.height = `${dom.sidcInput.scrollHeight + 2}px`;
+}
+
+let positionCodes = {};
+
+function markFieldTags() {
+  for (const text of dom.symbolPreview.querySelectorAll("text")) {
+    const key = text.textContent.split("/").map((part) => positionCodes[part]).find(Boolean);
+    if (!key) continue;
+    text.classList.add("field-tag");
+    text.dataset.field = key;
+    text.classList.toggle("focused", key === state.focusField);
+  }
+}
+
+function syncGraphicsControls() {
+  const value = Number(dom.direction.value);
+  const on = value >= 0 && !dom.direction.disabled;
+  dom.directionOutput.value = value < 0 ? "Off" : `${value}°`;
+  if (document.activeElement !== dom.directionNumber) dom.directionNumber.value = value < 0 ? "" : String(value);
+  for (const button of document.querySelectorAll("[data-direction]")) {
+    button.classList.toggle("active", Number(button.dataset.direction) === value);
+    button.disabled = dom.direction.disabled;
+  }
+  dom.directionNeedle.toggleAttribute("hidden", !on);
+  dom.directionNeedle.setAttribute("transform", `rotate(${on ? value : 0} 60 60)`);
+  dom.directionDial.classList.toggle("on", on);
+  dom.directionDial.setAttribute("aria-label", on ? `Heading ${value} degrees` : "Direction off");
+  dom.directionNote.textContent = dom.direction.disabled
+    ? "Direction does not apply to APP-6A tactical points."
+    : dom.hq.checked && !dom.hq.disabled
+      ? "With a headquarters, the arrow starts at the end of the HQ staff."
+      : "Ground symbols draw the arrow from a staff below the frame.";
+  dom.graphicsBadge.hidden = !on;
+  dom.graphicsBadge.textContent = on ? `Q ${value}°` : "";
+  dom.sizeOutput.value = `${dom.symbolSize.value}%`;
+  dom.strokeOutput.value = dom.strokeWidth.value;
+  dom.fillOpacityOutput.value = `${dom.fillOpacity.value}%`;
+  dom.infoSizeOutput.value = dom.infoSize.value;
+  dom.outlineWidthOutput.value = dom.outlineWidth.value;
+}
+
+function renderFlagSwatch() {
+  const artwork = flagArtwork.get(dom.countryFlag.value);
+  dom.flagSwatch.innerHTML = artwork || "";
+  dom.flagSwatch.classList.toggle("has-flag", Boolean(artwork));
 }
 
 function renderAll() {
@@ -727,7 +1145,18 @@ function renderAll() {
   try {
     currentSymbol = new window.ms.Symbol(sidc, currentOptions());
     currentSvg = currentSymbol.asSVG();
-    dom.symbolPreview.innerHTML = currentSvg;
+    let previewSvg = currentSvg;
+    positionCodes = {};
+    if (state.positions) {
+      const values = Object.fromEntries(textModifiers.map(({ key, id }) => [key, document.getElementById(id)?.value || ""]));
+      const tags = placeholderOptions(currentFieldStates(sidc), values);
+      positionCodes = tags.codes;
+      try {
+        previewSvg = new window.ms.Symbol(sidc, { ...currentOptions(), infoFields: true, ...tags.options }).asSVG();
+      } catch {}
+    }
+    dom.symbolPreview.innerHTML = previewSvg;
+    if (state.positions) markFieldTags();
     document.getElementById("compactPreview").innerHTML = currentSvg;
     const valid = Boolean(currentSymbol.isValid());
     dom.renderState.classList.toggle("invalid", !valid);
@@ -737,7 +1166,7 @@ function renderAll() {
     currentSymbol = null;
     currentSvg = "";
     document.getElementById("compactPreview").replaceChildren();
-    dom.symbolPreview.innerHTML = `<div class="empty-state">Unable to render symbol.<br>${error.message}</div>`;
+    dom.symbolPreview.innerHTML = `<div class="empty-state">Unable to render symbol.<br>${escapeHtml(error.message)}</div>`;
     dom.renderState.classList.add("invalid");
     dom.renderState.innerHTML = "<i></i>Rendering error";
   }
@@ -749,17 +1178,17 @@ function renderAll() {
     : state.standardId === "app6a"
       ? `${icon.source || "APP-6A (1998)"}. ${dataset().icons.length} S-scheme catalog entries.${icon.categoryOnly ? " Category — no separate illustration in APP-6A Annex D; preview is the renderer’s representation." : ""}${icon.remarks ? " " + icon.remarks : ""}`
       : "Rendered with milsymbol. Symbol appearance may differ from older standard publications.";
-  dom.sidcInput.value = sidc;
+  if (!state.sidcDirty) dom.sidcInput.value = sidc;
   for (const button of [dom.downloadSvg, dom.downloadPng, dom.copySvg, dom.copySidc]) button.disabled = !currentSvg;
   const auditLink = document.getElementById("publicationAudit");
   auditLink.hidden = document.documentElement.dataset.localAudit !== "true" || state.standardId !== "app6a" || !icon.id.startsWith("S");
   auditLink.href = `audit/symbols/index.html?symbol=${encodeURIComponent(icon.id)}`;
-  dom.sidcLength.textContent = `${sidc.length} characters`;
   updateSegments(sidc);
-  dom.directionOutput.value =
-    Number(dom.direction.value) < 0 ? "Off" : `${dom.direction.value}°`;
-  dom.sizeOutput.value = `${dom.symbolSize.value}%`;
-  dom.strokeOutput.value = dom.strokeWidth.value;
+  renderSidcStatus(sidc);
+  renderChips(sidc);
+  renderFlagSwatch();
+  syncGraphicsControls();
+  dom.previewHint.textContent = state.positions ? "Tags mark empty fields. Click one to edit it." : "Transparent background";
   document.title = `${icon.name} — Military Symbol Editor`;
 }
 
@@ -772,6 +1201,7 @@ function updateSidcAndRender(field, { rerenderCatalog = false } = {}) {
 
 function selectSymbol(id) {
   state.selectedId = id;
+  rememberRecent(id);
   state.modifier1 = "";
   state.modifier2 = "";
   state.customSidc = "";
@@ -862,8 +1292,21 @@ function resetControls() {
     modifier2: "",
     customSidc: "",
     importedIcon: null,
-    outline: false
+    outline: false,
+    sidcDirty: false,
+    sidcMessage: null
   });
+  for (const select of document.querySelectorAll("[data-rating-part]")) select.value = "";
+  for (const id of ["fillColorOn", "monoColorOn", "infoColorOn", "infoBackgroundOn"]) dom[id].checked = false;
+  dom.showFlag.checked = true;
+  dom.fillColor.value = "#80e0ff";
+  dom.monoColor.value = "#000000";
+  dom.infoColor.value = "#000000";
+  dom.infoBackground.value = "#ffffff";
+  dom.fillOpacity.value = 100;
+  dom.infoSize.value = 40;
+  dom.outlineWidth.value = 7;
+  dom.outlineColor.value = "#ffffff";
   dom.countryFlag.value = "";
   dom.colorMode.value = "Light";
   for (const id of ["hq", "taskForce", "feintDummy"]) dom[id].checked = false;
@@ -884,18 +1327,40 @@ function resetControls() {
   toast("Modifiers reset");
 }
 
+function activateTab(tab) {
+  for (const candidate of document.querySelectorAll("[data-editor-tab]")) {
+    const active = candidate === tab;
+    candidate.setAttribute("aria-selected", String(active));
+    candidate.tabIndex = active ? 0 : -1;
+    document.getElementById(candidate.getAttribute("aria-controls")).hidden =
+      !active;
+  }
+  // Section switches return the form to its top.
+  const panel = document.querySelector(".editor-panel");
+  if (panel.getBoundingClientRect().top < 0) panel.scrollIntoView({ block: "start" });
+}
+
+function openField(key) {
+  const field = textModifiers.find((item) => item.key === key);
+  const input = field && document.getElementById(field.id);
+  if (!input || input.disabled) return;
+  activateTab(document.getElementById("tab-text"));
+  setFocusField(key);
+  input.scrollIntoView({ block: "center" });
+  input.focus({ preventScroll: true });
+}
+
+function moveCardFocus(card, step) {
+  const cards = [...dom.searchResults.querySelectorAll("[data-symbol-id]")];
+  const index = cards.indexOf(card);
+  if (index < 0) return;
+  const next = cards[index + step];
+  if (next) next.focus();
+  else if (step < 0) dom.symbolSearch.focus();
+}
+
 function bindEvents() {
   const editorTabs = [...document.querySelectorAll("[data-editor-tab]")];
-  const activateTab = (tab) => {
-    for (const candidate of editorTabs) {
-      const active = candidate === tab;
-      candidate.setAttribute("aria-selected", String(active));
-      candidate.tabIndex = active ? 0 : -1;
-      document.getElementById(candidate.getAttribute("aria-controls")).hidden =
-        !active;
-    }
-    document.querySelector(".control-scroll").scrollTop = 0;
-  };
   editorTabs.forEach((tab, index) => {
     tab.addEventListener("click", () => activateTab(tab));
     tab.addEventListener("keydown", (event) => {
@@ -922,26 +1387,69 @@ function bindEvents() {
     state.search = dom.symbolSearch.value;
     state.visible = 40;
     renderCatalog();
-    dom.symbolGrid.scrollTop = 0;
+    dom.searchResults.scrollTop = 0;
   });
   const clearSearch = () => {
     dom.symbolSearch.value = "";
     state.search = "";
     state.visible = 40;
     renderCatalog();
-    dom.symbolGrid.scrollTop = 0;
+    dom.searchResults.scrollTop = 0;
     dom.symbolSearch.focus();
   };
   dom.clearSearch.addEventListener("click", clearSearch);
-  dom.categoryFilter.addEventListener("change", () => {
-    state.category = dom.categoryFilter.value;
+  dom.categoryList.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-category]");
+    if (!button) return;
+    state.category = button.dataset.category;
     state.visible = 40;
     renderCatalog();
-    dom.symbolGrid.scrollTop = 0;
+    dom.searchResults.scrollTop = 0;
   });
-  dom.symbolGrid.addEventListener("click", (event) => {
+  dom.searchResults.addEventListener("click", (event) => {
     const card = event.target.closest("[data-symbol-id]");
-    if (card) selectSymbol(card.dataset.symbolId);
+    if (!card) return;
+    selectSymbol(card.dataset.symbolId);
+    closeSearch();
+  });
+  dom.searchResults.addEventListener("keydown", (event) => {
+    const card = event.target.closest("[data-symbol-id]");
+    if (!card) return;
+    if (["ArrowDown", "ArrowRight"].includes(event.key)) {
+      event.preventDefault();
+      moveCardFocus(card, 1);
+    } else if (["ArrowUp", "ArrowLeft"].includes(event.key)) {
+      event.preventDefault();
+      moveCardFocus(card, -1);
+    }
+  });
+  dom.symbolSearch.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      dom.searchResults.querySelector("[data-symbol-id]")?.focus();
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      const first = filteredIcons()[0];
+      if (first) {
+        selectSymbol(first.id);
+        closeSearch();
+      }
+    }
+  });
+  dom.searchLauncher.addEventListener("click", openSearch);
+  for (const element of document.querySelectorAll("[data-close-search]"))
+    element.addEventListener("click", closeSearch);
+  dom.identityChips.addEventListener("click", (event) => {
+    const chip = event.target.closest("[data-value]");
+    if (!chip || chip.disabled || dom.affiliation.disabled) return;
+    dom.affiliation.value = chip.dataset.value;
+    dom.affiliation.dispatchEvent(new Event("change"));
+  });
+  dom.statusChips.addEventListener("click", (event) => {
+    const chip = event.target.closest("[data-value]");
+    if (!chip || chip.disabled) return;
+    dom.status.value = chip.dataset.value;
+    dom.status.dispatchEvent(new Event("change"));
   });
   dom.loadMore.addEventListener("click", () => {
     state.visible += 40;
@@ -993,6 +1501,54 @@ function bindEvents() {
   dom.frameShape.addEventListener("change", () => updateSidcAndRender("frameShape"));
   for (const id of ["speedLeader", "hqStaffLength", "stack"])
     dom[id].addEventListener("input", renderAll);
+  for (const id of ["showFlag", "fillColorOn", "monoColorOn", "infoColorOn", "infoBackgroundOn"])
+    dom[id].addEventListener("change", renderAll);
+  for (const id of ["fillColor", "monoColor", "infoColor", "infoBackground", "fillOpacity", "infoSize", "outlineWidth", "outlineColor"])
+    dom[id].addEventListener("input", () => {
+      const toggle = { fillColor: "fillColorOn", monoColor: "monoColorOn", infoColor: "infoColorOn", infoBackground: "infoBackgroundOn" }[id];
+      if (toggle) dom[toggle].checked = true;
+      if (id.startsWith("outline") && !state.outline) {
+        state.outline = true;
+        dom.outlineToggle.classList.add("active");
+        dom.outlineToggle.setAttribute("aria-pressed", "true");
+      }
+      renderAll();
+    });
+  dom.directionNumber.addEventListener("input", () => {
+    const raw = dom.directionNumber.value.trim();
+    dom.direction.value = raw === "" ? -1 : Math.min(360, Math.max(0, Math.round(Number(raw) || 0)));
+    renderAll();
+  });
+  for (const button of document.querySelectorAll("[data-direction]"))
+    button.addEventListener("click", () => {
+      dom.direction.value = button.dataset.direction;
+      renderAll();
+    });
+  dom.toggleUnavailable.addEventListener("click", () => {
+    state.showUnavailable = !state.showUnavailable;
+    renderAll();
+  });
+  dom.clearText.addEventListener("click", () => {
+    for (const input of document.querySelectorAll("[data-modifier-field]")) input.value = "";
+    for (const select of document.querySelectorAll("[data-rating-part]")) select.value = "";
+    renderAll();
+    toast("Text amplifiers cleared");
+  });
+  dom.positionsToggle.addEventListener("click", () => {
+    state.positions = !state.positions;
+    dom.positionsToggle.classList.toggle("active", state.positions);
+    dom.positionsToggle.setAttribute("aria-pressed", String(state.positions));
+    renderAll();
+  });
+  dom.symbolPreview.addEventListener("click", (event) => {
+    const tag = event.target.closest("[data-field]");
+    if (tag) openField(tag.dataset.field);
+  });
+  dom.sidcInput.addEventListener("input", () => {
+    state.sidcDirty = true;
+    state.sidcMessage = null;
+    renderSidcStatus(state.customSidc || buildSidc());
+  });
   for (const id of ["colorMode", "direction", "symbolSize", "strokeWidth"])
     dom[id].addEventListener("input", () => {
       renderAll();
@@ -1003,18 +1559,24 @@ function bindEvents() {
     let value = dom.sidcInput.value.trim().toUpperCase().replace(/\s/g, "");
     const allowed =
       config().family === "modern" ? /^\d{20,30}$/ : /^[A-Z0-9*-]{10,15}$/;
+    const reject = (text) => {
+      state.sidcDirty = true;
+      state.sidcMessage = { kind: "error", text };
+      renderSidcStatus(state.customSidc || buildSidc());
+    };
     if (!allowed.test(value)) {
-      toast(
+      reject(
         config().family === "modern"
-          ? "Enter a numeric SIDC with 20–30 digits"
-          : "Enter a letter-based SIDC with 10–15 characters (letters, digits, - or *)"
+          ? `Enter a numeric SIDC with 20–30 digits. This one has ${value.length} characters${/\D/.test(value) ? ", including letters" : ""}.`
+          : `Enter a letter-based SIDC with 10–15 characters (letters, digits, - or *). This one has ${value.length}.`
       );
       return;
     }
     if (state.standardId === "app6a" && !value.startsWith("S")) {
-      toast("APP-6A: enter an S-scheme tactical symbol code");
+      reject("APP-6A: enter an S-scheme tactical symbol code. G-scheme tactical graphics are not part of this editor.");
       return;
     }
+    const startStandard = state.standardId;
     const hasWildcards = value.includes("*");
     if (hasWildcards) {
       // Publication templates leave identity/status open. Resolve those using
@@ -1030,14 +1592,31 @@ function bindEvents() {
     // A newly applied SIDC is authoritative, including empty/unknown country
     // fields. Never leave the previously selected country's flag on a new code.
     dom.countryFlag.value = countryFlagFromSidc(value, state.standardId);
+    state.sidcDirty = false;
+    state.sidcMessage = null;
     renderAll();
     renderCatalog();
-    toast(hasWildcards ? "SIDC applied — wildcard fields resolved using current identity/status; other fields left unspecified" : "SIDC applied");
+    const notes = [
+      hasWildcards ? "Wildcards resolved with the current identity and status; other fields left unspecified." : "",
+      state.standardId !== startStandard ? `Standard switched to ${config().label}.` : "",
+      state.importedIcon?.name === "Custom SIDC" ? "This function code is not in the catalog; it is kept as entered." : ""
+    ].filter(Boolean);
+    state.sidcMessage = {
+      kind: notes.length ? "info" : "ok",
+      text: `Applied · ${selectedIcon().name}. ${notes.join(" ")}`.trim(),
+      sidc: state.customSidc || buildSidc()
+    };
+    renderSidcStatus(state.sidcMessage.sidc);
   });
   dom.sidcInput.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
       event.preventDefault();
       dom.applySidc.click();
+    } else if (event.key === "Escape" && state.sidcDirty) {
+      event.preventDefault();
+      state.sidcDirty = false;
+      state.sidcMessage = null;
+      renderAll();
     }
   });
   dom.copySidc.addEventListener("click", () =>
@@ -1072,17 +1651,16 @@ function bindEvents() {
   document.addEventListener("keydown", (event) => {
     if (
       event.key === "/" &&
-      !["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)
+      !["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName) &&
+      !dom.helpDialog.open
     ) {
       event.preventDefault();
-      dom.symbolSearch.focus();
+      openSearch();
     }
-    if (
-      event.key === "Escape" &&
-      document.activeElement === dom.symbolSearch &&
-      dom.symbolSearch.value
-    ) {
-      clearSearch();
+    if (event.key === "Escape" && state.searchOpen) {
+      event.preventDefault();
+      if (document.activeElement === dom.symbolSearch && dom.symbolSearch.value) clearSearch();
+      else closeSearch();
     }
   });
 }
@@ -1100,6 +1678,8 @@ async function init() {
       const response = await fetch("./flags.json");
       if (!response.ok) throw new Error(`Flag request failed: ${response.status}`);
       const flags = await response.json();
+      flagArtwork = new Map(flags.map((flag) => [flag.code, flag.svg]));
+      flagNames = new Map(flags.map((flag) => [flag.code, flag.name]));
       window.ms.addSymbolPart(createCountryFlagPart(flags));
       dom.countryFlag.innerHTML = option("", "No flag") + flags.map(flag =>
         option(flag.code, flag.name)
@@ -1111,6 +1691,7 @@ async function init() {
       console.error("Unable to load flag artwork", error);
     }
     bindEvents();
+    loadRecent();
     renderStandardSelect();
     populateCategories();
     chooseInitialSymbol();
