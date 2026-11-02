@@ -1,4 +1,6 @@
-export default function (ms, sidc) {
+// identityFor(symbolset, code) may return another standard identity digit for
+// entities whose APP-6(D) text restricts it (default 3, Friend).
+export default function (ms, sidc, identityFor) {
   const mainIcon = {};
   for (let i = 0; i < sidc.mainIcon.length; i++) {
     if (
@@ -14,7 +16,12 @@ export default function (ms, sidc) {
         sidc.mainIcon[i]["Entity Type"] ||
         sidc.mainIcon[i]["Entity"]);
     const valid = new ms.Symbol(
-      "1003" + sidc.symbolset + "0000" + sidc.mainIcon[i]["Code"] + "0000"
+      "100" +
+        (identityFor ? identityFor(sidc.symbolset, sidc.mainIcon[i]["Code"]) : "3") +
+        sidc.symbolset +
+        "0000" +
+        sidc.mainIcon[i]["Code"] +
+        "0000"
     ).isValid();
     mainIcon[icon] = [valid, true];
   }
