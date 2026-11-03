@@ -189,6 +189,11 @@ textarea::placeholder {
   font-weight: 400;
   text-align: left;
 }
+.search-launcher strong {
+  flex: none;
+  color: var(--text);
+  font-weight: 600;
+}
 .search-launcher span {
   flex: 1;
   min-width: 0;
@@ -1212,6 +1217,21 @@ a.support-note {
     0 2px 8px #17222e1f;
   overflow: hidden;
 }
+.palette-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  padding: 12px 16px 0;
+}
+.palette-header h2 {
+  font-size: 14px;
+  font-weight: 600;
+}
+.palette-header span {
+  color: var(--muted);
+  font-size: 12px;
+}
 .search-box {
   display: flex;
   align-items: center;
@@ -1360,13 +1380,23 @@ a.support-note {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+/* A long category name shortens with an ellipsis; the code always stays visible. */
 .symbol-card small {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
   max-width: 100%;
   color: var(--faint);
   font-size: 11px;
+  white-space: nowrap;
+}
+.symbol-card .card-category {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+}
+.symbol-card .card-code {
+  flex: none;
 }
 .category-badge {
   display: inline-block;
@@ -1389,9 +1419,13 @@ a.support-note {
   max-width: 60px;
   max-height: 44px;
 }
-.load-more {
+.palette-status {
   align-self: center;
+  color: var(--faint);
   font-size: 12px;
+}
+.palette-status:empty {
+  display: none;
 }
 .empty-state {
   grid-column: 1 / -1;

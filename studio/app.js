@@ -29,7 +29,7 @@ import {
   profileDetailLines
 } from "./profile-controls.js";
 
-import { fieldStates, profileFieldStates, formatDtg, evaluationRating, sidcParts, pushRecent, placeholderOptions } from "./editor-helpers.js";
+import { fieldStates, profileFieldStates, formatDtg, evaluationRating, sidcParts, pushRecent, placeholderOptions, paletteProgress } from "./editor-helpers.js";
 import { fieldReference } from "./field-reference.js";
 import { app6aIdentities, contextOptions, convertIdentity, decodeIdentity, identityCode, identityLabel, identityList } from "./identities.js";
 import { createCountryFlagPart } from "./country-flags.js";
@@ -188,7 +188,7 @@ const dom = Object.fromEntries(
     "resultHeading",
     "symbolGrid",
     "resultCount",
-    "loadMore",
+    "paletteStatus",
     "selectedName",
     "selectedPath",
     "symbolPreview",
@@ -298,12 +298,15 @@ const dom = Object.fromEntries(
   ].map((id) => [id, document.getElementById(id)])
 );
 
+// The symbol palette renders its results in batches as the list scrolls.
+const paletteBatch = 40;
+
 const state = {
   standardId: "app6a",
   selectedId: null,
   search: "",
   category: "all",
-  visible: 40,
+  visible: paletteBatch,
   affiliation: "friend",
   context: "0",
   status: "present",
@@ -622,7 +625,7 @@ function setStandard(id) {
   state.context = identity.context;
   state.selectedId = null;
   state.category = "all";
-  state.visible = 40;
+  state.visible = paletteBatch;
   state.modifier1 = "";
   state.modifier2 = "";
   state.customSidc = "";
@@ -685,7 +688,7 @@ function symbolCard(icon) {
     <button type="button" class="symbol-card ${icon.id === state.selectedId ? "active" : ""}" aria-pressed="${icon.id === state.selectedId}" data-symbol-id="${escapeHtml(icon.id)}" title="${escapeHtml(icon.name + (icon.categoryOnly ? " — Category: no separate illustration in APP-6A" : ""))}">
       <span class="mini-symbol">${safeMiniSvg(icon)}</span>
       <strong>${escapeHtml(icon.name)}${icon.categoryOnly ? ' <span class="category-badge">Category</span>' : ""}</strong>
-      <small>${escapeHtml(icon.category)} · ${escapeHtml(icon.code)}</small>
+      <small><span class="card-category">${escapeHtml(icon.category)}</span><span aria-hidden="true">·</span><span class="card-code">${escapeHtml(icon.code)}</span></small>
     </button>`;
 }
 
@@ -756,9 +759,28 @@ function renderCatalog() {
   dom.symbolGrid.innerHTML = visible.length
     ? visible.map(symbolCard).join("")
     : `<div class="empty-state">No symbols found.<br>Try a different name, code, or symbol set.</div>`;
-  dom.loadMore.hidden = icons.length <= state.visible;
-  dom.loadMore.textContent = `Show more · ${icons.length - state.visible}`;
+  dom.paletteStatus.textContent = paletteProgress(visible.length, icons.length);
   if (focusedId && dom.searchPanel.contains(document.activeElement)) [...dom.symbolGrid.querySelectorAll("[data-symbol-id]")].find(card=>card.dataset.symbolId === focusedId)?.focus({preventScroll:true});
+  fillPalette();
+}
+
+// Append the next batch of results; returns false when every result is shown.
+function appendCatalogBatch() {
+  const icons = filteredIcons();
+  const batch = icons.slice(state.visible, state.visible + paletteBatch);
+  if (!batch.length) return false;
+  dom.symbolGrid.insertAdjacentHTML("beforeend", batch.map(symbolCard).join(""));
+  state.visible += batch.length;
+  dom.paletteStatus.textContent = paletteProgress(state.visible, icons.length);
+  return true;
+}
+
+// Keep loading while the end of the list is within 400px of the visible area,
+// so scrolling never reaches a gap and tall windows fill on open.
+function fillPalette() {
+  if (!state.searchOpen) return;
+  const list = dom.searchResults;
+  while (list.scrollHeight - list.scrollTop - list.clientHeight < 400 && appendCatalogBatch());
 }
 
 function mobilityNameFor(offers) {
@@ -1866,9 +1888,12 @@ function openField(key) {
 }
 
 function moveCardFocus(card, step) {
-  const cards = [...dom.searchResults.querySelectorAll("[data-symbol-id]")];
+  const allCards = () => [...dom.searchResults.querySelectorAll("[data-symbol-id]")];
+  let cards = allCards();
   const index = cards.indexOf(card);
   if (index < 0) return;
+  // At the last loaded card, load the next batch before moving on.
+  if (step > 0 && index === cards.length - 1 && appendCatalogBatch()) cards = allCards();
   const next = cards[index + step];
   if (next) next.focus();
   else if (step < 0) dom.symbolSearch.focus();
@@ -1900,14 +1925,14 @@ function bindEvents() {
   });
   dom.symbolSearch.addEventListener("input", () => {
     state.search = dom.symbolSearch.value;
-    state.visible = 40;
+    state.visible = paletteBatch;
     renderCatalog();
     dom.searchResults.scrollTop = 0;
   });
   const clearSearch = () => {
     dom.symbolSearch.value = "";
     state.search = "";
-    state.visible = 40;
+    state.visible = paletteBatch;
     renderCatalog();
     dom.searchResults.scrollTop = 0;
     dom.symbolSearch.focus();
@@ -1917,7 +1942,7 @@ function bindEvents() {
     const button = event.target.closest("[data-category]");
     if (!button) return;
     state.category = button.dataset.category;
-    state.visible = 40;
+    state.visible = paletteBatch;
     renderCatalog();
     dom.searchResults.scrollTop = 0;
   });
@@ -1970,10 +1995,7 @@ function bindEvents() {
     dom.status.value = chip.dataset.value;
     dom.status.dispatchEvent(new Event("change"));
   });
-  dom.loadMore.addEventListener("click", () => {
-    state.visible += 40;
-    renderCatalog();
-  });
+  dom.searchResults.addEventListener("scroll", fillPalette, { passive: true });
 
   dom.affiliation.addEventListener("change", () => {
     delete state.adjustments.identity;

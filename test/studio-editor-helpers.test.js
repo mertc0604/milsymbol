@@ -4,7 +4,8 @@ import {
   evaluationRating,
   sidcParts,
   pushRecent,
-  placeholderOptions
+  placeholderOptions,
+  paletteProgress
 } from "../studio/editor-helpers.js";
 import { fieldReference } from "../studio/field-reference.js";
 import { textModifiers } from "../studio/modifier-fields.js";
@@ -137,6 +138,22 @@ export default {
     "evaluation reference lists six reliability and six credibility codes": [
       fieldReference.evaluationRating.rows.length,
       12
+    ],
+    "palette status counts loaded symbols while more remain": [
+      paletteProgress(40, 1589),
+      "Showing 40 of 1,589"
+    ],
+    "palette status says when every symbol is loaded": [
+      paletteProgress(713, 713),
+      "All 713 symbols shown"
+    ],
+    "palette status uses the singular for one symbol": [
+      paletteProgress(1, 1),
+      "1 symbol shown"
+    ],
+    "palette status is empty when nothing matches": [
+      paletteProgress(0, 0),
+      ""
     ]
   }
 };

@@ -132,3 +132,11 @@ export function placeholderOptions(states, values) {
   }
   return { options, codes };
 }
+
+// Status line under the symbol palette, which loads its results in batches.
+export function paletteProgress(shown, total) {
+  if (!total) return "";
+  if (total === 1) return "1 symbol shown";
+  const count = (value) => value.toLocaleString("en-US");
+  return shown < total ? `Showing ${count(shown)} of ${count(total)}` : `All ${count(total)} symbols shown`;
+}

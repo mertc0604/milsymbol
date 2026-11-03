@@ -22,8 +22,8 @@
           >Military Symbol Editor</a
         >
         <button id="searchLauncher" class="search-launcher" type="button" aria-haspopup="dialog" aria-controls="searchPanel" aria-expanded="false">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 4.5 4.5" /></svg>
-          <span>Search symbols by name, code or full SIDC</span><kbd>/</kbd>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5" /><rect x="13.5" y="3.5" width="7" height="7" rx="1.5" /><rect x="3.5" y="13.5" width="7" height="7" rx="1.5" /><rect x="13.5" y="13.5" width="7" height="7" rx="1.5" /></svg>
+          <strong>Symbol palette</strong><span>Search name, code or full SIDC</span><kbd>/</kbd>
         </button>
         <div class="top-actions">
           <label class="standard-switcher" for="standardSelect">
@@ -285,7 +285,10 @@
     <div id="searchPanel" class="search-overlay" hidden>
       <div class="search-backdrop" data-close-search></div>
       <section class="search-dialog" role="dialog" aria-modal="true" aria-labelledby="searchTitle">
-        <h2 id="searchTitle" class="visually-hidden">Symbol library</h2>
+        <header class="palette-header">
+          <h2 id="searchTitle">Symbol palette</h2>
+          <span>Browse a symbol set or search; the list loads as you scroll.</span>
+        </header>
         <div class="search-box">
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 4.5 4.5" /></svg
           ><input id="symbolSearch" type="search" aria-label="Search symbols" placeholder="Search name, function code or full SIDC" autocomplete="off" /><button
@@ -304,7 +307,7 @@
               <span id="resultCount" class="count-badge" role="status" aria-label="Matching symbols">—</span>
             </div>
             <div id="symbolGrid" class="symbol-grid" aria-label="Symbol results"></div>
-            <button id="loadMore" class="load-more" type="button" hidden>Show more symbols</button>
+            <p id="paletteStatus" class="palette-status"></p>
           </div>
         </div>
         <footer class="search-footer">
