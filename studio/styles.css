@@ -346,7 +346,11 @@ textarea::placeholder {
   max-height: 100%;
   height: auto;
 }
-.symbol-preview text.field-tag {
+/* Tag halos reach past the symbol's viewBox; do not clip the outer rows. */
+.symbol-preview svg {
+  overflow: visible;
+}
+.symbol-preview .field-tag {
   fill: var(--blue-dark);
   font-weight: 700;
   paint-order: stroke;
@@ -355,8 +359,8 @@ textarea::placeholder {
   stroke-linejoin: round;
   cursor: pointer;
 }
-.symbol-preview text.field-tag:hover,
-.symbol-preview text.field-tag.focused {
+.symbol-preview .field-tag:hover,
+.symbol-preview .field-tag.focused {
   fill: #fff;
   stroke: var(--blue);
 }

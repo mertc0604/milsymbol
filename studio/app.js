@@ -1581,14 +1581,23 @@ function renderProfileDetails() {
 
 let positionCodes = {};
 
+// One shared row holds several tags ("[AR] [W]", legacy "[X]/[Y]"), so each tag
+// becomes its own tspan: every tag can be clicked and highlighted on its own.
 function markFieldTags() {
+  const svgNs = "http://www.w3.org/2000/svg";
   for (const text of dom.symbolPreview.querySelectorAll("text")) {
-    // Legacy rows join with "/", edition profiles with a space.
-    const key = text.textContent.split(/[/ ]+/).map((part) => positionCodes[part]).find(Boolean);
-    if (!key) continue;
-    text.classList.add("field-tag");
-    text.dataset.field = key;
-    text.classList.toggle("focused", key === state.focusField);
+    const parts = text.textContent.split(/(\[[^\]]+\])/).filter(Boolean);
+    if (!parts.some((part) => positionCodes[part])) continue;
+    text.replaceChildren(...parts.map((part) => {
+      const key = positionCodes[part];
+      if (!key) return document.createTextNode(part);
+      const tag = document.createElementNS(svgNs, "tspan");
+      tag.textContent = part;
+      tag.classList.add("field-tag");
+      tag.classList.toggle("focused", key === state.focusField);
+      tag.dataset.field = key;
+      return tag;
+    }));
   }
 }
 
