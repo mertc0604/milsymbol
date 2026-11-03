@@ -1,4 +1,4 @@
-import { completeEditorSidc, decodeEditorSidc, editImportedSidc } from "../studio/sidc-editor.js";
+import { completeEditorSidc, decodeEditorSidc, displayEditorSidc, editImportedSidc } from "../studio/sidc-editor.js";
 
 const tank = { id: "S-G-EVAT--", name: "Tank", code: "EVAT--", battleDimension: "G", codingScheme: "S" };
 const legacy = { family: "legacy", version: "", icons: [tank] };
@@ -43,5 +43,18 @@ export default {
     "numeric codes of 20 to 30 digits are unchanged": [completeEditorSidc("100310001612110102037921234567", "modern").added, 0],
     "a numeric code needs version, context, identity and symbol set": [Boolean(completeEditorSidc("10031", "modern").error), true],
     "letters in a numeric code are an error": [Boolean(completeEditorSidc("1003A0001211", "modern").error), true]
+  },
+  "SIDC box shows unspecified user fields as *": {
+    "a unit without size, country or order of battle": [displayEditorSidc("SFGPUCI--------"), "SFGPUCI---*****"],
+    "a chosen echelon, country and order of battle stay": [displayEditorSidc("SFGPUCI----FTUG"), "SFGPUCI----FTUG"],
+    "only the empty fields change": [displayEditorSidc("SFGPUCI----F---"), "SFGPUCI----F***"],
+    "an installation keeps its H": [displayEditorSidc("SFGPI-----H----"), "SFGPI-----H****"],
+    "a feint/dummy installation stays HB": [displayEditorSidc("SFGPI-----HB---"), "SFGPI-----HB***"],
+    "the function code keeps its dashes": [displayEditorSidc("SFAP-----------"), "SFAP------*****"],
+    "a short code shows its missing fields as *": [displayEditorSidc("SFGPUCI---"), "SFGPUCI---*****"],
+    "signals intelligence keeps its fixed -- size field": [displayEditorSidc("IHGPSCC--------"), "IHGPSCC-----***"],
+    "tactical graphics keep position 15": [displayEditorSidc("GFGPGPP--------"), "GFGPGPP---****-"],
+    "weather codes are unchanged": [displayEditorSidc("WAS-PHT---P----"), "WAS-PHT---P----"],
+    "numeric codes are unchanged": [displayEditorSidc("10031000001211000000"), "10031000001211000000"]
   }
 };

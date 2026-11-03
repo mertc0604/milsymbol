@@ -24,6 +24,32 @@ export function completeEditorSidc(input, family) {
   return { value: value.padEnd(10, "-").padEnd(15, "*"), added: 15 - value.length, error: "" };
 }
 
+// User-defined fields (positions 11-15) by coding scheme, as the code tables
+// mark them with "*": APP-6A Annex B (S: ** ** *, installations H* ** *) and
+// MIL-STD-2525C (S/E/O *****, I --***, G ****X; W none).
+const userFields = {
+  S: [[10, 12], [12, 14], [14, 15]],
+  E: [[10, 12], [12, 14], [14, 15]],
+  O: [[10, 12], [12, 14], [14, 15]],
+  I: [[12, 14], [14, 15]],
+  G: [[10, 12], [12, 14]]
+};
+
+// The SIDC box shows a user-defined field that is still empty as "*" instead
+// of "-"; an installation keeps its H. Rendering and Apply use "-" (Apply turns
+// these * back into -). Numeric SIDCs are unchanged.
+export function displayEditorSidc(sidc) {
+  const fields = userFields[sidc[0]];
+  if (!fields) return sidc;
+  let shown = sidc.padEnd(15, "-");
+  for (const [start, end] of fields) {
+    const part = shown.slice(start, end);
+    const empty = part === "-".repeat(end - start) ? "*".repeat(end - start) : start === 10 && part === "H-" ? "H*" : part;
+    shown = shown.slice(0, start) + empty + shown.slice(end);
+  }
+  return shown;
+}
+
 export function decodeEditorSidc(value, { family, version, icons }) {
   const modern = family === "modern";
   const extended = (numericSidcEdition(value) || (version === "13" ? "e" : "d")) === "e";

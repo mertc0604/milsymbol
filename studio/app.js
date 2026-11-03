@@ -9,7 +9,7 @@ import {
   app6dEngagementError
 } from "./vendor/modifierprofiles/app6d.js";
 import * as app6dSectors from "./vendor/modifierprofiles/app6d-sectors.js";
-import { completeEditorSidc, decodeEditorSidc, editImportedSidc, numericSidcEdition } from "./sidc-editor.js";
+import { completeEditorSidc, decodeEditorSidc, displayEditorSidc, editImportedSidc, numericSidcEdition } from "./sidc-editor.js";
 import { modifierGroups, textModifiers, collectTextModifiers } from "./modifier-fields.js";
 import {
   probeOffers,
@@ -1445,6 +1445,7 @@ function describePart(key, value, sidc) {
     case "version": return /^1[012]/.test(value) ? "Edition D" : /^1[34]/.test(value) ? "Edition E" : "";
     case "modifiers": {
       if (modern) return value === "0000" ? "None" : "Icon modifiers";
+      if (/^\*+$/.test(value)) return "Not set";
       if (value[0] === "H") return value === "HB" ? "Installation · feint" : "Installation";
       const mobility = mobilities.find((item) => item[3] === value);
       if (mobility) return mobility[1];
@@ -1459,9 +1460,9 @@ function describePart(key, value, sidc) {
       return [status, flags, amplifier].filter(Boolean).join(" · ");
     }
     case "country":
-    case "originatorCountry": return flagName(countryFlagFromSidc(sidc, state.standardId)) || (/^[-0]+$/.test(value) ? "Not set" : "");
+    case "originatorCountry": return flagName(countryFlagFromSidc(sidc, state.standardId)) || (/^[-0*]+$/.test(value) ? "Not set" : "");
     case "frameShape": return [...dom.frameShape.options].find((item) => item.value === value)?.textContent || "";
-    case "oob": return value === "-" ? "Not set" : "";
+    case "oob": return value === "-" || value === "*" ? "Not set" : "";
     default: return "";
   }
 }
@@ -1708,12 +1709,12 @@ function renderAll() {
     : state.standardId === "app6a"
       ? `${icon.source || "APP-6A (1998)"}. ${dataset().icons.length} S-scheme catalog entries.${icon.categoryOnly ? " Category — no separate illustration in APP-6A Annex D; preview is the renderer’s representation." : ""}${icon.remarks ? " " + icon.remarks : ""}`
       : "Rendered with milsymbol. Symbol appearance may differ from older standard publications.";
-  if (!state.sidcDirty) dom.sidcInput.value = sidc;
+  if (!state.sidcDirty) dom.sidcInput.value = displayEditorSidc(sidc);
   for (const button of [dom.downloadSvg, dom.downloadPng, dom.copySvg, dom.copySidc]) button.disabled = !currentSvg;
   const auditLink = document.getElementById("publicationAudit");
   auditLink.hidden = document.documentElement.dataset.localAudit !== "true" || state.standardId !== "app6a" || !icon.id.startsWith("S");
   auditLink.href = `audit/symbols/index.html?symbol=${encodeURIComponent(icon.id)}`;
-  updateSegments(sidc);
+  updateSegments(displayEditorSidc(sidc));
   renderSidcStatus(sidc);
   renderProfileDetails();
   renderChips(sidc);
@@ -2116,8 +2117,9 @@ function bindEvents() {
     const completionNote = !completion.added ? ""
       : config().family === "modern" ? `Completed with 0 to ${completion.value.length} digits.`
         : `Completed as ${completion.value}; * positions left unspecified.`;
-    // Only wildcards the user typed get the wildcard note; completion adds its own *.
-    const typedWildcards = completion.value.slice(0, completion.value.length - completion.added).includes("*");
+    // Identity and status wildcards get the note; * in positions 11-15 (from
+    // completion or the box itself) only means "not specified".
+    const typedWildcards = completion.value[1] === "*" || completion.value[3] === "*";
     let value = completion.value;
     const reject = (text) => {
       state.sidcDirty = true;
