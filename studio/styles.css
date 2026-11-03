@@ -285,13 +285,38 @@ textarea::placeholder {
 .heading-copy {
   min-width: 0;
 }
+/* The symbol's place in the palette: whole words that wrap, never cut. */
 .selected-path {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 1px 4px;
   color: var(--muted);
   font-size: 11px;
-  line-height: 1.4;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.5;
+}
+.path-link {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-weight: 400;
+  text-align: left;
+}
+.path-link:hover {
+  background: none;
+  color: var(--blue);
+  text-decoration: underline;
+}
+.path-sep {
+  color: var(--faint);
+}
+.path-tag {
+  margin-left: 4px;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: #eef1f4;
 }
 .heading-badges {
   display: flex;
@@ -796,9 +821,6 @@ a.support-note {
   accent-color: var(--blue);
   margin: 0;
 }
-.display-toggles {
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-}
 .segmented {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -821,8 +843,7 @@ a.support-note {
   box-shadow: 0 1px 2px #20364a1f;
 }
 .full-field,
-.control-group label,
-.number-field {
+.control-group label {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -1491,67 +1512,79 @@ a.support-note {
 }
 
 /* Graphics */
-.direction-row {
+/* Q and AJ in the Amplifiers list; S length under the HQ flag. */
+.direction-control {
+  max-width: 460px;
+}
+.direction-control input[type="range"] {
+  accent-color: var(--blue);
+}
+.inline-field {
   display: flex;
   align-items: center;
-  gap: 16px;
-}
-.direction-dial {
-  width: 108px;
-  height: 108px;
-  flex: none;
-}
-.dial-face {
-  fill: #f6f8fa;
-  stroke: #cfd8e1;
-  stroke-width: 2;
-}
-.dial-ticks {
-  stroke: var(--faint);
-  stroke-width: 2;
-}
-.direction-dial text {
-  font-size: 12px;
-  font-weight: 600;
-  fill: var(--muted);
-  text-anchor: middle;
-}
-.dial-needle path {
-  stroke: var(--blue);
-  stroke-width: 3;
-  stroke-linecap: round;
-}
-.dial-needle .dial-head {
-  fill: var(--blue);
-  stroke: none;
-}
-.dial-hub {
-  fill: #b9c4cf;
-}
-.direction-dial.on .dial-hub {
-  fill: var(--blue);
-}
-.direction-controls {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
+  justify-content: space-between;
   gap: 10px;
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 500;
 }
-.direction-quick {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+.inline-field > span:first-child {
+  display: flex;
+  align-items: center;
   gap: 6px;
 }
-.direction-quick button {
-  min-height: 30px;
-  padding: 2px;
+.unit-input {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
   font-size: 12px;
 }
-.direction-quick button.active {
-  border-color: var(--blue);
-  background: var(--soft-blue);
-  color: var(--blue-dark);
+.unit-input input {
+  width: 86px;
+}
+.check-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+}
+.check-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.check-row input {
+  margin: 0;
+  accent-color: var(--blue);
+}
+.style-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 16px;
+}
+.select-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 500;
+}
+.more-style summary {
+  width: fit-content;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.more-style summary:hover {
+  color: var(--blue);
+}
+.more-style[open] summary {
+  margin-bottom: 12px;
 }
 .range-field {
   display: flex;
@@ -1749,6 +1782,67 @@ a.support-note {
   color: var(--muted);
   font-size: 12px;
   font-weight: 600;
+}
+/* Browsing a set: a heading per group (closable), subheadings inside. */
+.symbol-grid.grouped {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.palette-section {
+  border-top: 1px solid var(--line-soft);
+  padding-top: 10px;
+}
+.palette-section summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  list-style: none;
+}
+.palette-section summary::-webkit-details-marker {
+  display: none;
+}
+.palette-section summary h4 {
+  font-size: 14px;
+  font-weight: 600;
+}
+.palette-section summary small {
+  color: var(--faint);
+  font-size: 11px;
+}
+.palette-section summary svg {
+  width: 16px;
+  height: 16px;
+  margin-left: auto;
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 2;
+  transition: transform 0.15s;
+}
+.palette-section:not([open]) summary svg {
+  transform: rotate(-90deg);
+}
+.palette-section-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.palette-section[open] .palette-section-body {
+  margin-top: 10px;
+}
+.palette-group {
+  margin: 6px 0 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--line-soft);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+}
+.palette-section-body > .palette-group:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
 }
 .count-badge {
   font-size: 12px;
@@ -2024,12 +2118,8 @@ dialog p {
   .toggle-grid {
     grid-template-columns: minmax(0, 1fr);
   }
-  .direction-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .direction-dial {
-    align-self: center;
+  .style-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 @media (prefers-reduced-motion: reduce) {

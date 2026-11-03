@@ -137,7 +137,8 @@ export function movementControls(profile, sidc, title = "This edition's field ta
   if (listed("direction") && !listed("speedLeader"))
     return {
       direction: yes,
-      speedLeader: { applies: false, reason: `${title} has no AJ speed leader` }
+      // Not a field of this edition at all (defined: false), not a rule-out.
+      speedLeader: { applies: false, defined: false, reason: `${title} has no AJ speed leader` }
     };
   const aj = addedErrors(
     profile,

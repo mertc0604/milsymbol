@@ -15,7 +15,12 @@ import { app6dProfile } from "../src/modifierprofiles/app6d.js";
 import {
   profileFieldStates,
   dtgForField,
-  legacyDefaultModifier
+  legacyDefaultModifier,
+  inBranch,
+  baseBranch,
+  groupEntries,
+  paletteSections,
+  entryCrumbs
 } from "../studio/editor-helpers.js";
 import { textModifiers } from "../studio/modifier-fields.js";
 import {
@@ -337,7 +342,54 @@ const identities = {
   ]
 };
 
+// ------------------------- 9. palette groups from the catalogue paths
+const groundUnits = [
+  { name: "GROUND TRACK", path: ["GROUND TRACK"] },
+  { name: "UNIT", path: ["GROUND TRACK", "UNIT"] },
+  { name: "COMBAT", path: ["GROUND TRACK", "UNIT", "COMBAT"] },
+  { name: "AIR DEFENSE", path: ["GROUND TRACK", "UNIT", "COMBAT", "AIR DEFENSE"] },
+  { name: "SHORT RANGE", path: ["GROUND TRACK", "UNIT", "COMBAT", "AIR DEFENSE", "SHORT RANGE"] },
+  { name: "CHAPARRAL", path: ["GROUND TRACK", "UNIT", "COMBAT", "AIR DEFENSE", "SHORT RANGE", "CHAPARRAL"] },
+  { name: "INFANTRY", path: ["GROUND TRACK", "UNIT", "COMBAT", "INFANTRY"] },
+  { name: "COMBAT SUPPORT", path: ["GROUND TRACK", "UNIT", "COMBAT SUPPORT"] },
+  { name: "MILITARY POLICE", path: ["GROUND TRACK", "UNIT", "COMBAT SUPPORT", "MILITARY POLICE"] }
+];
+const base = baseBranch(groundUnits);
+const groups = {
+  "a set starts below the levels all its entries share": [base, ["GROUND TRACK", "UNIT"]],
+  "groups one level down hold more than one entry; the rest are loose": [
+    (({ loose, groups }) => ({ loose: loose.map((icon) => icon.name), groups: groups.map((group) => [group.name, group.icons.length]) }))(groupEntries(groundUnits, base)),
+    { loose: ["GROUND TRACK", "UNIT"], groups: [["COMBAT", 5], ["COMBAT SUPPORT", 2]] }
+  ],
+  "the palette shows a heading per group and subheadings for their groups": [
+    paletteSections(groundUnits, base).map((section) => ({
+      name: section.name,
+      loose: section.loose.map((icon) => icon.name),
+      groups: section.groups.map((group) => [group.name, group.icons.map((icon) => icon.name)])
+    })),
+    [
+      { name: "", loose: ["GROUND TRACK", "UNIT"], groups: [] },
+      { name: "COMBAT", loose: ["COMBAT", "INFANTRY"], groups: [["AIR DEFENSE", ["AIR DEFENSE", "SHORT RANGE", "CHAPARRAL"]]] },
+      { name: "COMBAT SUPPORT", loose: ["COMBAT SUPPORT", "MILITARY POLICE"], groups: [] }
+    ]
+  ],
+  "a group holds its own entry and everything under it": [
+    groundUnits.filter((icon) => inBranch(icon, ["GROUND TRACK", "UNIT", "COMBAT", "AIR DEFENSE"])).map((icon) => icon.name),
+    ["AIR DEFENSE", "SHORT RANGE", "CHAPARRAL"]
+  ],
+  "the heading names the groups above an entry, not the entry itself": [
+    entryCrumbs(groundUnits[5], base).map((crumb) => crumb.name),
+    ["COMBAT", "AIR DEFENSE", "SHORT RANGE"]
+  ],
+  "each crumb opens its group": [
+    entryCrumbs(groundUnits[5], base)[1].branch,
+    ["GROUND TRACK", "UNIT", "COMBAT", "AIR DEFENSE"]
+  ],
+  "an entry above the base has no crumbs": [entryCrumbs(groundUnits[0], base), []]
+};
+
 export default {
+  "9 palette groups": groups,
   "1 2525C quantity and engagement bar": overlap,
   "2 2525C catalogue installations": installation,
   "3 engagement bar colour with AO": engagement,

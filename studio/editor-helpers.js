@@ -302,6 +302,65 @@ export function layoutFieldBoxes(rows, widths, { height = 30, gap = 8, center = 
   return boxes;
 }
 
+// Catalogue hierarchy. Every entry's path ends with its own name, so a branch
+// (a path prefix) holds the entry of that name and everything under it.
+export const inBranch = (icon, branch) => branch.every((name, index) => (icon.path || [])[index] === name);
+
+// The branch a category starts from: the levels every entry under it shares
+// are skipped (APP-6A Ground units all sit under GROUND TRACK › UNIT).
+export function baseBranch(icons) {
+  const branch = [];
+  for (;;) {
+    const next = new Set(icons.filter((icon) => (icon.path || []).length > branch.length && inBranch(icon, branch)).map((icon) => icon.path[branch.length]));
+    if (next.size !== 1) return branch;
+    branch.push([...next][0]);
+  }
+}
+
+// The entries of a branch split for the palette: the groups one level below
+// it that hold more than one entry (each with every entry under it, in
+// catalogue order) and the loose entries that belong to no group (entries
+// above the branch, the branch's own entry and single leaves).
+export function groupEntries(icons, branch) {
+  const groups = new Map();
+  for (const icon of icons) {
+    const path = icon.path || [];
+    if (path.length <= branch.length || !inBranch(icon, branch)) continue;
+    if (!groups.has(path[branch.length])) groups.set(path[branch.length], []);
+    groups.get(path[branch.length]).push(icon);
+  }
+  const kept = [...groups].filter(([, list]) => list.length > 1);
+  const grouped = new Set(kept.flatMap(([, list]) => list));
+  return {
+    loose: icons.filter((icon) => !grouped.has(icon)),
+    groups: kept.map(([name, list]) => ({ name, branch: [...branch, name], icons: list }))
+  };
+}
+
+// A symbol set in the palette: a heading for each group under the set's base
+// branch, and inside it a subheading for each of its own groups (APP-6A
+// Ground units: COMBAT, then INFANTRY, ARMOR, FIELD ARTILLERY ...). Entries
+// that fit no group open the list without a heading.
+export function paletteSections(icons, base) {
+  const top = groupEntries(icons, base);
+  const sections = top.loose.length ? [{ name: "", branch: base, count: top.loose.length, loose: top.loose, groups: [] }] : [];
+  for (const group of top.groups) {
+    const inner = groupEntries(group.icons, group.branch);
+    sections.push({ name: group.name, branch: group.branch, count: group.icons.length, loose: inner.loose, groups: inner.groups });
+  }
+  return sections;
+}
+
+// The groups above an entry, below its category's base branch, each with the
+// branch it opens: CHAPARRAL in APP-6A is COMBAT › AIR DEFENSE › SHORT RANGE.
+export function entryCrumbs(icon, base) {
+  const path = icon.path || [];
+  if (!inBranch(icon, base)) return [];
+  const crumbs = [];
+  for (let index = base.length; index < path.length - 1; index += 1) crumbs.push({ name: path[index], branch: path.slice(0, index + 1) });
+  return crumbs;
+}
+
 // Status line under the symbol palette, which loads its results in batches.
 export function paletteProgress(shown, total) {
   if (!total) return "";

@@ -40,7 +40,7 @@
           <section class="panel-card preview-card">
             <div class="symbol-heading">
               <div class="heading-copy">
-                <p id="selectedPath" class="selected-path">Loading the symbol library.</p>
+                <p id="selectedPath" class="selected-path" aria-label="Place in the symbol palette">Loading the symbol library.</p>
                 <h1 id="selectedName">Loading symbols…</h1>
               </div>
               <div class="heading-badges">
@@ -52,7 +52,7 @@
               <div id="symbolPreview" class="symbol-preview" aria-label="Military symbol preview"></div>
             </div>
             <div class="preview-toolbar">
-              <button class="tool-toggle edit-text" id="positionsToggle" type="button" aria-label="Edit text amplifiers at their positions" title="Open Text amplifiers with a box for each field around the symbol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4Z" /><path d="m13.5 6.5 4 4" /></svg>Edit text</button>
+              <button class="tool-toggle edit-text" id="positionsToggle" type="button" aria-label="Edit text amplifiers at their positions" title="Open Amplifiers with a box for each text field around the symbol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4Z" /><path d="m13.5 6.5 4 4" /></svg>Edit text</button>
               <div class="downloads" role="group" aria-label="Download">
                 <button class="download-link" id="downloadPng" type="button" aria-label="Download PNG" title="Download PNG (transparent background)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6.5A1.5 1.5 0 0 0 5 4.5v15A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V8Z" /><path d="M14 3v5h5M12 11v6m-3-3 3 3 3-3" /></svg>PNG</button
                 ><button class="download-link" id="downloadSvg" type="button" aria-label="Download SVG" title="Download SVG (vector, transparent background)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6.5A1.5 1.5 0 0 0 5 4.5v15A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V8Z" /><path d="M14 3v5h5M12 11v6m-3-3 3 3 3-3" /></svg>SVG</button>
@@ -94,10 +94,10 @@
           <div class="editor-tabs" role="tablist" aria-label="Configuration sections">
             <button id="tab-symbol" role="tab" aria-selected="true" aria-controls="panel-symbol" data-editor-tab="symbol" type="button">Symbol</button>
             <button id="tab-text" role="tab" aria-selected="false" aria-controls="panel-text" data-editor-tab="text" tabindex="-1" type="button">
-              Text amplifiers <span id="textFilledBadge" class="tab-badge" hidden></span>
+              Amplifiers <span id="textFilledBadge" class="tab-badge" hidden></span>
             </button>
             <button id="tab-style" role="tab" aria-selected="false" aria-controls="panel-style" data-editor-tab="style" tabindex="-1" type="button">
-              Graphics and display <span id="graphicsBadge" class="tab-badge" hidden></span>
+              Display
             </button>
             <span class="tab-spacer"></span>
             <span class="editor-hint">Changes update the preview automatically.</span>
@@ -138,6 +138,7 @@
                     ><label><input id="taskForce" type="checkbox" /><span>Task force</span></label
                     ><label><input id="feintDummy" type="checkbox" /><span>Feint / dummy</span></label>
                   </div>
+                  <label class="inline-field" id="hqStaffRow" hidden title="0 draws the default length"><span><span id="hqStaffLabel">HQ staff length</span> <span class="field-code">S</span></span><span class="unit-input"><input id="hqStaffLength" type="number" min="0" max="500" value="0" placeholder="0" /><span aria-hidden="true">px</span></span></label>
                   <p class="field-note" id="designationNote"></p>
                 </section>
 
@@ -188,15 +189,31 @@
                 <p class="text-summary"><span id="textSummary"></span
                   ><button id="textInfoButton" class="info-button" type="button" aria-expanded="false" aria-controls="textInfo" aria-label="About these fields" title="About these fields">i</button></p>
                 <div class="text-actions">
-                  <button id="clearText" class="quiet-button" type="button">Clear text</button>
+                  <button id="clearText" class="quiet-button" type="button" title="Clear every amplifier value">Clear all</button>
                 </div>
               </div>
               <div id="textInfo" class="text-info" hidden>
                 <p id="textApplies"></p>
                 <p id="app6aFieldNote" hidden>APP-6A Table III (pp. 19–21). Only applicable fields are editable; limits follow the publication.</p>
-                <p>Text amplifiers are included in SVG / PNG exports, separately from the SIDC. Placement depends on the symbol set.</p>
+                <p>Amplifiers are included in SVG / PNG exports, separately from the SIDC. Placement depends on the symbol set. Q (direction of movement) and AJ (speed leader) are graphic amplifiers: they are set in the list.</p>
               </div>
               <div id="carryNotes" class="carry-notes" role="status" aria-live="polite" hidden></div>
+              <div id="graphicFields" hidden>
+                <div class="text-field graphic-field wide" data-field-wrapper="direction" id="directionRow">
+                  <label class="field-label" for="directionNumber"><span class="field-code" data-field-code>Q</span><span class="field-name" data-field-label>Direction of movement</span></label>
+                  <div class="field-control direction-control">
+                    <input id="direction" type="range" min="-1" max="360" value="-1" aria-label="Direction of movement" aria-describedby="about-direction" />
+                    <span class="unit-input"><input id="directionNumber" type="number" min="0" max="360" step="1" placeholder="Off" aria-describedby="about-direction" /><span aria-hidden="true">°</span></span>
+                    <button id="directionOff" class="field-tool" type="button" hidden>Off</button>
+                  </div>
+                  <span class="visually-hidden" id="about-direction" data-field-about></span>
+                </div>
+                <div class="text-field graphic-field" data-field-wrapper="speedLeader" id="speedLeaderRow">
+                  <label class="field-label" for="speedLeader"><span class="field-code" data-field-code>AJ</span><span class="field-name" data-field-label>Speed leader</span></label>
+                  <div class="field-control"><span class="unit-input"><input id="speedLeader" type="number" min="0" max="500" value="0" aria-describedby="about-speedLeader" /><span aria-hidden="true">px</span></span></div>
+                  <span class="visually-hidden" id="about-speedLeader" data-field-about></span>
+                </div>
+              </div>
               <section id="fieldLayout" class="field-layout" aria-label="Text amplifiers at their positions" hidden>
                 <div class="layout-stage"><div id="layoutCanvas" class="layout-canvas"></div></div>
                 <p id="layoutHelp" class="layout-help"></p>
@@ -224,77 +241,46 @@
             <div id="panel-style" role="tabpanel" aria-labelledby="tab-style" hidden>
               <div class="card-grid">
                 <section class="card-section">
-                  <div class="section-head"><h3>Direction of movement</h3><small class="code-tag">Q</small></div>
-                  <div class="direction-row">
-                    <svg id="directionDial" class="direction-dial" viewBox="0 0 120 120" role="img" aria-label="Direction off">
-                      <circle cx="60" cy="60" r="50" class="dial-face" />
-                      <path d="M60,12 v8 M60,100 v8 M12,60 h8 M100,60 h8" class="dial-ticks" />
-                      <text x="60" y="34">N</text><text x="90" y="64">E</text><text x="60" y="94">S</text><text x="30" y="64">W</text>
-                      <g id="directionNeedle" class="dial-needle" hidden><path d="M60,60 L60,22" /><path d="M60,12 l-7,11 14,0 z" class="dial-head" /></g>
-                      <circle cx="60" cy="60" r="4" class="dial-hub" />
-                    </svg>
-                    <div class="direction-controls">
-                      <label class="range-field"><span>Heading <output id="directionOutput">Off</output></span>
-                        <input id="direction" aria-label="Direction of movement" type="range" min="-1" max="360" value="-1" /></label>
-                      <div class="direction-quick" role="group" aria-label="Quick headings">
-                        <button type="button" data-direction="0">N</button><button type="button" data-direction="90">E</button><button type="button" data-direction="180">S</button><button type="button" data-direction="270">W</button><button type="button" data-direction="-1">Off</button>
-                      </div>
-                      <label class="number-field"><span>Degrees</span><input id="directionNumber" type="number" min="0" max="360" step="1" placeholder="Off" aria-describedby="directionNote" /></label>
-                    </div>
-                  </div>
-                  <p class="field-note" id="directionNote"></p>
-                </section>
-
-                <section class="card-section">
-                  <div class="section-head"><h3>Graphic amplifiers</h3></div>
-                  <div class="control-group two-col">
-                    <label><span>Speed leader length <small>AJ</small></span><input id="speedLeader" type="number" min="0" max="500" value="0" aria-describedby="speedLeaderNote" /><span class="modifier-description" id="speedLeaderNote">Movement line length in pixels. Set a direction; 0 uses the normal arrow.</span></label>
-                    <label><span><span id="hqStaffLabel">HQ staff length</span> <small>S</small></span><input id="hqStaffLength" type="number" min="0" max="500" value="0" aria-describedby="hqStaffNote" /><span class="modifier-description" id="hqStaffNote">Applies when Headquarters is selected. 0 uses the default length.</span></label>
-                  </div>
-                </section>
-
-                <section class="card-section">
                   <div class="section-head"><h3>Display</h3></div>
-                  <div class="toggle-grid display-toggles">
-                    <label><input id="fill" type="checkbox" checked /><span>Fill</span></label
-                    ><label><input id="frame" type="checkbox" checked /><span>Frame</span></label
-                    ><label><input id="icon" type="checkbox" checked /><span>Icon</span></label
-                    ><label><input id="infoFields" type="checkbox" checked /><span>Text labels</span></label
-                    ><label><input id="showFlag" type="checkbox" checked /><span>Country flag</span></label
-                    ><label title="Draw a halo around the symbol"><input id="outlineToggle" type="checkbox" /><span>Outline</span></label
-                    ><label><input id="gridToggle" type="checkbox" checked /><span>Preview grid</span></label>
+                  <div class="check-row">
+                    <label><input id="fill" type="checkbox" checked />Fill</label
+                    ><label><input id="frame" type="checkbox" checked />Frame</label
+                    ><label><input id="icon" type="checkbox" checked />Icon</label
+                    ><label><input id="infoFields" type="checkbox" checked />Text labels</label
+                    ><label><input id="showFlag" type="checkbox" checked />Country flag</label
+                    ><label title="Draw a halo around the symbol"><input id="outlineToggle" type="checkbox" />Outline</label
+                    ><label><input id="gridToggle" type="checkbox" checked />Preview grid</label>
                   </div>
-                  <p class="field-note">Exports use these switches, except Preview grid, which only helps in the editor: SVG and PNG have a transparent background. Turning a switch off keeps its values.</p>
+                  <p class="field-note">Exports follow these switches; Preview grid is for the editor only. Turning a switch off keeps its values.</p>
                 </section>
 
                 <section class="card-section">
                   <div class="section-head"><h3>Style</h3></div>
-                  <div class="control-group two-col">
-                    <label><span>Color palette</span><select id="colorMode"><option>Light</option><option>Medium</option><option>Dark</option></select></label>
-                    <label><span>Symbol stack</span><select id="stack">
+                  <div class="style-grid">
+                    <label class="range-field"><span>Symbol size <output id="sizeOutput">100%</output></span><input id="symbolSize" type="range" min="55" max="170" value="100" /></label>
+                    <label class="range-field"><span>Stroke width <output id="strokeOutput">4</output></span><input id="strokeWidth" type="range" min="1" max="8" step="0.5" value="4" /></label>
+                    <label class="select-field"><span>Color palette</span><select id="colorMode"><option>Light</option><option>Medium</option><option>Dark</option></select></label>
+                    <label class="select-field" id="stackField"><span>Symbol stack</span><select id="stack">
                       <option value="0">Single symbol</option><option value="1">2 symbols</option><option value="2">3 symbols</option><option value="3">4 symbols</option><option value="4">5 symbols</option><option value="5">6 symbols</option>
                     </select></label>
                   </div>
-                  <p class="field-note" id="stackNote">Stacking is an optional display extension, available outside the APP-6A publication profile.</p>
-                  <label class="range-field"><span>Symbol size <output id="sizeOutput">100%</output></span><input id="symbolSize" aria-label="Symbol size" type="range" min="55" max="170" value="100" /></label>
-                  <label class="range-field"><span>Stroke width <output id="strokeOutput">4</output></span><input id="strokeWidth" aria-label="Stroke width" type="range" min="1" max="8" step="0.5" value="4" /></label>
-                </section>
-
-                <section class="card-section wide">
-                  <div class="section-head"><h3>Advanced style</h3><span class="section-meta">Not part of the SIDC</span></div>
-                  <div class="advanced-grid">
-                    <div class="color-field"><label><input id="fillColorOn" type="checkbox" /><span>Custom fill color</span></label><input id="fillColor" type="color" value="#80e0ff" aria-label="Fill color" /></div>
-                    <div class="color-field"><label><input id="monoColorOn" type="checkbox" /><span>Monochrome</span></label><input id="monoColor" type="color" value="#000000" aria-label="Monochrome color" /></div>
-                    <div class="color-field"><label><input id="infoColorOn" type="checkbox" /><span>Text color</span></label><input id="infoColor" type="color" value="#000000" aria-label="Text color" /></div>
-                    <div class="color-field"><label><input id="infoBackgroundOn" type="checkbox" /><span>Text background</span></label><input id="infoBackground" type="color" value="#ffffff" aria-label="Text background color" /></div>
-                    <label class="range-field"><span>Fill opacity <output id="fillOpacityOutput">100%</output></span><input id="fillOpacity" type="range" min="10" max="100" step="5" value="100" /></label>
-                    <label class="range-field"><span>Text size <output id="infoSizeOutput">40</output></span><input id="infoSize" type="range" min="20" max="80" step="2" value="40" /></label>
-                    <label class="range-field"><span>Outline width <output id="outlineWidthOutput">7</output></span><input id="outlineWidth" type="range" min="1" max="20" step="1" value="7" /></label>
-                    <div class="color-field"><span>Outline color</span><input id="outlineColor" type="color" value="#ffffff" aria-label="Outline color" /></div>
-                  </div>
-                  <p class="field-note">Outline width and color apply when Outline is on (Display). All style options are included in SVG and PNG exports.</p>
                 </section>
               </div>
+
+              <details class="card-section more-style" id="moreStyle">
+                <summary>More style options</summary>
+                <div class="advanced-grid">
+                  <div class="color-field"><label><input id="fillColorOn" type="checkbox" /><span>Custom fill color</span></label><input id="fillColor" type="color" value="#80e0ff" aria-label="Fill color" /></div>
+                  <div class="color-field"><label><input id="monoColorOn" type="checkbox" /><span>Monochrome</span></label><input id="monoColor" type="color" value="#000000" aria-label="Monochrome color" /></div>
+                  <div class="color-field"><label><input id="infoColorOn" type="checkbox" /><span>Text color</span></label><input id="infoColor" type="color" value="#000000" aria-label="Text color" /></div>
+                  <div class="color-field"><label><input id="infoBackgroundOn" type="checkbox" /><span>Text background</span></label><input id="infoBackground" type="color" value="#ffffff" aria-label="Text background color" /></div>
+                  <label class="range-field"><span>Fill opacity <output id="fillOpacityOutput">100%</output></span><input id="fillOpacity" type="range" min="10" max="100" step="5" value="100" /></label>
+                  <label class="range-field"><span>Text size <output id="infoSizeOutput">40</output></span><input id="infoSize" type="range" min="20" max="80" step="2" value="40" /></label>
+                  <label class="range-field"><span>Outline width <output id="outlineWidthOutput">7</output></span><input id="outlineWidth" type="range" min="1" max="20" step="1" value="7" /></label>
+                  <div class="color-field"><span>Outline color</span><input id="outlineColor" type="color" value="#ffffff" aria-label="Outline color" /></div>
+                </div>
+                <p class="field-note">Outline width and color apply when Outline is on. All of these go into SVG and PNG exports; none changes the SIDC.</p>
+              </details>
             </div>
           </div>
         </section>
@@ -340,8 +326,8 @@
       <button id="closeHelp" class="dialog-close" aria-label="Close help" type="button">×</button>
       <h2>Using the symbol editor</h2>
       <p>
-        Select a standard, open the search with the bar at the top (or <kbd>/</kbd>), then configure the symbol, its text
-        amplifiers and its graphics. The preview and SIDC update as you edit.
+        Select a standard, open the search with the bar at the top (or <kbd>/</kbd>), then configure the symbol, its
+        amplifiers and its display. The preview and SIDC update as you edit.
       </p>
       <p>
         In the search, <kbd>↑</kbd> <kbd>↓</kbd> move between results, <kbd>Enter</kbd> selects and <kbd>Esc</kbd> clears the
@@ -352,7 +338,7 @@
         current code. In codes copied from a publication, * keeps the current identity or status. Messages below the box explain what was applied or why a code was rejected.
       </p>
       <p>
-        Edit text, under the preview, opens Text amplifiers in Field positions: a box for each field around the symbol, in
+        Edit text, under the preview, opens Amplifiers in Field positions: a box for each text field around the symbol, in
         the order the standard places it (the boxes are spaced apart for typing; the preview shows the exact placement).
         The List view shows the fields that apply to the symbol, with their rules and tools; the others are listed, closed,
         under it. SVG is a scalable vector file; PNG is exported with a transparent background. Copying the SIDC alone does not include text or appearance

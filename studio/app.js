@@ -33,7 +33,7 @@ import {
   editorGaps
 } from "./profile-controls.js";
 
-import { fieldStates, profileFieldStates, dtgForField, evaluationRating, sidcParts, pushRecent, placeholderOptions, readTextRows, fieldValueChars, fitRowWidths, layoutFieldBoxes, paletteProgress } from "./editor-helpers.js";
+import { fieldStates, profileFieldStates, dtgForField, evaluationRating, sidcParts, pushRecent, placeholderOptions, readTextRows, fieldValueChars, fitRowWidths, layoutFieldBoxes, paletteProgress, baseBranch, entryCrumbs, groupEntries, paletteSections } from "./editor-helpers.js";
 import { fieldReference } from "./field-reference.js";
 import { fieldGuide } from "./field-guide.js";
 import { app6aIdentities, contextOptions, convertIdentity, decodeIdentity, identityCode, identityLabel, identityList } from "./identities.js";
@@ -253,15 +253,15 @@ const dom = Object.fromEntries(
     "unavailableBody",
     "hqLabel",
     "hqStaffLabel",
-    "speedLeaderNote",
     "clearText",
     "textFilledBadge",
-    "graphicsBadge",
     "directionNumber",
-    "directionDial",
-    "directionNeedle",
-    "directionNote",
-    "hqStaffNote",
+    "graphicFields",
+    "directionRow",
+    "directionOff",
+    "speedLeaderRow",
+    "hqStaffRow",
+    "stackField",
     "showFlag",
     "fillColorOn",
     "fillColor",
@@ -303,7 +303,6 @@ const dom = Object.fromEntries(
     "modifier2",
     "modifierNote",
     "direction",
-    "directionOutput",
     "speedLeader",
     "hqStaffLength",
     "stack",
@@ -344,7 +343,7 @@ const state = {
   customSidc: "",
   importedIcon: null,
   outline: false,
-  // Text amplifiers tab: boxes at the field positions, or the grouped list.
+  // Amplifiers tab: boxes at the field positions, or the grouped list.
   positions: storedTextView() !== "list",
   searchOpen: false,
   sidcDirty: false,
@@ -715,12 +714,13 @@ function rememberRecent(id) {
   } catch {}
 }
 
-function symbolCard(icon) {
+// Cards under a set's own headings leave the set name out.
+function symbolCard(icon, { inSection = false } = {}) {
   return `
     <button type="button" class="symbol-card ${icon.id === state.selectedId ? "active" : ""}" aria-pressed="${icon.id === state.selectedId}" data-symbol-id="${escapeHtml(icon.id)}" title="${escapeHtml(icon.name + (icon.categoryOnly ? " — Category: no separate illustration in APP-6A" : ""))}">
       <span class="mini-symbol">${safeMiniSvg(icon)}</span>
       <strong>${escapeHtml(icon.name)}${icon.categoryOnly ? ' <span class="category-badge">Category</span>' : ""}</strong>
-      <small><span class="card-category">${escapeHtml(icon.category)}</span><span aria-hidden="true">·</span><span class="card-code">${escapeHtml(icon.code)}</span></small>
+      <small>${inSection ? "" : `<span class="card-category">${escapeHtml(icon.category)}</span><span aria-hidden="true">·</span>`}<span class="card-code">${escapeHtml(icon.code)}</span></small>
     </button>`;
 }
 
@@ -772,10 +772,90 @@ function safeMiniSvg(icon) {
   }
 }
 
+// The groups of a category come from the catalogue paths (editor-helpers.js).
+const baseCache = new Map();
+function categoryBase(category) {
+  const key = `${state.standardId}|${category}`;
+  if (!baseCache.has(key)) baseCache.set(key, baseBranch(dataset().icons.filter((icon) => icon.category === category)));
+  return baseCache.get(key);
+}
+
+// Browsing (no search), the results are sections: one per group of the
+// chosen set, or one per set under All symbol sets, each with subheadings for
+// its groups. A search lists its matches as one grid.
+function paletteGroups(icons) {
+  if (state.search.trim()) return null;
+  if (state.category !== "all") return paletteSections(icons, categoryBase(state.category));
+  const categories = [...new Set(icons.map((icon) => icon.category))].sort((a, b) => a.localeCompare(b));
+  return categories.map((category) => {
+    const members = icons.filter((icon) => icon.category === category);
+    const base = categoryBase(category);
+    return { name: category, branch: base, count: members.length, ...groupEntries(members, base) };
+  });
+}
+
+// Headings and cards in reading order; the palette renders them in batches.
+function paletteItems(sections) {
+  const items = [];
+  for (const section of sections) {
+    items.push({ type: "section", section });
+    for (const icon of section.loose) items.push({ type: "card", icon });
+    for (const group of section.groups) {
+      items.push({ type: "group", group });
+      for (const icon of group.icons) items.push({ type: "card", icon });
+    }
+  }
+  return items;
+}
+
+// Sections the user closed stay closed while the palette re-renders.
+const closedSections = new Set();
+let feed = null;
+const sectionKey = (section) => `${state.standardId}|${state.category}|${JSON.stringify(section.branch)}|${section.name}`;
+
+// Render the next `limit` cards of the grouped list, with the headings that
+// come before them. Returns the number of cards added.
+function feedPalette(limit) {
+  let added = 0;
+  while (feed.index < feed.items.length && added < limit) {
+    const item = feed.items[feed.index++];
+    if (item.type === "section") {
+      const { section } = item;
+      if (section.name) {
+        const key = sectionKey(section);
+        const element = document.createElement("details");
+        element.className = "palette-section";
+        element.open = !closedSections.has(key);
+        element.dataset.sectionKey = key;
+        element.dataset.key = JSON.stringify(section.branch);
+        element.innerHTML = `<summary><h4>${escapeHtml(section.name)}</h4><small>${section.count.toLocaleString("en-US")}</small><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4" /></svg></summary><div class="palette-section-body"></div>`;
+        dom.symbolGrid.append(element);
+        feed.body = element.lastElementChild;
+      } else {
+        feed.body = document.createElement("div");
+        feed.body.className = "palette-section-body";
+        dom.symbolGrid.append(feed.body);
+      }
+      feed.grid = null;
+    } else if (item.type === "group") {
+      feed.body.insertAdjacentHTML("beforeend", `<h5 class="palette-group" data-key="${escapeHtml(JSON.stringify(item.group.branch))}">${escapeHtml(item.group.name)}</h5><div class="symbol-grid"></div>`);
+      feed.grid = feed.body.lastElementChild;
+    } else {
+      if (!feed.grid) {
+        feed.body.insertAdjacentHTML("beforeend", '<div class="symbol-grid"></div>');
+        feed.grid = feed.body.lastElementChild;
+      }
+      feed.grid.insertAdjacentHTML("beforeend", symbolCard(item.icon, { inSection: true }));
+      added += 1;
+    }
+  }
+  feed.shown += added;
+  return added;
+}
+
 function renderCatalog() {
   const focusedId = document.activeElement?.dataset.symbolId;
   const icons = filteredIcons();
-  const visible = icons.slice(0, state.visible);
   dom.resultCount.textContent = icons.length.toLocaleString("en-US");
   dom.resultHeading.textContent = state.search.trim()
     ? `Results in ${state.category === "all" ? "all symbol sets" : state.category}`
@@ -787,11 +867,19 @@ function renderCatalog() {
     ? state.recent.map((id) => dataset().icons.find((icon) => icon.id === id)).filter(Boolean)
     : [];
   dom.recentSection.hidden = !recent.length;
-  dom.recentGrid.innerHTML = recent.map(symbolCard).join("");
-  dom.symbolGrid.innerHTML = visible.length
-    ? visible.map(symbolCard).join("")
-    : `<div class="empty-state">No symbols found.<br>Try a different name, code, or symbol set.</div>`;
-  dom.paletteStatus.textContent = paletteProgress(visible.length, icons.length);
+  dom.recentGrid.innerHTML = recent.map((icon) => symbolCard(icon)).join("");
+  const sections = icons.length ? paletteGroups(icons) : null;
+  dom.symbolGrid.classList.toggle("grouped", Boolean(sections));
+  dom.symbolGrid.replaceChildren();
+  feed = null;
+  if (sections) {
+    feed = { items: paletteItems(sections), index: 0, shown: 0, body: null, grid: null };
+    feedPalette(state.visible);
+  } else
+    dom.symbolGrid.innerHTML = icons.length
+      ? icons.slice(0, state.visible).map((icon) => symbolCard(icon)).join("")
+      : `<div class="empty-state">No symbols found.<br>Try a different name, code, or symbol set.</div>`;
+  dom.paletteStatus.textContent = paletteProgress(Math.min(state.visible, icons.length), icons.length);
   if (focusedId && dom.searchPanel.contains(document.activeElement)) [...dom.symbolGrid.querySelectorAll("[data-symbol-id]")].find(card=>card.dataset.symbolId === focusedId)?.focus({preventScroll:true});
   fillPalette();
 }
@@ -799,10 +887,15 @@ function renderCatalog() {
 // Append the next batch of results; returns false when every result is shown.
 function appendCatalogBatch() {
   const icons = filteredIcons();
-  const batch = icons.slice(state.visible, state.visible + paletteBatch);
-  if (!batch.length) return false;
-  dom.symbolGrid.insertAdjacentHTML("beforeend", batch.map(symbolCard).join(""));
-  state.visible += batch.length;
+  if (feed) {
+    if (!feedPalette(paletteBatch)) return false;
+    state.visible = feed.shown;
+  } else {
+    const batch = icons.slice(state.visible, state.visible + paletteBatch);
+    if (!batch.length) return false;
+    dom.symbolGrid.insertAdjacentHTML("beforeend", batch.map((icon) => symbolCard(icon)).join(""));
+    state.visible += batch.length;
+  }
   dom.paletteStatus.textContent = paletteProgress(state.visible, icons.length);
   return true;
 }
@@ -813,6 +906,29 @@ function fillPalette() {
   if (!state.searchOpen) return;
   const list = dom.searchResults;
   while (list.scrollHeight - list.scrollTop - list.clientHeight < 400 && appendCatalogBatch());
+}
+
+// Opens the palette on a group of a set (from the symbol's heading): the set
+// is chosen and the list scrolls to the group's heading or subheading.
+function showGroup(category, branch) {
+  dom.symbolSearch.value = state.search = "";
+  state.category = category;
+  state.visible = paletteBatch;
+  renderCatalog();
+  openSearch();
+  dom.searchResults.scrollTop = 0;
+  const base = categoryBase(category);
+  const keys = [branch.slice(0, base.length + 2), branch.slice(0, base.length + 1)]
+    .filter((key) => key.length > base.length && key.length <= branch.length)
+    .map((key) => JSON.stringify(key));
+  const find = () => keys.map((key) => [...dom.symbolGrid.querySelectorAll("[data-key]")].find((element) => element.dataset.key === key)).find(Boolean);
+  let target = find();
+  while (!target && appendCatalogBatch()) target = find();
+  if (!target) return;
+  const section = target.closest("details");
+  if (section) section.open = true;
+  target.scrollIntoView({ block: "start" });
+  fillPalette();
 }
 
 function mobilityNameFor(offers) {
@@ -1077,10 +1193,9 @@ function syncRuleNotes({ modern, app6a, kind, installation, tactical, prescribed
   dom.modifierNote.hidden = !modern;
   dom.symbolClass.hidden = false;
   dom.symbolClass.textContent = app6a ? kindLabels[kind] || "Symbol" : selectedIcon()?.category || "Symbol";
-  dom.hqStaffLength.disabled = !dom.hq.checked || dom.hq.disabled;
-  dom.hqStaffNote.textContent = dom.hqStaffLength.disabled
-    ? `Turn on ${dom.hqLabel.textContent} in the Symbol tab to use it.`
-    : offsetRole ? "Length of the location offset line. 0 uses the default length." : "Length of the headquarters staff. 0 uses the default length.";
+  // S appears with its flag: Headquarters (or Location offset) in the Symbol tab.
+  dom.hqStaffRow.hidden = dom.hqStaffLength.disabled = !dom.hq.checked || dom.hq.disabled;
+  dom.hqStaffRow.title = `${offsetRole ? "Length of the location offset line" : "Length of the headquarters staff"}; 0 draws the default length.`;
 }
 
 // J: one letter A-F for source reliability and one digit 1-6 for information
@@ -1134,8 +1249,11 @@ function createTextFields() {
     <h4 id="group-${index}">${escapeHtml(group.label)}</h4>
     <div class="field-grid">${group.fields.filter((field) => field.key !== "engagementType").map(fieldHtml).join("")}</div>
   </section>`).join("");
+  // Q and AJ join the movement group, after Z (speed).
+  container.querySelector('[data-field-wrapper="speed"]').parentElement.append(dom.directionRow, dom.speedLeaderRow);
   container.addEventListener("input", (event) => {
-    if (event.target.matches("[data-rating-part], [data-ao-part]")) return;
+    // Q and AJ have their own listeners (bindEvents).
+    if (event.target.matches("[data-rating-part], [data-ao-part]") || event.target.closest(".graphic-field")) return;
     recordTextOrigin(event.target);
     renderAll();
   });
@@ -1428,6 +1546,24 @@ function syncApp6aTextFields() {
     counter.textContent = field.choices || definition.parts ? "" : max ? `${input.value.length}/${max}` : filled ? String(input.value.length) : "";
     counter.classList.toggle("full", Boolean(max) && input.value.length >= max);
   }
+  // Q and AJ: shown where the edition gives them to the symbol, like the rest.
+  const movement = movementFor(sidc);
+  for (const definition of graphicAmplifiers) {
+    const wrapper = document.querySelector(`[data-field-wrapper="${definition.key}"]`);
+    const applies = movement[definition.key].applies;
+    const filled = applies && graphicFilled(definition.key);
+    const visible = applies && matches(definition) && (!state.filledOnly || filled);
+    wrapper.hidden = !visible;
+    wrapper.classList.toggle("filled", filled);
+    const help = graphicHelp(definition.key);
+    fieldHelp.set(definition.key, help);
+    wrapper.querySelector("[data-field-about]").textContent = help;
+    if (!applies) continue;
+    counts.available += 1;
+    if (filled) counts.filled += 1;
+    if (visible) counts.shown += 1;
+    else if (filled) counts.hiddenFilled += 1;
+  }
   for (const group of container.querySelectorAll(".modifier-group"))
     group.hidden = ![...group.querySelectorAll("[data-field-wrapper]")].some((wrapper) => !wrapper.hidden);
   renderCarryNotes([...carried.values()], states);
@@ -1439,7 +1575,8 @@ function syncApp6aTextFields() {
     : `${config().label} has no field table here: all ${counts.available} fields are offered, and placement follows the renderer's symbol-set rules. Offering a field does not mean this edition defines it for the symbol.`;
   dom.textFilledBadge.hidden = !counts.filled;
   dom.textFilledBadge.textContent = `${counts.filled} filled`;
-  dom.stack.disabled = state.standardId === "app6a";
+  // Stacking is a display extension outside the APP-6A publication profile.
+  dom.stackField.hidden = dom.stack.disabled = state.standardId === "app6a";
   syncListHelp();
 }
 
@@ -1481,17 +1618,32 @@ function renderUnavailable(states, { sidc, profile, kind, active }) {
       const reason = humanize(shortReason(definition.reason).replace(new RegExp(`^${field.key} is `), ""));
       notHere.push({ field: name.field, label: name.label, reason: reason.charAt(0).toUpperCase() + reason.slice(1), full: definition.reason });
     }
-  const gaps = active ? editorGaps({ standardId: state.standardId, profile, sidc, tables: editionTables, movement: movementFor(sidc) }) : [];
+  const movement = movementFor(sidc);
+  if (active)
+    for (const definition of graphicAmplifiers) {
+      const control = movement[definition.key];
+      // A field the edition does not have (APP-6A AJ) is not listed.
+      if (control.applies || control.defined === false) continue;
+      const kept = !graphicFilled(definition.key) ? "" : definition.key === "direction" ? `The heading ${graphicValue("direction")}°` : `The length ${graphicValue("speedLeader")}`;
+      notHere.push({ field: definition.field, label: definition.label, reason: movementNote(control, kept), full: control.reason, kept });
+    }
+  const gaps = active ? editorGaps({ standardId: state.standardId, profile, sidc, tables: editionTables, movement }) : [];
   // A code that means something else for this class (APP-6D Land Unit AC is
   // the installation graphic) is listed once, with that meaning.
-  for (let index = notHere.length - 1; index >= 0; index -= 1) if (gaps.some((gap) => gap.field === notHere[index].field)) notHere.splice(index, 1);
+  for (let index = notHere.length - 1; index >= 0; index -= 1) {
+    const gap = gaps.find((item) => item.field === notHere[index].field);
+    if (!gap) continue;
+    // A kept value (the heading of Q) is still reported on the remaining row.
+    if (notHere[index].kept) gap.kept = `${notHere[index].kept} is kept and returns on a symbol that takes it.`;
+    notHere.splice(index, 1);
+  }
   const row = (item) => `<li><span class="field-code">${escapeHtml(item.field || "–")}</span><span class="unavailable-name">${escapeHtml(item.label)}</span><small title="${escapeHtml(item.full || item.reason)}">${escapeHtml(item.reason)}</small></li>`;
   const total = notHere.length + gaps.length;
   dom.unavailableFields.hidden = !total;
   dom.unavailableSummary.textContent = `Not available for this symbol · ${total}`;
   dom.unavailableBody.innerHTML = [
     notHere.length ? `<h5>Not for ${escapeHtml(kind ? classWords(kind) : "this")} symbols</h5><ul>${notHere.map(row).join("")}</ul>` : "",
-    gaps.length ? `<h5>Defined by the standard, not supported by this editor</h5><ul>${gaps.map((item) => row({ ...item, reason: humanize(shortReason(item.reason)) || item.reason, full: item.reason })).join("")}</ul>` : ""
+    gaps.length ? `<h5>Defined by the standard, not supported by this editor</h5><ul>${gaps.map((item) => row({ ...item, reason: `${humanize(shortReason(item.reason)) || item.reason}${item.kept ? `. ${item.kept}` : ""}`, full: item.reason })).join("")}</ul>` : ""
   ].join("");
 }
 
@@ -1499,8 +1651,8 @@ function renderUnavailable(states, { sidc, profile, kind, active }) {
 // never moves the form: the focused field's code, name, rule and example.
 function syncListHelp() {
   const key = state.focusField;
-  const field = textModifiers.find((item) => item.key === key);
-  const input = field && document.getElementById(field.id);
+  const field = textModifiers.find((item) => item.key === key) || graphicAmplifiers.find((item) => item.key === key);
+  const input = field && document.getElementById(field.id || (key === "direction" ? "directionNumber" : key));
   const wrapper = input && input.closest("[data-field-wrapper]");
   if (!field || !wrapper || wrapper.hidden || input.disabled) {
     dom.listHelp.innerHTML = '<span class="list-help-title"><span>Select a field for its format and an example.</span></span><span class="list-help-text">Values stay when you switch views.</span>';
@@ -1776,7 +1928,7 @@ function renderProfileDetails() {
   dom.profileDetails.hidden = !issues.length && !lines.notes.length;
 }
 
-// Field positions (Text amplifiers tab): every applicable text field is a box
+// Field positions (Amplifiers tab): every applicable text field is a box
 // where the renderer draws its text, around the symbol drawn without text. A
 // probe rendering with each field set to its "[code]" marker gives the rows;
 // the boxes and the form fields hold the same values.
@@ -1872,7 +2024,9 @@ function buildFieldLayout(sidc, states, options, room) {
   const starts = rows.filter((row) => row.anchor === "start").map((row) => row.x);
   const between = ends.length && starts.length ? Math.min(...starts) - Math.max(...ends) : symbol.width;
   const drawn = new Set(rows.flatMap((row) => row.keys));
-  layoutUndrawn = states.filter((item) => !drawn.has(item.key));
+  // Q and AJ are graphics with no box: they are listed here, set in the list.
+  const movement = movementFor(sidc);
+  layoutUndrawn = [...states.filter((item) => !drawn.has(item.key)), ...graphicAmplifiers.filter((item) => movement[item.key].applies)];
   // A box fits its code, the field's name and a usual value. chrome is all
   // but the text: padding, border, gaps, and the "now" button of W, the arrow
   // of a select or the chevron of a list link. Crowded rows give up names
@@ -1952,7 +2106,7 @@ function buildFieldLayout(sidc, states, options, room) {
   dom.layoutMoreSummary.textContent = `Not drawn here · ${layoutUndrawn.length}`;
   dom.layoutMoreList.innerHTML = `${layoutUndrawn
     .map((item) => `<span class="layout-chip"><span class="field-code">${escapeHtml(item.field)}</span>${escapeHtml(item.label)}</span>`)
-    .join("")}<span>The renderer does not draw these around this symbol. <button type="button" class="link-button" data-text-view="list">Edit them in the list</button></span>`;
+    .join("")}<span>These have no box here. <button type="button" class="link-button" data-text-view="list">Edit them in the list</button></span>`;
   return true;
 }
 
@@ -2094,49 +2248,47 @@ function syncLayoutHelp() {
   }`;
 }
 
+// Q and AJ: the graphic amplifiers set in the Amplifiers list, next to Z.
+// They are renderer options, not text fields, so they have their own rows.
+const graphicAmplifiers = [
+  { key: "direction", field: "Q", label: "Direction of movement", description: "Direction the object moves or will move, in degrees from north; drawn as an arrow." },
+  { key: "speedLeader", field: "AJ", label: "Speed leader", description: "A line in the direction of movement instead of the arrow, in pixels; 0 draws the arrow. Needs a direction (Q)." }
+];
+const graphicValue = (key) => (key === "direction" ? Number(dom.direction.value) : Number(dom.speedLeader.value));
+const graphicFilled = (key) => (key === "direction" ? graphicValue(key) >= 0 : graphicValue(key) > 0);
+
 // Why Q or AJ is off for this symbol, and that a set value is kept.
-function movementNote(control, name, kept) {
-  if (control.applies) return "";
-  const keep = kept ? ` ${kept} is kept and returns on a symbol that takes it.` : "";
-  // Profile reasons may start with the field ("Q direction: ..."); the name says it.
+function movementNote(control, kept) {
+  // Profile reasons may start with the field ("Q direction: ..."); the row names it.
   const reason = humanize(control.reason.replace(/^[A-Z]{1,2} [a-zA-Z]+: /, ""));
-  return `${name} does not apply to this symbol: ${reason}.${keep}`;
+  return `${reason.charAt(0).toUpperCase()}${reason.slice(1)}.${kept ? ` ${kept} is kept and returns on a symbol that takes it.` : ""}`;
 }
 
+// The Q and AJ controls follow their values; whether they show at all is
+// decided with the other amplifiers (syncApp6aTextFields).
 function syncGraphicsControls() {
-  // Q and AJ follow the edition and the symbol class (movementControls).
   const movement = movementFor(state.customSidc || buildSidc());
-  dom.direction.disabled = dom.directionNumber.disabled = !movement.direction.applies;
-  dom.speedLeader.disabled = !movement.speedLeader.applies;
   const value = Number(dom.direction.value);
-  const on = value >= 0 && !dom.direction.disabled;
-  dom.directionOutput.value = value < 0 ? "Off" : `${value}°`;
+  const on = value >= 0 && movement.direction.applies;
+  dom.direction.disabled = dom.directionNumber.disabled = !movement.direction.applies;
+  dom.speedLeader.disabled = !movement.speedLeader.applies || !on;
   if (document.activeElement !== dom.directionNumber) dom.directionNumber.value = value < 0 ? "" : String(value);
-  for (const button of document.querySelectorAll("[data-direction]")) {
-    button.classList.toggle("active", Number(button.dataset.direction) === value);
-    button.disabled = dom.direction.disabled;
-  }
-  dom.directionNeedle.toggleAttribute("hidden", !on);
-  dom.directionNeedle.setAttribute("transform", `rotate(${on ? value : 0} 60 60)`);
-  dom.directionDial.classList.toggle("on", on);
-  dom.directionDial.setAttribute("aria-label", on ? `Heading ${value} degrees` : "Direction off");
-  dom.directionNote.textContent = movementNote(movement.direction, "Direction of movement (Q)", value >= 0 ? `The heading ${value}°` : "")
-    || (state.standardId === "app6a"
-      // APP-6A 505.1a: a bent arrow down from the bottom centre of the frame,
-      // also with a headquarters; other dimensions draw it from the centre.
-      ? "Land symbols draw a bent arrow down from the bottom centre of the frame, also with a headquarters (505.1a). Other symbols draw it from the centre."
-      : dom.hq.checked && !dom.hq.disabled
-        ? "With a headquarters, the arrow starts at the end of the HQ staff."
-        : "Ground symbols draw the arrow from a staff below the frame.");
-  dom.speedLeaderNote.textContent = movementNote(movement.speedLeader, "Speed leader (AJ)", Number(dom.speedLeader.value) > 0 ? `The length ${dom.speedLeader.value}` : "")
-    || "Movement line length in pixels. Set a direction; 0 uses the normal arrow.";
-  dom.graphicsBadge.hidden = !on;
-  dom.graphicsBadge.textContent = on ? `Q ${value}°` : "";
+  dom.directionOff.hidden = value < 0;
   dom.sizeOutput.value = `${dom.symbolSize.value}%`;
   dom.strokeOutput.value = dom.strokeWidth.value;
   dom.fillOpacityOutput.value = `${dom.fillOpacity.value}%`;
   dom.infoSizeOutput.value = dom.infoSize.value;
   dom.outlineWidthOutput.value = dom.outlineWidth.value;
+}
+
+// Help of Q and AJ for this symbol: where the arrow starts depends on the
+// edition and on a headquarters (APP-6A 505.1a: from the bottom centre).
+function graphicHelp(key) {
+  const definition = graphicAmplifiers.find((item) => item.key === key);
+  if (key !== "direction" || !dom.hq.checked || dom.hq.disabled) return definition.description;
+  return `${definition.description} ${state.standardId === "app6a"
+    ? "APP-6A draws it from the bottom centre of the frame, also with a headquarters (505.1a)."
+    : "With a headquarters, the arrow starts at the end of the HQ staff."}`;
 }
 
 function renderFlagSwatch() {
@@ -2179,8 +2331,7 @@ function renderAll() {
     dom.renderState.innerHTML = "<i></i>Rendering error";
   }
   dom.selectedName.textContent = icon.name;
-  dom.selectedPath.textContent = [...new Set([icon.category, ...(icon.path || [])].filter(Boolean))].join(" / ")
-    + (state.customSidc ? " / Imported SIDC" : "");
+  renderSelectedPath(icon);
   document.getElementById("supportNote").textContent = state.standardId === "app6e"
     ? "Compatibility view using the shared 2525E catalog. This is not a separate edition-specific catalog."
     : state.standardId === "app6a"
@@ -2199,6 +2350,20 @@ function renderAll() {
   syncGraphicsControls();
   renderFieldLayout();
   document.title = `${icon.name} — Military Symbol Editor`;
+}
+
+// Where the symbol sits in the palette: its set and the groups above it, each
+// opening the palette at that group. The symbol's own name is the title.
+function renderSelectedPath(icon) {
+  const known = dataset().icons.some((item) => item.category === icon.category);
+  const crumbs = known ? entryCrumbs(icon, categoryBase(icon.category)) : [];
+  const step = (label, branch) =>
+    known
+      ? `<button type="button" class="path-link" data-open-branch="${escapeHtml(JSON.stringify(branch))}" title="Show in the symbol palette">${escapeHtml(label)}</button>`
+      : `<span>${escapeHtml(label)}</span>`;
+  dom.selectedPath.innerHTML =
+    [step(icon.category, []), ...crumbs.map((crumb) => step(crumb.name, crumb.branch))].join('<span class="path-sep" aria-hidden="true">›</span>') +
+    (state.customSidc ? '<span class="path-tag">Imported SIDC</span>' : "");
 }
 
 function updateSidcAndRender(field, { rerenderCatalog = false } = {}) {
@@ -2358,7 +2523,7 @@ function activateTab(tab) {
 // parts) next to it.
 function openField(key) {
   const field = textModifiers.find((item) => item.key === key);
-  const input = field && document.getElementById(field.id);
+  const input = field ? document.getElementById(field.id) : key === "direction" ? dom.directionNumber : key === "speedLeader" ? dom.speedLeader : null;
   if (!input || input.disabled) return;
   // A list filter must not hide the field being opened.
   state.fieldQuery = dom.fieldFilter.value = "";
@@ -2374,7 +2539,8 @@ function openField(key) {
 }
 
 function moveCardFocus(card, step) {
-  const allCards = () => [...dom.searchResults.querySelectorAll("[data-symbol-id]")];
+  // Cards in a closed section are skipped.
+  const allCards = () => [...dom.searchResults.querySelectorAll("[data-symbol-id]")].filter((item) => item.offsetParent !== null);
   let cards = allCards();
   const index = cards.indexOf(card);
   if (index < 0) return;
@@ -2452,7 +2618,7 @@ function bindEvents() {
   dom.symbolSearch.addEventListener("keydown", (event) => {
     if (event.key === "ArrowDown") {
       event.preventDefault();
-      dom.searchResults.querySelector("[data-symbol-id]")?.focus();
+      [...dom.searchResults.querySelectorAll("[data-symbol-id]")].find((item) => item.offsetParent !== null)?.focus();
     } else if (event.key === "Enter") {
       event.preventDefault();
       const first = filteredIcons()[0];
@@ -2463,6 +2629,11 @@ function bindEvents() {
     }
   });
   dom.searchLauncher.addEventListener("click", openSearch);
+  dom.selectedPath.addEventListener("click", (event) => {
+    const link = event.target.closest("[data-open-branch]");
+    if (!link) return;
+    showGroup(selectedIcon().category, JSON.parse(link.dataset.openBranch));
+  });
   // The search panel is modal: keep focus inside it while it is open.
   document.addEventListener("focusin", (event) => {
     if (state.searchOpen && !dom.searchPanel.contains(event.target)) dom.symbolSearch.focus();
@@ -2482,6 +2653,14 @@ function bindEvents() {
     dom.status.dispatchEvent(new Event("change"));
   });
   dom.searchResults.addEventListener("scroll", fillPalette, { passive: true });
+  // A closed section stays closed; closing one may bring more into view.
+  dom.symbolGrid.addEventListener("toggle", (event) => {
+    const section = event.target.closest?.(".palette-section");
+    if (!section) return;
+    if (section.open) closedSections.delete(section.dataset.sectionKey);
+    else closedSections.add(section.dataset.sectionKey);
+    fillPalette();
+  }, true);
 
   dom.affiliation.addEventListener("change", () => {
     delete state.adjustments.identity;
@@ -2549,11 +2728,11 @@ function bindEvents() {
     dom.direction.value = raw === "" ? -1 : Math.min(360, Math.max(0, Math.round(Number(raw) || 0)));
     renderAll();
   });
-  for (const button of document.querySelectorAll("[data-direction]"))
-    button.addEventListener("click", () => {
-      dom.direction.value = button.dataset.direction;
-      renderAll();
-    });
+  dom.directionOff.addEventListener("click", () => {
+    dom.direction.value = -1;
+    renderAll();
+    dom.directionNumber.focus();
+  });
   dom.fieldFilter.addEventListener("input", () => {
     state.fieldQuery = dom.fieldFilter.value;
     syncApp6aTextFields();
@@ -2574,10 +2753,12 @@ function bindEvents() {
     state.droppedChoices = {};
     for (const input of document.querySelectorAll("[data-modifier-field]")) input.value = "";
     for (const select of document.querySelectorAll("[data-rating-part]")) select.value = "";
+    dom.direction.value = -1;
+    dom.speedLeader.value = 0;
     renderAll();
-    toast("Text amplifiers cleared");
+    toast("Amplifiers cleared");
   });
-  // Edit text opens the boxes under Text amplifiers.
+  // Edit text opens the boxes under Amplifiers.
   dom.positionsToggle.addEventListener("click", () => {
     setTextView("positions");
     activateTab(document.getElementById("tab-text"));
