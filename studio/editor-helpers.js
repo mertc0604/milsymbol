@@ -77,18 +77,24 @@ export function profileFieldStates(textModifiers, profile, sidc) {
 const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
 const twoDigits = (value) => String(value).padStart(2, "0");
 
-// DDHHMMZMONYY, or DDHHMMZMONYYYY with fourDigitYear.
-export function formatDtg(date, { fourDigitYear = false } = {}) {
+// DDHHMMZMONYY; seconds add SS after the minutes, fourDigitYear gives YYYY.
+export function formatDtg(date, { fourDigitYear = false, seconds = false } = {}) {
   const year = fourDigitYear ? String(date.getUTCFullYear()).padStart(4, "0") : twoDigits(date.getUTCFullYear() % 100);
-  return `${twoDigits(date.getUTCDate())}${twoDigits(date.getUTCHours())}${twoDigits(date.getUTCMinutes())}Z${months[date.getUTCMonth()]}${year}`;
+  return `${twoDigits(date.getUTCDate())}${twoDigits(date.getUTCHours())}${twoDigits(date.getUTCMinutes())}${seconds ? twoDigits(date.getUTCSeconds()) : ""}Z${months[date.getUTCMonth()]}${year}`;
 }
 
 // Now (UTC) for the W field of the current symbol: the year length the field's
 // own pattern asks for (APP-6D Land Unit W1 four digits, Table 3-2 PDF 87/3-7;
-// equipment and installations two). A field without a pattern gets two digits.
-export function dtgForField(date, definition) {
+// equipment and installations two). A field without a pattern takes the
+// edition's printed format when one is given (APP-6A DDHHMMSSZMONYY, 2525C
+// DDHHMMSSZMONYYYY; see field-guide.js), else two digits.
+export function dtgForField(date, definition, printed = null) {
   const short = formatDtg(date);
   const pattern = definition && definition.pattern;
+  if (!pattern && printed) {
+    const value = formatDtg(date, printed);
+    return !definition || !definition.maxLength || value.length <= definition.maxLength ? value : short;
+  }
   if (!pattern || pattern.test(short)) return short;
   const long = formatDtg(date, { fourDigitYear: true });
   return pattern.test(long) ? long : short;
@@ -133,6 +139,15 @@ export function sidcParts(sidc, dEdition) {
           part("country", "Country", 27, 30)
         ])
   ];
+}
+
+// Catalogue entries of a letter-SIDC edition carry no positions 11-12.
+// MIL-STD-2525C prints every ground installation (S*G*I...) with H there: the
+// AC installation modifier (Table A-III PDF 87-88/81-82, for example Military
+// Base/Facility S*G*IB----H****, Table A-V PDF 270/264). Only an edition that
+// prints it (installationModifier) gets it; no other symbol does.
+export function legacyDefaultModifier(item, { installationModifier = false } = {}) {
+  return installationModifier && item.codingscheme === "S" && item.battledimension === "G" && String(item.functionid || "").startsWith("I") ? "H-" : undefined;
 }
 
 export function pushRecent(list, id, max = 8) {

@@ -1,6 +1,6 @@
 import { app6aSymbolClass, app6aTextFields, getApp6aFields } from "./vendor/letter-metadata.js";
 import * as app6aRules from "./vendor/modifierprofiles/app6a.js";
-import { std2525cProfile } from "./vendor/modifierprofiles/std2525c.js";
+import { std2525cProfile, std2525cTableIV } from "./vendor/modifierprofiles/std2525c.js";
 import {
   app6dProfile,
   app6dContexts,
@@ -26,11 +26,16 @@ import {
   carryWarnings,
   fieldRule,
   profileExtraFields,
-  profileDetailLines
+  profileDetailLines,
+  movementControls,
+  engagementTypeState,
+  editionField,
+  editorGaps
 } from "./profile-controls.js";
 
 import { fieldStates, profileFieldStates, dtgForField, evaluationRating, sidcParts, pushRecent, placeholderOptions, readTextRows, fieldValueChars, fitRowWidths, layoutFieldBoxes, paletteProgress } from "./editor-helpers.js";
 import { fieldReference } from "./field-reference.js";
+import { fieldGuide } from "./field-guide.js";
 import { app6aIdentities, contextOptions, convertIdentity, decodeIdentity, identityCode, identityLabel, identityList } from "./identities.js";
 import { createCountryFlagPart } from "./country-flags.js";
 import { countryCodeForFlag, countryFlagFromSidc, countrySidcField, withCountryFlag } from "./country-codes.js";
@@ -103,7 +108,11 @@ const profileNotes = {
   app6d: "APP-6D amplifier tables of this symbol set. Only applicable fields are editable; limits appear only where the publication sets one."
 };
 const profileTitles = { app6a: "APP-6A Table III", "2525c": "MIL-STD-2525C Table IV", app6d: "APP-6D" };
+// Field tables that name a form key the way the edition does (see editionField).
+const editionTables = { app6a: app6aRules.app6aTextFields, "2525c": std2525cTableIV };
 const activeProfile = () => profiles[state.standardId] || null;
+// Q and AJ for the symbol, as the edition profile allows them.
+const movementFor = (sidc) => movementControls(activeProfile(), sidc, profileTitles[state.standardId]);
 // Names come from the edition's own table when its profile has one: APP-6D
 // names Joker and Faker only with context 1 and calls status 2-5 "Present/...".
 function identityLabelFor(entry, context = state.context) {
@@ -228,13 +237,23 @@ const dom = Object.fromEntries(
     "editionMeta",
     "textSummary",
     "carryNotes",
-    "profileExtras",
     "profileDetails",
     "profileIssues",
     "profileNotesBox",
     "profileNotesSummary",
     "profileNotesList",
-    "toggleUnavailable",
+    "textList",
+    "listTools",
+    "fieldFilter",
+    "filledOnly",
+    "filterStatus",
+    "listHelp",
+    "unavailableFields",
+    "unavailableSummary",
+    "unavailableBody",
+    "hqLabel",
+    "hqStaffLabel",
+    "speedLeaderNote",
     "clearText",
     "textFilledBadge",
     "graphicsBadge",
@@ -266,7 +285,6 @@ const dom = Object.fromEntries(
     "sidcSegments",
     "downloadSvg",
     "downloadPng",
-    "copySvg",
     "renderState",
     "affiliation",
     "context",
@@ -331,7 +349,9 @@ const state = {
   searchOpen: false,
   sidcDirty: false,
   sidcMessage: null,
-  showUnavailable: true,
+  // List view filters: they hide fields, never their values.
+  fieldQuery: "",
+  filledOnly: false,
   focusField: "",
   recent: [],
   // Fallbacks the Studio made after the edition profile rejected a selection.
@@ -392,6 +412,8 @@ function currentOptions(minimal = false) {
   const values = minimal ? {} : Object.fromEntries(textModifiers.map(({ key, id }) =>
     [key, document.getElementById(id)?.value || ""]
   ));
+  // A heading or speed leader the symbol does not take stays in its control, unsent.
+  const movement = minimal ? null : movementFor(sidc);
   const options = {
     standard: config().standard,
     countryFlag: minimal || !dom.showFlag.checked ? "" : dom.countryFlag.value,
@@ -411,14 +433,13 @@ function currentOptions(minimal = false) {
     infoSize: minimal ? 40 : Number(dom.infoSize.value),
     infoBackground: !minimal && dom.infoBackgroundOn.checked ? dom.infoBackground.value : "",
     ...collectTextModifiers(values, profiledFieldKeys(sidc)),
-    direction: minimal || direction < 0 ? undefined : direction,
-    speedLeader: minimal ? 0 : Number(dom.speedLeader.value),
+    direction: minimal || direction < 0 || !movement.direction.applies ? undefined : direction,
+    speedLeader: minimal || !movement.speedLeader.applies ? 0 : Number(dom.speedLeader.value),
     hqStaffLength: minimal ? 0 : Number(dom.hqStaffLength.value),
     stack: minimal || app6a ? 0 : Number(dom.stack.value)
   };
   // APP-6A 503.1a lets the "?" of pending, assumed friend and suspect sit in field E or in the frame.
   if (app6a && !minimal && dom.uncertaintyMarker.value !== "table") options.uncertaintyMarker = dom.uncertaintyMarker.value;
-  if (app6a && app6aSymbolClass(sidc) === "point") options.direction = undefined;
   return options;
 }
 
@@ -583,7 +604,8 @@ function buildSidc(icon = selectedIcon(), minimal = false) {
           (state.amplifierValue.startsWith("code:") ? state.amplifierValue.slice(5) : "--"))
       ];
     }
-    if ((state.standardId === "app6a" || state.customSidc) && icon.defaultModifier?.startsWith("H")) {
+    // Installations keep their H (APP-6A and 2525C catalogue entries, imported codes).
+    if (icon.defaultModifier?.startsWith("H")) {
       amplifier = ["H", !minimal && dom.feintDummy.checked ? "B" : "-"];
     }
     if (state.standardId === "app6a" && icon.codingScheme === "G")
@@ -1020,10 +1042,19 @@ function syncRuleNotes({ modern, app6a, kind, installation, tactical, prescribed
       : "";
   dom.designationMeta.textContent = modern ? "Position 8" : "Position 11";
   const reasons = [];
-  if (installation) reasons.push("Installations carry the installation modifier, so headquarters and task force do not apply.");
+  // APP-6A Table III S is the location offset indicator on equipment and
+  // installations, the headquarters staff on units (505.1c, 505.1e).
+  const offsetRole = app6a && (kind === "equipment" || kind === "installation");
+  dom.hqLabel.textContent = offsetRole ? "Location offset" : "Headquarters";
+  dom.hqStaffLabel.textContent = offsetRole ? "Offset line length" : "HQ staff length";
+  if (installation)
+    reasons.push(app6a
+      ? "Installations carry the installation modifier H in position 11, so task force does not apply. Table III also gives installations the location offset indicator (S); this editor cannot set it, because position 11 holds the H."
+      : "Installations carry the installation modifier (H in position 11), so headquarters and task force do not apply.");
   else if (tactical) reasons.push("Tactical points take no headquarters or feint flag.");
   else {
-    if (app6a && state.amplifierMode === "mobility") reasons.push("Mobility uses positions 11–12, so headquarters is off.");
+    if (app6a && state.amplifierMode === "mobility") reasons.push(`Mobility uses positions 11–12, so ${offsetRole ? "location offset" : "headquarters"} is off.`);
+    if (offsetRole) reasons.push("On equipment, S is the location offset indicator: a line down from the left side of the frame whose end marks the actual location (Table III, 505.1e).");
     if (app6a && kind !== "unit") reasons.push("Task force applies to units only.");
   }
   const flagNames = { hq: "Headquarters", taskForce: "Task force", feintDummy: "Feint / dummy" };
@@ -1048,45 +1079,61 @@ function syncRuleNotes({ modern, app6a, kind, installation, tactical, prescribed
   dom.symbolClass.textContent = app6a ? kindLabels[kind] || "Symbol" : selectedIcon()?.category || "Symbol";
   dom.hqStaffLength.disabled = !dom.hq.checked || dom.hq.disabled;
   dom.hqStaffNote.textContent = dom.hqStaffLength.disabled
-    ? "Turn on Headquarters in the Symbol tab to use it."
-    : "Length of the headquarters staff. 0 uses the default length.";
+    ? `Turn on ${dom.hqLabel.textContent} in the Symbol tab to use it.`
+    : offsetRole ? "Length of the location offset line. 0 uses the default length." : "Length of the headquarters staff. 0 uses the default length.";
 }
 
-const reliabilityCodes = ["A", "B", "C", "D", "E", "F"];
-const credibilityCodes = ["1", "2", "3", "4", "5", "6"];
+// J: one letter A-F for source reliability and one digit 1-6 for information
+// credibility (APP-6A Table III note b, 2525C Table IV note 4).
+const ratingScale = (pattern) => fieldReference.evaluationRating.rows.filter(([code]) => pattern.test(code));
 
+// Small tools next to a field's input: Now (UTC) for W, the scale picker for J.
 function fieldTools(field) {
   if (field.key === "dtg")
-    return `<div class="field-tools"><button type="button" data-dtg-now="${field.id}">Now (UTC)</button></div>`;
+    return `<button type="button" class="field-tool" data-dtg-now="${field.id}" title="Fill the current time in this field's format">Now (UTC)</button>`;
   if (field.key === "evaluationRating")
-    return `<div class="field-tools"><select data-rating-part="reliability" aria-label="Source reliability">${option("", "Reliability")}${reliabilityCodes.map((code) => option(code, code)).join("")}</select><select data-rating-part="credibility" aria-label="Information credibility">${option("", "Credibility")}${credibilityCodes.map((code) => option(code, code)).join("")}</select></div>`;
+    return `<button type="button" class="field-tool" data-rating-toggle aria-expanded="false" aria-controls="rating-${field.id}" title="Choose from the reliability and credibility scales">A–F · 1–6</button>`;
   return "";
 }
 
-function fieldReferenceHtml(key) {
-  const reference = fieldReference[key];
-  if (!reference) return "";
-  return `<details><summary>${escapeHtml(reference.title)}</summary><dl class="reference-table">${reference.rows
+function ratingHelperHtml(field) {
+  const select = (part, caption, codes) =>
+    `<label><span>${caption}</span><select data-rating-part="${part}">${option("", "Choose…")}${codes.map(([code, meaning]) => option(code, `${code} — ${meaning}`)).join("")}</select></label>`;
+  return `<div class="rating-helper" id="rating-${field.id}" data-rating-helper hidden>${select("reliability", "Source reliability", ratingScale(/^[A-F]$/))}${select("credibility", "Information credibility", ratingScale(/^[1-6]$/))}</div>`;
+}
+
+// The code table of AO for the editions that use the A:BBB-CC grammar without
+// a field table here (MIL-STD-2525D/E, APP-6E). APP-6D builds AO from lists;
+// 2525C and APP-6B define no code list. Opened on request only.
+function engagementReferenceHtml() {
+  const reference = fieldReference.engagementBar;
+  return `<details class="field-reference" data-ao-reference hidden><summary>${escapeHtml(reference.title)}</summary><dl class="reference-table">${reference.rows
     .map(([code, meaning]) => `<dt>${escapeHtml(code)}</dt><dd>${escapeHtml(meaning)}</dd>`)
     .join("")}</dl><p>${escapeHtml(reference.note)}</p></details>`;
 }
 
+function fieldHtml(field) {
+  const described = `aria-describedby="about-${field.id} warn-${field.id}"`;
+  const control = field.choices
+    ? `<select id="${field.id}" data-modifier-field="${field.key}" ${described}>${field.choices.map(([value, label]) => option(value, label)).join("")}</select>`
+    : `<input id="${field.id}" data-modifier-field="${field.key}" autocomplete="off" spellcheck="false" ${described} />`;
+  return `<div class="text-field" data-field-wrapper="${field.key}">
+    <label class="field-label" for="${field.id}"><span class="field-code" data-field-code>${escapeHtml(field.field || "–")}</span><span class="field-name" data-field-label>${escapeHtml(field.label)}</span><span class="field-count" data-field-count aria-hidden="true"></span></label>
+    <div class="field-control">${control}${fieldTools(field)}</div>
+    ${field.key === "evaluationRating" ? ratingHelperHtml(field) : ""}${field.key === "engagementBar" ? engagementBuilderHtml() + engagementReferenceHtml() : ""}
+    <span class="visually-hidden" id="about-${field.id}" data-field-about></span>
+    <div class="field-warn" id="warn-${field.id}" data-field-warn hidden></div>
+  </div>`;
+}
+
 function createTextFields() {
   const container = document.getElementById("app6aTextFields");
-  // All editions share one form; applicable APP-6A fields are filtered below.
-  container.innerHTML = modifierGroups.map((group, index) => `<section class="modifier-group" data-group="${index}">
-    <div class="group-head"><h4>${escapeHtml(group.label)}</h4><span data-group-summary></span></div>
-    <div class="field-grid">
-    ${group.fields.map(field => `<div class="text-field" data-field-wrapper="${field.key}">
-      <label><span class="field-label"><span><span class="field-code" data-field-code>${escapeHtml(field.field || "–")}</span><span class="field-name" data-field-label id="label-${field.id}">${escapeHtml(field.label)}</span></span><span class="field-count" data-field-count></span></span>
-      ${field.choices
-        ? `<select id="${field.id}" data-modifier-field="${field.key}" aria-labelledby="label-${field.id}" aria-describedby="help-${field.id}">${field.choices.map(([value, label]) => option(value, label)).join("")}</select>`
-        : `<input id="${field.id}" data-modifier-field="${field.key}" aria-labelledby="label-${field.id}" aria-describedby="help-${field.id}" placeholder="${escapeHtml(field.placeholder)}" />`}</label>
-      ${field.key === "engagementBar" ? engagementBuilderHtml() : ""}${fieldTools(field)}
-      <div class="field-warn" data-field-warn role="status" hidden></div>
-      <div class="field-help"><span class="modifier-description" id="help-${field.id}">${escapeHtml(field.description)}</span>${fieldReferenceHtml(field.key)}</div>
-    </div>`).join("")}
-    </div><div class="unavailable-list" data-unavailable></div></section>`).join("");
+  // One form for every edition. Groups and fields keep this order; fields that
+  // do not apply to the symbol are hidden and listed under "Not available".
+  container.innerHTML = modifierGroups.map((group, index) => `<section class="modifier-group" data-group="${index}" aria-labelledby="group-${index}">
+    <h4 id="group-${index}">${escapeHtml(group.label)}</h4>
+    <div class="field-grid">${group.fields.filter((field) => field.key !== "engagementType").map(fieldHtml).join("")}</div>
+  </section>`).join("");
   container.addEventListener("input", (event) => {
     if (event.target.matches("[data-rating-part], [data-ao-part]")) return;
     recordTextOrigin(event.target);
@@ -1095,23 +1142,29 @@ function createTextFields() {
   container.addEventListener("change", (event) => {
     if (event.target.matches("[data-ao-part]")) return composeEngagementInput(event.target);
     if (!event.target.matches("[data-rating-part]")) return;
-    const tools = event.target.closest(".text-field");
+    const wrapper = event.target.closest(".text-field");
     const value = evaluationRating(
-      tools.querySelector('[data-rating-part="reliability"]').value,
-      tools.querySelector('[data-rating-part="credibility"]').value
+      wrapper.querySelector('[data-rating-part="reliability"]').value,
+      wrapper.querySelector('[data-rating-part="credibility"]').value
     );
     if (!value) return;
-    const input = tools.querySelector("[data-modifier-field]");
+    const input = wrapper.querySelector("[data-modifier-field]");
     input.value = value;
     input.dispatchEvent(new Event("input", { bubbles: true }));
   });
   container.addEventListener("click", (event) => {
+    const toggle = event.target.closest("[data-rating-toggle]");
+    if (toggle) {
+      const helper = document.getElementById(toggle.getAttribute("aria-controls"));
+      helper.hidden = !helper.hidden;
+      toggle.setAttribute("aria-expanded", String(!helper.hidden));
+      if (!helper.hidden) helper.querySelector("select").focus();
+      return;
+    }
     const button = event.target.closest("[data-dtg-now]");
     if (!button) return;
     const input = document.getElementById(button.dataset.dtgNow);
-    // The year length follows this symbol's W definition, not the input length.
-    const definition = currentFieldStates().find((item) => item.key === input.dataset.modifierField);
-    input.value = dtgForField(new Date(), definition);
+    input.value = nowForDtg();
     input.dispatchEvent(new Event("input", { bubbles: true }));
     input.focus();
   });
@@ -1127,6 +1180,21 @@ function createTextFields() {
     input.value = "";
     input.dispatchEvent(new Event("input", { bubbles: true }));
   });
+}
+
+// Now (UTC) for W: the year length of this symbol's W definition, else the
+// edition's printed format (field-guide.js).
+function nowForDtg() {
+  const sidc = state.customSidc || buildSidc();
+  const definition = currentFieldStates(sidc).find((item) => item.key === "dtg");
+  const guide = fieldGuide(state.standardId, symbolClassOf(sidc), textModifiers.find((item) => item.key === "dtg"));
+  return dtgForField(new Date(), definition, guide.printed);
+}
+
+// The profile's class name for the symbol ("unit", "landInstallation"), or "".
+function symbolClassOf(sidc) {
+  const profile = activeProfile();
+  return profile && profile.fields(sidc) ? profile.symbolClass(sidc) : "";
 }
 
 // Remember what a text field meant where the user typed it, so a later change
@@ -1146,20 +1214,24 @@ function describeWhere(sidc = state.customSidc || buildSidc()) {
   return kind ? `${config().label} ${kind}` : config().label;
 }
 
-// AO "A:BBB-CC" (APP-6D): three dropdowns compose the text that is sent.
+// AO "A:BBB-CC" (APP-6D): three lists compose the text that is sent; the stage
+// comes first because the other two depend on it. The bar colour (engagement
+// type) is a companion of AO, shown under it where the edition defines it.
 const engagementSourceNames = { R: "remote", B: "local and remote" };
 function engagementBuilderHtml() {
-  const part = (name, caption) => `<label class="ao-part"><span>${caption}</span><select data-ao-part="${name}" aria-label="Engagement bar ${caption}"></select></label>`;
-  return `<div class="ao-builder" data-ao-builder hidden>${part("a", "A source")}${part("b", "BBB stage")}${part("c", "CC weapon or count")}<p class="ao-preview" data-ao-preview></p></div>`;
+  const type = textModifiers.find((field) => field.key === "engagementType");
+  const part = (name, caption) => `<label class="ao-part"><span>${caption}</span><select data-ao-part="${name}"></select></label>`;
+  return `<div class="ao-builder" data-ao-builder hidden>${part("b", "Stage (BBB)")}${part("a", "Engaged by (A)")}${part("c", "Weapon or count (CC)")}<p class="ao-preview" data-ao-preview></p></div>
+    <div class="ao-type" data-companion="engagementType" hidden><label for="${type.id}">Bar colour</label><select id="${type.id}" data-modifier-field="engagementType" aria-describedby="about-${type.id}">${type.choices.map(([value, label]) => option(value, label)).join("")}</select><span class="visually-hidden" id="about-${type.id}">Target designation colour of the engagement bar: target, non-target or expired. It is drawn with the AO text.</span></div>`;
 }
 
 function composeEngagementInput(select) {
   const wrapper = select.closest("[data-field-wrapper]");
+  const input = wrapper.querySelector('[data-modifier-field="engagementBar"]');
   const value = (name) => wrapper.querySelector(`[data-ao-part="${name}"]`).value;
   const parts = { a: value("a"), b: value("b"), c: value("c") };
   // The list behind CC changes with the stage (weapons, or counts for MLT).
-  if (select.dataset.aoPart === "b" && (parts.b === "MLT") !== (parseEngagement(wrapper.querySelector("[data-modifier-field]").value).b === "MLT")) parts.c = "";
-  const input = wrapper.querySelector("[data-modifier-field]");
+  if (select.dataset.aoPart === "b" && (parts.b === "MLT") !== (parseEngagement(input.value).b === "MLT")) parts.c = "";
   input.value = composeEngagement(parts);
   input.dispatchEvent(new Event("input", { bubbles: true }));
 }
@@ -1170,6 +1242,8 @@ function syncEngagementBuilder(wrapper, definition, input) {
   const composite = Boolean(definition && definition.parts);
   builder.hidden = !composite;
   input.hidden = composite;
+  wrapper.classList.toggle("wide", composite);
+  wrapper.querySelector("[data-ao-reference]").hidden = composite || !["2525d", "2525e", "app6e"].includes(state.standardId);
   if (!composite) return;
   const options = engagementOptions(definition.parts, app6dEngagementError);
   const parts = parseEngagement(input.value);
@@ -1182,30 +1256,45 @@ function syncEngagementBuilder(wrapper, definition, input) {
     select.value = value;
     select.disabled = name !== "b" && !parts.b;
   };
-  fill("a", options.sources, parts.a, "(local)", (code) => `${code} — ${engagementSourceNames[code] || code}`);
-  fill("b", options.stages, parts.b, "(none)", (code, text) => `${code} — ${text}`);
-  fill("c", parts.b === "MLT" ? options.counts : options.weapons, parts.c, "(none)", (code, text) => `${code} — ${text}`);
+  fill("a", options.sources, parts.a, "Local (no prefix)", (code) => `${code} — ${engagementSourceNames[code] || code}`);
+  fill("b", options.stages, parts.b, "None", (code, text) => `${code} — ${text}`);
+  fill("c", parts.b === "MLT" ? options.counts : options.weapons, parts.c, "None", (code, text) => `${code} — ${text}`);
   const message = parts.b || input.value ? app6dEngagementError(input.value) : "";
   const preview = builder.querySelector("[data-ao-preview]");
-  preview.textContent = input.value ? `${input.value}${message ? ` — ${message}` : ""}` : `Format ${definition.format}: choose the stage (BBB) first.`;
+  preview.textContent = input.value ? `Drawn as ${input.value}${message ? ` — ${message}` : ""}` : `Format ${definition.format}. Choose the stage first.`;
   preview.classList.toggle("problem", Boolean(message));
 }
 
+// The bar colour sits under AO and follows engagementTypeState(); a value it
+// cannot use stays in the select and is reported, unsent.
+function syncEngagementType(definition, select) {
+  const companion = select.closest("[data-companion]");
+  companion.hidden = !definition.available;
+  select.disabled = !definition.available;
+}
+
 function setFocusField(key) {
-  if (state.focusField === key) return;
-  state.focusField = key;
-  for (const wrapper of document.querySelectorAll("[data-field-wrapper]"))
-    wrapper.classList.toggle("focused", wrapper.dataset.fieldWrapper === key);
-  for (const box of dom.layoutCanvas.querySelectorAll("[data-layout-key]"))
-    box.classList.toggle("focused", box.dataset.layoutKey === key);
+  if (state.focusField !== key) {
+    state.focusField = key;
+    for (const wrapper of document.querySelectorAll("[data-field-wrapper]"))
+      wrapper.classList.toggle("focused", wrapper.dataset.fieldWrapper === key);
+    for (const box of dom.layoutCanvas.querySelectorAll("[data-layout-key]"))
+      box.classList.toggle("focused", box.dataset.layoutKey === key);
+  }
+  syncListHelp();
 }
 
 function currentFieldStates(sidc = state.customSidc || buildSidc()) {
   const profile = activeProfile();
-  if (profile) return profileFieldStates(textModifiers, profile, sidc);
-  return fieldStates(textModifiers, state.standardId === "app6a"
-    ? { available: getApp6aFields(sidc), table: app6aTextFields, kind: app6aSymbolClass(sidc), identity: sidc[1] }
-    : null);
+  const states = profile
+    ? profileFieldStates(textModifiers, profile, sidc)
+    : fieldStates(textModifiers, null);
+  // The bar colour is offered with AO, as the edition allows (APP-6D: hostile).
+  const ao = states.find((item) => item.key === "engagementBar");
+  const type = engagementTypeState(profile, sidc, Boolean(ao && ao.available));
+  return states.map((item) =>
+    item.key === "engagementType" ? { ...item, field: "", label: "Engagement bar colour", available: type.available, reason: type.reason, choices: null } : item
+  );
 }
 
 // Keys the edition allows for this SIDC; null when every field applies.
@@ -1218,8 +1307,9 @@ function profiledFieldKeys(sidc) {
 
 // Offer a profile's literal values: rebuild a select, or suggest via a datalist.
 function applyFieldChoices(field, input, profileChoices, alternates) {
-  // Profiles may list plain literals; the form uses [value, label] pairs.
-  const choices = profileChoices && profileChoices.map((choice) => (Array.isArray(choice) ? choice : [String(choice), String(choice)]));
+  // Profiles may list plain literals; the form uses [value, label] pairs. J
+  // has its own scale picker instead of a list of all 36 pairs.
+  const choices = field.key !== "evaluationRating" && profileChoices && profileChoices.map((choice) => (Array.isArray(choice) ? choice : [String(choice), String(choice)]));
   if (field.choices) {
     let list = choices ? [["", field.choices[0][1]], ...choices.filter(([code]) => code !== "")] : field.choices;
     // A form the profile accepts besides its own list (APP-6D F "(+)") stays selectable.
@@ -1256,10 +1346,15 @@ function applyFieldChoices(field, input, profileChoices, alternates) {
   input.setAttribute("list", id);
 }
 
+// What the List and the help line say about a field: its rule, format,
+// example and source notes, for the symbol in the editor.
+const fieldHelp = new Map();
+
 function syncApp6aTextFields() {
   const sidc = state.customSidc || buildSidc();
   const profile = activeProfile();
   const active = profile ? Boolean(profile.fields(sidc)) : state.standardId === "app6a";
+  const kind = active && profile ? profile.symbolClass(sidc) : "";
   const fieldNote = document.getElementById("app6aFieldNote");
   fieldNote.hidden = !active;
   fieldNote.textContent = profileNotes[state.standardId] || "";
@@ -1269,31 +1364,58 @@ function syncApp6aTextFields() {
   const values = Object.fromEntries(textModifiers.map(({ key, id }) => [key, document.getElementById(id).value]));
   for (const key of Object.keys(state.textOrigins)) if (!values[key]) delete state.textOrigins[key];
   const carried = new Map(carryWarnings({ states: [...states.values()], values, origins: state.textOrigins, extras }).map((item) => [item.key, item]));
+  const query = normalize(state.fieldQuery).trim();
+  const matches = (definition) => !query || normalize(definition.field) === query || normalize(definition.label).includes(query);
+  const counts = { available: 0, shown: 0, filled: 0, hiddenFilled: 0 };
   for (const field of textModifiers) {
     const input = document.getElementById(field.id);
     const definition = states.get(field.key);
+    if (field.key === "engagementType") {
+      syncEngagementType(definition, input);
+      fieldWarnings.set(field.key, []);
+      continue;
+    }
     const wrapper = input.closest("[data-field-wrapper]");
-    wrapper.hidden = !definition.available;
+    const filled = Boolean(input.value);
+    const visible = definition.available && matches(definition) && (!state.filledOnly || filled);
+    wrapper.hidden = !visible;
+    wrapper.classList.toggle("filled", filled);
     input.disabled = !definition.available;
+    if (definition.available) {
+      counts.available += 1;
+      if (filled) counts.filled += 1;
+      if (visible) counts.shown += 1;
+      else if (filled) counts.hiddenFilled += 1;
+    }
     const warning = wrapper.querySelector("[data-field-warn]");
     const lines = [];
     if (definition.available) {
+      const guide = fieldGuide(state.standardId, kind, field);
       wrapper.querySelector("[data-field-label]").textContent = definition.label;
       wrapper.querySelector("[data-field-code]").textContent = definition.field || "–";
       applyFieldChoices(field, input, definition.choices || definition.examples || null, definition.alternates);
       syncEngagementBuilder(wrapper, definition, input);
+      // A value the profile lists (APP-6D K "Fully Operational") is the
+      // example; else the edition's guide; J keeps its own A1-F6 example.
+      const listed = field.key !== "evaluationRating" && (definition.examples || definition.choices || [])[0];
+      const example = listed ? String(Array.isArray(listed) ? listed[0] : listed) : guide.example;
       if (!field.choices) {
         if (definition.maxLength) input.maxLength = definition.maxLength;
         else input.removeAttribute("maxlength");
-        input.placeholder = active && definition.maxLength ? `Max. ${definition.maxLength} characters · ${definition.field}` : field.placeholder;
+        input.placeholder = example ? `e.g. ${example}` : "";
       }
+      if (field.key === "evaluationRating") syncRatingHelper(wrapper, input.value);
       // Rules the profile attaches to the field: format, length, source tensions.
       const rule = fieldRule(definition, input.value);
-      const help = [field.description];
-      if (rule.hint) help.push(`Format: ${rule.hint}.`);
+      const help = [guide.description];
+      const format = rule.hint || guide.format;
+      if (format) help.push(`Format: ${format}.`);
+      if (definition.maxLength && !field.choices) help.push(`At most ${definition.maxLength} characters.`);
+      if (example && !field.choices && !definition.parts) help.push(`Example: ${example}.`);
       if (definition.requiresEchelonDivisionOrBelow) help.push("Used at division level and below.");
       if (definition.unresolved) help.push(`${definition.nonBlocking ? "Source note" : "Unresolved in the source"}: ${definition.unresolved}.`);
-      wrapper.querySelector(".modifier-description").textContent = help.join(" ");
+      fieldHelp.set(field.key, help.join(" "));
+      wrapper.querySelector("[data-field-about]").textContent = help.join(" ");
       if (rule.problem) lines.push(`${definition.field} ${rule.problem}.`);
       if (definition.unresolved && !definition.nonBlocking && input.value) lines.push("Unresolved in the source: the symbol is reported as not valid while this field is filled.");
       if (carried.has(field.key)) lines.push(carried.get(field.key).message);
@@ -1301,62 +1423,100 @@ function syncApp6aTextFields() {
     warning.hidden = !lines.length;
     warning.innerHTML = lines.map(escapeHtml).join("<br>");
     fieldWarnings.set(field.key, lines);
+    const counter = wrapper.querySelector("[data-field-count]");
+    const max = !field.choices && input.maxLength > 0 ? input.maxLength : 0;
+    counter.textContent = field.choices || definition.parts ? "" : max ? `${input.value.length}/${max}` : filled ? String(input.value.length) : "";
+    counter.classList.toggle("full", Boolean(max) && input.value.length >= max);
   }
-  renderCarryNotes([...carried.values()], extras, states);
-  let available = 0;
-  for (const group of container.querySelectorAll(".modifier-group")) {
-    const fields = modifierGroups[Number(group.dataset.group)].fields;
-    const groupStates = fields.map((field) => states.get(field.key));
-    const open = groupStates.filter((item) => item.available);
-    available += open.length;
-    group.classList.toggle("none-available", !open.length);
-    group.querySelector(".field-grid").hidden = !open.length;
-    group.querySelector("[data-group-summary]").textContent = active
-      ? `${open.length} of ${fields.length} apply`
-      : `${fields.length} fields`;
-    group.querySelector("[data-unavailable]").innerHTML = groupStates
-      .filter((item) => !item.available)
-      .map((item) => `<div class="unavailable-row" title="${escapeHtml(fields.find((field) => field.key === item.key).description)}"><span><span class="field-code">${escapeHtml(item.field || "–")}</span><span>${escapeHtml(item.label)}</span></span><small title="${escapeHtml(item.reason)}">${escapeHtml(humanize(shortReason(item.reason)))}</small></div>`)
-      .join("");
-  }
-  const unavailable = textModifiers.length - available;
-  container.classList.toggle("hide-unavailable", !state.showUnavailable);
-  dom.toggleUnavailable.hidden = !unavailable;
-  dom.toggleUnavailable.dataset.unavailable = String(unavailable);
-  dom.toggleUnavailable.textContent = state.showUnavailable ? `Hide ${unavailable} unavailable` : `Show ${unavailable} unavailable`;
-  dom.toggleUnavailable.setAttribute("aria-pressed", String(!state.showUnavailable));
-  dom.toggleUnavailable.classList.toggle("active", !state.showUnavailable);
-  const kind = !active ? "" : profile ? profile.symbolClass(sidc) : app6aSymbolClass(sidc);
-  const filled = textModifiers.filter((field) => {
-    const input = document.getElementById(field.id);
-    return !input.disabled && input.value;
-  }).length;
-  for (const field of textModifiers) {
-    const input = document.getElementById(field.id);
-    const counter = input.closest("[data-field-wrapper]").querySelector("[data-field-count]");
-    if (field.choices) counter.textContent = "";
-    else {
-      const max = input.maxLength > 0 ? input.maxLength : 0;
-      counter.textContent = max ? `${input.value.length} / ${max}` : input.value ? String(input.value.length) : "";
-      counter.classList.toggle("full", Boolean(max) && input.value.length >= max);
-    }
-  }
-  dom.textSummary.textContent = active ? `${config().label} · ${available} applicable fields` : `${config().label} · ${textModifiers.length} fields`;
+  for (const group of container.querySelectorAll(".modifier-group"))
+    group.hidden = ![...group.querySelectorAll("[data-field-wrapper]")].some((wrapper) => !wrapper.hidden);
+  renderCarryNotes([...carried.values()], states);
+  renderUnavailable(states, { sidc, profile, kind, active });
+  renderListFilters(counts, query);
+  dom.textSummary.textContent = active ? `${config().label} · ${counts.available} applicable fields` : `${config().label} · ${counts.available} fields`;
   dom.textApplies.textContent = active
-    ? `${profileTitles[state.standardId]}: ${available} of ${textModifiers.length} fields apply to ${({ unit: "units", equipment: "equipment", installation: "installations", point: "tactical points", nuclear: "nuclear points" })[kind] || (kind ? `${classWords(kind)} symbols` : "this symbol")}.`
-    : `${config().label} has no field table here: all ${textModifiers.length} fields are offered, and placement follows the renderer's symbol-set rules.`;
-  dom.textFilledBadge.hidden = !filled;
-  dom.textFilledBadge.textContent = `${filled} filled`;
-  dom.direction.disabled = state.standardId === "app6a" && app6aSymbolClass(sidc) === "point";
-  dom.speedLeader.disabled = dom.direction.disabled;
-  dom.directionNumber.disabled = dom.direction.disabled;
+    ? `${profileTitles[state.standardId]}: ${counts.available} text fields apply to ${({ unit: "units", equipment: "equipment", installation: "installations", point: "tactical points", nuclear: "nuclear points" })[kind] || (kind ? `${classWords(kind)} symbols` : "this symbol")}.`
+    : `${config().label} has no field table here: all ${counts.available} fields are offered, and placement follows the renderer's symbol-set rules. Offering a field does not mean this edition defines it for the symbol.`;
+  dom.textFilledBadge.hidden = !counts.filled;
+  dom.textFilledBadge.textContent = `${counts.filled} filled`;
   dom.stack.disabled = state.standardId === "app6a";
+  syncListHelp();
+}
+
+// J scale picker: follows the typed value.
+function syncRatingHelper(wrapper, value) {
+  const valid = /^[A-F][1-6]$/.test(value);
+  for (const [part, index] of [["reliability", 0], ["credibility", 1]]) {
+    const select = wrapper.querySelector(`[data-rating-part="${part}"]`);
+    if (document.activeElement !== select) select.value = valid ? value[index] : "";
+  }
+}
+
+// Search and "Filled only" hide fields, never their values; the status line
+// says how many filled fields a filter hides.
+function renderListFilters(counts, query) {
+  dom.filledOnly.setAttribute("aria-pressed", String(state.filledOnly));
+  dom.filledOnly.classList.toggle("active", state.filledOnly);
+  dom.filledOnly.textContent = counts.filled ? `Filled only · ${counts.filled}` : "Filled only";
+  const filtering = Boolean(query) || state.filledOnly;
+  const parts = [];
+  if (filtering) parts.push(counts.shown ? `Showing ${counts.shown} of ${counts.available} fields.` : query ? `No applicable field matches "${state.fieldQuery.trim()}".` : "No field is filled yet.");
+  if (counts.hiddenFilled) parts.push(`${counts.hiddenFilled} filled ${counts.hiddenFilled === 1 ? "field is" : "fields are"} hidden by the filter.`);
+  dom.filterStatus.innerHTML = parts.length ? `${escapeHtml(parts.join(" "))} <button type="button" class="link-button" data-clear-filters>Show all</button>` : "";
+  dom.filterStatus.hidden = !parts.length;
+}
+
+// Closed section under the form: fields of this edition that do not apply to
+// the symbol (with the edition's own names) and graphics the edition defines
+// that this editor cannot set. Another edition's fields are not listed.
+function renderUnavailable(states, { sidc, profile, kind, active }) {
+  const notHere = [];
+  if (active)
+    for (const field of textModifiers) {
+      const definition = states.get(field.key);
+      if (field.key === "engagementType" || definition.available) continue;
+      const own = editionField(state.standardId, field.key, editionTables);
+      if (own === null) continue;
+      const name = own || { field: definition.field, label: definition.label };
+      const reason = humanize(shortReason(definition.reason).replace(new RegExp(`^${field.key} is `), ""));
+      notHere.push({ field: name.field, label: name.label, reason: reason.charAt(0).toUpperCase() + reason.slice(1), full: definition.reason });
+    }
+  const gaps = active ? editorGaps({ standardId: state.standardId, profile, sidc, tables: editionTables, movement: movementFor(sidc) }) : [];
+  // A code that means something else for this class (APP-6D Land Unit AC is
+  // the installation graphic) is listed once, with that meaning.
+  for (let index = notHere.length - 1; index >= 0; index -= 1) if (gaps.some((gap) => gap.field === notHere[index].field)) notHere.splice(index, 1);
+  const row = (item) => `<li><span class="field-code">${escapeHtml(item.field || "–")}</span><span class="unavailable-name">${escapeHtml(item.label)}</span><small title="${escapeHtml(item.full || item.reason)}">${escapeHtml(item.reason)}</small></li>`;
+  const total = notHere.length + gaps.length;
+  dom.unavailableFields.hidden = !total;
+  dom.unavailableSummary.textContent = `Not available for this symbol · ${total}`;
+  dom.unavailableBody.innerHTML = [
+    notHere.length ? `<h5>Not for ${escapeHtml(kind ? classWords(kind) : "this")} symbols</h5><ul>${notHere.map(row).join("")}</ul>` : "",
+    gaps.length ? `<h5>Defined by the standard, not supported by this editor</h5><ul>${gaps.map((item) => row({ ...item, reason: humanize(shortReason(item.reason)) || item.reason, full: item.reason })).join("")}</ul>` : ""
+  ].join("");
+}
+
+// One help line under the List, always the same height, so focusing a field
+// never moves the form: the focused field's code, name, rule and example.
+function syncListHelp() {
+  const key = state.focusField;
+  const field = textModifiers.find((item) => item.key === key);
+  const input = field && document.getElementById(field.id);
+  const wrapper = input && input.closest("[data-field-wrapper]");
+  if (!field || !wrapper || wrapper.hidden || input.disabled) {
+    dom.listHelp.innerHTML = '<span class="list-help-title"><span>Select a field for its format and an example.</span></span><span class="list-help-text">Values stay when you switch views.</span>';
+    return;
+  }
+  const code = wrapper.querySelector("[data-field-code]").textContent;
+  const name = wrapper.querySelector("[data-field-label]").textContent;
+  const count = !field.choices && input.maxLength > 0 ? `<span class="layout-count">${input.value.length} / ${input.maxLength}</span>` : "";
+  const text = fieldHelp.get(key) || field.description;
+  dom.listHelp.innerHTML = `<span class="list-help-title"><span class="field-code">${escapeHtml(code)}</span><strong>${escapeHtml(name)}</strong>${count}</span><span class="list-help-text" title="${escapeHtml(text)}">${escapeHtml(text)}</span>`;
 }
 
 // Non-blocking list above the text fields: text that is kept but not drawn,
 // text now read under a different meaning, and select values cleared because
 // the edition does not define them. Nothing here changes what the user typed.
-function renderCarryNotes(warnings, extras, states) {
+function renderCarryNotes(warnings, states) {
   const rows = warnings.map((item) => ({ ...item, clearable: true }));
   for (const [key, value] of Object.entries(state.droppedChoices)) {
     const definition = states.get(key);
@@ -1366,11 +1526,6 @@ function renderCarryNotes(warnings, extras, states) {
   dom.carryNotes.innerHTML = rows.length
     ? `<h4>Check these entries (${rows.length})</h4>` +
       rows.map((item) => `<div class="carry-row" data-kind="${item.kind}"><span class="field-code">${escapeHtml(item.field || "–")}</span><div><b>${escapeHtml(item.label)}</b>${item.kind === "dropped" ? "" : ` <q>${escapeHtml(item.value)}</q>`}<span>${escapeHtml(item.message)}</span></div>${item.clearable ? `<button type="button" class="quiet-button" data-clear-field="${escapeHtml(item.key)}">Clear</button>` : ""}</div>`).join("")
-    : "";
-  dom.profileExtras.hidden = !extras.length;
-  dom.profileExtras.innerHTML = extras.length
-    ? `<summary>Not editable here · ${extras.length}</summary><p>The standard defines these for this symbol; this editor cannot set them.</p>` +
-      extras.map((item) => `<div class="unavailable-row"><span><span class="field-code">${escapeHtml(item.field || "–")}</span><span>${escapeHtml(item.label)}</span></span><small>${escapeHtml(humanize(item.reason))}</small></div>`).join("")
     : "";
 }
 
@@ -1662,7 +1817,6 @@ function layoutStates(sidc) {
 
 function renderFieldLayout() {
   const panel = document.getElementById("panel-text");
-  const list = document.getElementById("app6aTextFields");
   if (!panel.hidden && state.positions) {
     const sidc = state.customSidc || buildSidc();
     const states = layoutStates(sidc);
@@ -1681,17 +1835,19 @@ function renderFieldLayout() {
   }
   const showing = !panel.hidden && state.positions && layoutFits;
   dom.fieldLayout.hidden = !showing;
-  list.hidden = showing;
-  dom.toggleUnavailable.hidden = showing || !Number(dom.toggleUnavailable.dataset.unavailable);
+  dom.textList.hidden = showing;
   if (showing) syncLayoutBoxes();
+  // The switch shows the view on screen: a window too narrow for the boxes
+  // shows the list, and says so on the disabled Field positions button.
+  const positionsShown = state.positions && layoutFits;
   for (const button of dom.textViewSwitch.querySelectorAll("[data-text-view]")) {
-    const active = (button.dataset.textView === "positions") === state.positions;
+    const active = (button.dataset.textView === "positions") === positionsShown;
     button.classList.toggle("active", active);
     button.setAttribute("aria-pressed", String(active));
   }
   const positionsButton = dom.textViewSwitch.querySelector('[data-text-view="positions"]');
   positionsButton.disabled = !layoutFits;
-  positionsButton.title = layoutFits ? "Boxes at the positions where the text renders" : "Field positions need a wider window";
+  positionsButton.title = layoutFits ? "Boxes around the symbol, in the order the standard places the fields" : "Field positions need a wider window; the list is shown";
 }
 
 // Lays out the boxes; false when they do not fit the room.
@@ -1906,9 +2062,7 @@ function syncLayoutBoxes() {
 // The code, name, description and example of a field, as one sentence for
 // the box's screen-reader description.
 function layoutAbout(definition) {
-  const field = textModifiers.find((item) => item.key === definition.key);
-  const example = field.placeholder ? ` ${field.placeholder.replace(/^e\.g\./, "Example:")}.` : "";
-  return `${field.description}${example}`;
+  return fieldHelp.get(definition.key) || textModifiers.find((item) => item.key === definition.key).description;
 }
 
 // Two lines under the boxes, always the same height: the field under the
@@ -1920,7 +2074,7 @@ function syncLayoutHelp() {
   const box = hoveredBox?.isConnected ? hoveredBox : focused && dom.layoutCanvas.contains(focused) ? focused : null;
   if (!box) {
     dom.layoutHelp.innerHTML = dom.layoutCanvas.querySelector("[data-layout-key]")
-      ? '<span class="layout-help-title">Click a box and type.</span><span class="layout-help-text">Each box sits where its text is drawn; empty boxes are left out of the symbol.</span>'
+      ? '<span class="layout-help-title">Click a box and type.</span><span class="layout-help-text">Boxes follow the standard\'s field layout, spaced apart for typing; the preview shows the exact placement. Empty fields are left out.</span>'
       : '<span class="layout-help-title">No text amplifier is drawn around this symbol.</span>';
     return;
   }
@@ -1937,7 +2091,20 @@ function syncLayoutHelp() {
   }`;
 }
 
+// Why Q or AJ is off for this symbol, and that a set value is kept.
+function movementNote(control, name, kept) {
+  if (control.applies) return "";
+  const keep = kept ? ` ${kept} is kept and returns on a symbol that takes it.` : "";
+  // Profile reasons may start with the field ("Q direction: ..."); the name says it.
+  const reason = humanize(control.reason.replace(/^[A-Z]{1,2} [a-zA-Z]+: /, ""));
+  return `${name} does not apply to this symbol: ${reason}.${keep}`;
+}
+
 function syncGraphicsControls() {
+  // Q and AJ follow the edition and the symbol class (movementControls).
+  const movement = movementFor(state.customSidc || buildSidc());
+  dom.direction.disabled = dom.directionNumber.disabled = !movement.direction.applies;
+  dom.speedLeader.disabled = !movement.speedLeader.applies;
   const value = Number(dom.direction.value);
   const on = value >= 0 && !dom.direction.disabled;
   dom.directionOutput.value = value < 0 ? "Off" : `${value}°`;
@@ -1950,11 +2117,16 @@ function syncGraphicsControls() {
   dom.directionNeedle.setAttribute("transform", `rotate(${on ? value : 0} 60 60)`);
   dom.directionDial.classList.toggle("on", on);
   dom.directionDial.setAttribute("aria-label", on ? `Heading ${value} degrees` : "Direction off");
-  dom.directionNote.textContent = dom.direction.disabled
-    ? "Direction does not apply to APP-6A tactical points."
-    : dom.hq.checked && !dom.hq.disabled
-      ? "With a headquarters, the arrow starts at the end of the HQ staff."
-      : "Ground symbols draw the arrow from a staff below the frame.";
+  dom.directionNote.textContent = movementNote(movement.direction, "Direction of movement (Q)", value >= 0 ? `The heading ${value}°` : "")
+    || (state.standardId === "app6a"
+      // APP-6A 505.1a: a bent arrow down from the bottom centre of the frame,
+      // also with a headquarters; other dimensions draw it from the centre.
+      ? "Land symbols draw a bent arrow down from the bottom centre of the frame, also with a headquarters (505.1a). Other symbols draw it from the centre."
+      : dom.hq.checked && !dom.hq.disabled
+        ? "With a headquarters, the arrow starts at the end of the HQ staff."
+        : "Ground symbols draw the arrow from a staff below the frame.");
+  dom.speedLeaderNote.textContent = movementNote(movement.speedLeader, "Speed leader (AJ)", Number(dom.speedLeader.value) > 0 ? `The length ${dom.speedLeader.value}` : "")
+    || "Movement line length in pixels. Set a direction; 0 uses the normal arrow.";
   dom.graphicsBadge.hidden = !on;
   dom.graphicsBadge.textContent = on ? `Q ${value}°` : "";
   dom.sizeOutput.value = `${dom.symbolSize.value}%`;
@@ -2012,7 +2184,7 @@ function renderAll() {
       ? `${icon.source || "APP-6A (1998)"}. ${dataset().icons.length} S-scheme catalog entries.${icon.categoryOnly ? " Category — no separate illustration in APP-6A Annex D; preview is the renderer’s representation." : ""}${icon.remarks ? " " + icon.remarks : ""}`
       : "Rendered with milsymbol. Symbol appearance may differ from older standard publications.";
   if (!state.sidcDirty) dom.sidcInput.value = displayEditorSidc(sidc);
-  for (const button of [dom.downloadSvg, dom.downloadPng, dom.copySvg, dom.copySidc]) button.disabled = !currentSvg;
+  for (const button of [dom.downloadSvg, dom.downloadPng, dom.copySidc]) button.disabled = !currentSvg;
   const auditLink = document.getElementById("publicationAudit");
   auditLink.hidden = document.documentElement.dataset.localAudit !== "true" || state.standardId !== "app6a" || !icon.id.startsWith("S");
   auditLink.href = `audit/symbols/index.html?symbol=${encodeURIComponent(icon.id)}`;
@@ -2186,6 +2358,9 @@ function openField(key) {
   const field = textModifiers.find((item) => item.key === key);
   const input = field && document.getElementById(field.id);
   if (!input || input.disabled) return;
+  // A list filter must not hide the field being opened.
+  state.fieldQuery = dom.fieldFilter.value = "";
+  state.filledOnly = false;
   setTextView("list");
   activateTab(document.getElementById("tab-text"));
   setFocusField(key);
@@ -2379,9 +2554,20 @@ function bindEvents() {
       dom.direction.value = button.dataset.direction;
       renderAll();
     });
-  dom.toggleUnavailable.addEventListener("click", () => {
-    state.showUnavailable = !state.showUnavailable;
-    renderAll();
+  dom.fieldFilter.addEventListener("input", () => {
+    state.fieldQuery = dom.fieldFilter.value;
+    syncApp6aTextFields();
+  });
+  dom.filledOnly.addEventListener("click", () => {
+    state.filledOnly = !state.filledOnly;
+    syncApp6aTextFields();
+  });
+  dom.filterStatus.addEventListener("click", (event) => {
+    if (!event.target.closest("[data-clear-filters]")) return;
+    state.fieldQuery = dom.fieldFilter.value = "";
+    state.filledOnly = false;
+    syncApp6aTextFields();
+    dom.fieldFilter.focus();
   });
   dom.clearText.addEventListener("click", () => {
     state.textOrigins = {};
@@ -2422,8 +2608,8 @@ function bindEvents() {
     if (open) return openField(open.dataset.layoutOpen);
     if (!event.target.closest("[data-layout-now]")) return;
     const source = document.getElementById(textModifiers.find((item) => item.key === "dtg").id);
-    // The year length follows this symbol's W definition.
-    source.value = dtgForField(new Date(), currentFieldStates().find((item) => item.key === "dtg"));
+    // The format follows this symbol's W definition and the edition.
+    source.value = nowForDtg();
     source.dispatchEvent(new Event("input", { bubbles: true }));
     dom.layoutCanvas.querySelector('[data-layout-input="dtg"]')?.focus();
   });
@@ -2532,10 +2718,6 @@ function bindEvents() {
   dom.copySidc.addEventListener("click", () =>
     copyText(dom.sidcInput.value, "SIDC copied")
   );
-  dom.copySvg.addEventListener(
-    "click",
-    () => currentSvg && copyText(currentSvg, "SVG source copied")
-  );
   dom.downloadSvg.addEventListener(
     "click",
     () => currentSvg && download(currentSvg, exportName("svg"), "image/svg+xml")
@@ -2614,7 +2796,7 @@ async function init() {
     renderCatalog();
     renderAll();
   } catch (error) {
-    for (const button of [dom.downloadSvg, dom.downloadPng, dom.copySvg, dom.copySidc, dom.applySidc]) button.disabled = true;
+    for (const button of [dom.downloadSvg, dom.downloadPng, dom.copySidc, dom.applySidc]) button.disabled = true;
     dom.symbolGrid.innerHTML = `<div class="empty-state">Unable to load the symbol library.<br>${error.message}<br><br><b>npm run studio:build</b> to rebuild the library.</div>`;
     dom.symbolPreview.innerHTML = `<div class="empty-state">The symbol library is unavailable.</div>`;
   }

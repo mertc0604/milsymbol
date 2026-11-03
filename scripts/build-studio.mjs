@@ -6,6 +6,7 @@ import legacyStandards from "mil-std-2525";
 import modernStandards from "milstandard-e";
 import natoStandards from "stanag-app6";
 import { app6aCatalog } from "../studio/app6a-catalog.js";
+import { legacyDefaultModifier } from "../studio/editor-helpers.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = path.join(root, "studio");
@@ -83,7 +84,7 @@ function normalizeModern(dataset) {
   return { icons, modifiers, common };
 }
 
-function normalizeLegacy(dataset) {
+function normalizeLegacy(dataset, options = {}) {
   const icons = [];
   const walk = (node, group = []) => {
     if (!node || typeof node !== "object") return;
@@ -108,7 +109,8 @@ function normalizeLegacy(dataset) {
           path: (item.names || [name])
             .filter(Boolean)
             .map((part) => String(part).trim()),
-          remarks: String(item.remarks || "").trim()
+          remarks: String(item.remarks || "").trim(),
+          defaultModifier: legacyDefaultModifier(item, options)
         });
       }
     }
@@ -171,7 +173,7 @@ const data = {
       modifiers: {},
       common: { modifier1: [], modifier2: [] }
     },
-    "2525c": normalizeLegacy(legacyStandards.ms2525c),
+    "2525c": normalizeLegacy(legacyStandards.ms2525c, { installationModifier: true }),
     "2525d": normalizeModern(legacyStandards.ms2525d),
     "2525e": normalizeModern(modernStandards.ms2525e),
     app6b: normalizeLegacy(natoStandards.app6b),
@@ -180,7 +182,7 @@ const data = {
 };
 
 fs.mkdirSync(path.join(output, "vendor"), { recursive: true });
-for (const file of ["index.html", "styles.css", "app.js", "modifier-fields.js", "sidc-editor.js", "country-flags.js", "country-codes.js", "country-code-data.js", "editor-helpers.js", "field-reference.js", "identities.js", "profile-controls.js", "favicon.svg"]) {
+for (const file of ["index.html", "styles.css", "app.js", "modifier-fields.js", "sidc-editor.js", "country-flags.js", "country-codes.js", "country-code-data.js", "editor-helpers.js", "field-reference.js", "field-guide.js", "identities.js", "profile-controls.js", "favicon.svg"]) {
   if (file === "index.html") {
     const html = fs.readFileSync(path.join(source, file), "utf8");
     fs.writeFileSync(path.join(output, file), html.replace('<html lang="en">', `<html lang="en" data-local-audit="${!publicBuild}">`));
@@ -224,7 +226,7 @@ const notices = [
 ];
 fs.writeFileSync(path.join(output, "THIRD_PARTY_LICENSES.txt"), notices.join("\n\n----------------------------------------\n\n"));
 if (publicBuild) {
-  const allowed = new Set(["index.html", "styles.css", "app.js", "modifier-fields.js", "sidc-editor.js", "country-flags.js", "country-codes.js", "country-code-data.js", "editor-helpers.js", "field-reference.js", "identities.js", "profile-controls.js", "favicon.svg", "catalog.json", "flags.json", "vendor/milsymbol.js", "vendor/letter-metadata.js", "LICENSE.txt", "THIRD_PARTY_LICENSES.txt"]);
+  const allowed = new Set(["index.html", "styles.css", "app.js", "modifier-fields.js", "sidc-editor.js", "country-flags.js", "country-codes.js", "country-code-data.js", "editor-helpers.js", "field-reference.js", "field-guide.js", "identities.js", "profile-controls.js", "favicon.svg", "catalog.json", "flags.json", "vendor/milsymbol.js", "vendor/letter-metadata.js", "LICENSE.txt", "THIRD_PARTY_LICENSES.txt"]);
   const vendorModule = /^vendor\/(?:lettersidc\/metadata|modifierprofiles\/[a-z0-9-]+)\.js$/;
   const inspect = (directory, prefix = "") => {
     for (const entry of fs.readdirSync(directory, {withFileTypes:true})) {

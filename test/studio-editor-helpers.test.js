@@ -275,11 +275,13 @@ export default {
       ],
       [16, 6, 10]
     ],
-    "reference tables cover the rating, engagement, DTG and location fields": [
-      ["evaluationRating", "engagementBar", "dtg", "location"].every(
-        (key) => Boolean(fieldReference[key]) && fieldReference[key].rows.length > 0
+    // W and Y formats differ by edition (studio/field-guide.js), so they have
+    // no shared code table.
+    "code tables cover the rating and engagement fields only": [
+      Object.keys(fieldReference).filter(
+        (key) => fieldReference[key].rows.length > 0
       ),
-      true
+      ["evaluationRating", "engagementBar"]
     ],
     "evaluation reference lists six reliability and six credibility codes": [
       fieldReference.evaluationRating.rows.length,

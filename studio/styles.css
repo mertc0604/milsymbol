@@ -35,6 +35,10 @@ body {
   margin: 0;
   background: var(--bg);
 }
+/* Fields focused near the bottom stay clear of the List's sticky help line. */
+html {
+  scroll-padding-bottom: 88px;
+}
 button,
 input,
 select,
@@ -397,7 +401,7 @@ textarea::placeholder {
 }
 .export-bar {
   display: grid;
-  grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
   gap: 8px;
 }
 .export-bar button {
@@ -1212,19 +1216,16 @@ a.support-note {
 .layout-warn {
   color: var(--danger);
 }
-.layout-more,
-.profile-extras {
+.layout-more {
   font-size: 12px;
 }
-.layout-more summary,
-.profile-extras summary {
+.layout-more summary {
   width: fit-content;
   color: var(--muted);
   font-weight: 500;
   cursor: pointer;
 }
-.layout-more summary:hover,
-.profile-extras summary:hover {
+.layout-more summary:hover {
   color: var(--blue);
 }
 .layout-more-list {
@@ -1250,71 +1251,91 @@ a.support-note {
   background: none;
   text-decoration: underline;
 }
+/* List view: one column of groups in a fixed order; inside a group the
+   fields flow left to right. Focus never changes the height of anything. */
+.text-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.list-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.list-search {
+  position: relative;
+  flex: 1 1 220px;
+  max-width: 340px;
+}
+.list-search svg {
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  width: 15px;
+  height: 15px;
+  transform: translateY(-50%);
+  fill: none;
+  stroke: var(--faint);
+  stroke-width: 2;
+  pointer-events: none;
+}
+.list-search input {
+  min-height: 32px;
+  padding-left: 30px;
+}
+.list-tools .tool-toggle {
+  min-height: 32px;
+}
+.filter-status {
+  color: var(--muted);
+  font-size: 12px;
+}
 .text-groups {
-  columns: 2 330px;
-  column-gap: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 .modifier-group {
-  break-inside: avoid;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  margin-bottom: 14px;
-  border: 1px solid var(--line-soft);
-  border-radius: 10px;
-  padding: 12px 14px 14px;
 }
-.group-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 8px;
-}
-.group-head h4 {
-  font-size: 13px;
-  font-weight: 600;
-}
-.group-head span {
-  color: var(--faint);
+.modifier-group h4 {
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--muted);
   font-size: 11px;
-  white-space: nowrap;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 .field-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px 12px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr));
+  gap: 12px 14px;
 }
 .text-field {
   display: flex;
   flex-direction: column;
   gap: 5px;
   min-width: 0;
-  border-radius: 8px;
-  padding: 3px;
 }
-.text-field.focused {
-  box-shadow: 0 0 0 2px var(--blue);
-}
-.text-field label {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  font-size: 12px;
-  font-weight: 500;
+.text-field.wide {
+  grid-column: 1 / -1;
 }
 .field-label {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 6px;
-}
-.field-label > span:first-child {
   display: flex;
   align-items: center;
   gap: 6px;
   min-width: 0;
+  font-size: 12px;
+  font-weight: 500;
 }
 .field-label .field-name {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1325,41 +1346,67 @@ a.support-note {
   font-size: 11px;
   font-weight: 400;
   color: var(--faint);
+  visibility: hidden;
+}
+.text-field.focused .field-count,
+.text-field.filled .field-count {
+  visibility: visible;
 }
 .field-count.full {
-  color: var(--danger);
+  color: var(--text);
 }
-.field-tools {
+.text-field.focused .field-label .field-name {
+  color: var(--blue-dark);
+}
+.field-control {
   display: flex;
   gap: 6px;
+  min-width: 0;
 }
-.field-tools button,
-.field-tools select {
-  min-height: 28px;
-  padding: 2px 8px;
+.field-control > input,
+.field-control > select {
+  flex: 1;
+  min-width: 0;
+}
+.field-tool {
+  flex: none;
+  min-height: 36px;
+  padding: 2px 9px;
   font-size: 12px;
-  width: auto;
+  white-space: nowrap;
 }
-.field-help {
-  display: none;
-  flex-direction: column;
+.field-tool[aria-expanded="true"] {
+  border-color: var(--blue);
+  background: var(--soft-blue);
+  color: var(--blue-dark);
+}
+.rating-helper {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 1.45;
 }
-.text-field.focused .field-help {
+.rating-helper label {
   display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
 }
-.field-help details summary {
-  cursor: pointer;
+.field-reference summary {
+  width: fit-content;
   color: var(--blue);
+  font-size: 12px;
+  cursor: pointer;
 }
 .reference-table {
   display: grid;
   grid-template-columns: max-content 1fr;
   gap: 2px 10px;
   margin: 6px 0 0;
+  font-size: 11px;
+  color: var(--muted);
 }
 .reference-table dt {
   font-family: var(--mono);
@@ -1369,44 +1416,98 @@ a.support-note {
 .reference-table dd {
   margin: 0;
 }
-.unavailable-list {
+.field-reference p {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11px;
+}
+/* The help line stays at the bottom of the window while the list scrolls. */
+.list-help {
+  position: sticky;
+  bottom: 8px;
+  z-index: 2;
   display: flex;
   flex-direction: column;
-  border-top: 1px solid #eef1f4;
-  padding-top: 6px;
-}
-.modifier-group.none-available .unavailable-list {
-  border-top: 0;
-  padding-top: 0;
-}
-.unavailable-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  min-height: 28px;
-  color: var(--faint);
+  gap: 2px;
+  height: 64px;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfd;
+  color: var(--muted);
   font-size: 12px;
+  line-height: 18px;
 }
-.unavailable-row > span:first-child {
+.list-help-title {
   display: flex;
   align-items: center;
   gap: 6px;
   min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  color: var(--text);
 }
-.unavailable-row .field-code {
+.list-help-title > :not(.field-code):not(strong):not(.layout-count) {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.list-help-title strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+.list-help-text {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+.unavailable-fields {
+  font-size: 12px;
+}
+.unavailable-fields summary {
+  width: fit-content;
+  color: var(--muted);
+  font-weight: 500;
+  cursor: pointer;
+}
+.unavailable-fields summary:hover {
+  color: var(--blue);
+}
+.unavailable-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+.unavailable-body h5 {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+.unavailable-body ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.unavailable-body li {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 0.9fr) minmax(0, 1.4fr);
+  align-items: baseline;
+  gap: 4px 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--line-soft);
   color: var(--faint);
+}
+.unavailable-body .field-code {
+  color: var(--muted);
   background: #eef1f4;
 }
-.unavailable-row small {
-  flex: none;
-  font-size: 11px;
-}
-.hide-unavailable .unavailable-list {
-  display: none;
-}
-.hide-unavailable .modifier-group.none-available {
-  display: none;
+.unavailable-name {
+  color: var(--muted);
 }
 
 /* Graphics */
@@ -1894,11 +1995,14 @@ dialog p {
   .two-col {
     grid-template-columns: minmax(0, 1fr);
   }
-  .field-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
   .control-scroll {
     padding: 14px 12px 18px;
+  }
+  .unavailable-body li {
+    grid-template-columns: 34px minmax(0, 1fr);
+  }
+  .unavailable-body li small {
+    grid-column: 2;
   }
   .editor-tabs {
     flex-wrap: nowrap;
@@ -1955,8 +2059,8 @@ dialog p {
 }
 .ao-builder {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 8px;
 }
 .ao-part {
   display: flex;
@@ -1978,6 +2082,18 @@ dialog p {
 }
 .ao-preview.problem {
   color: var(--danger);
+}
+.ao-type {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.ao-type select {
+  width: auto;
+  min-width: 160px;
 }
 .carry-notes {
   display: flex;
@@ -2015,10 +2131,6 @@ dialog p {
 .carry-row q {
   font-family: var(--mono);
 }
-.profile-extras > p {
-  margin: 6px 0 4px;
-  color: var(--faint);
-}
 .profile-details {
   display: flex;
   flex-direction: column;
@@ -2050,8 +2162,4 @@ dialog p {
   margin: 6px 0 0;
   padding-left: 16px;
   line-height: 1.45;
-}
-.unavailable-row small {
-  max-width: 55%;
-  text-align: right;
 }

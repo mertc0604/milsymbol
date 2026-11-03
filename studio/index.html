@@ -54,7 +54,7 @@
             <div class="preview-toolbar">
               <span id="previewHint">Transparent background</span>
               <div class="view-actions">
-                <button class="tool-toggle edit-text" id="positionsToggle" type="button" aria-label="Edit text amplifiers at their positions" title="Open Text amplifiers with a box for each field where its text is drawn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4Z" /><path d="m13.5 6.5 4 4" /></svg>Edit text</button
+                <button class="tool-toggle edit-text" id="positionsToggle" type="button" aria-label="Edit text amplifiers at their positions" title="Open Text amplifiers with a box for each field around the symbol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4Z" /><path d="m13.5 6.5 4 4" /></svg>Edit text</button
                 ><button class="tool-toggle active" id="gridToggle" type="button" aria-pressed="true">Grid</button
                 ><button class="tool-toggle" id="outlineToggle" type="button" aria-pressed="false" title="Draw a halo around the symbol">Outline</button>
               </div>
@@ -62,8 +62,7 @@
             <div class="export-bar">
               <button class="export-primary" id="downloadSvg" type="button">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 15v5h14v-5" /></svg>Download SVG</button
-              ><button id="downloadPng" type="button">PNG</button
-              ><button id="copySvg" type="button">Copy SVG</button>
+              ><button id="downloadPng" type="button">PNG</button>
             </div>
           </section>
 
@@ -144,7 +143,7 @@
                 <section class="card-section">
                   <div class="section-head"><h3>Unit designation</h3><span class="section-meta" id="designationMeta"></span></div>
                   <div class="toggle-grid toggle-chips">
-                    <label><input id="hq" type="checkbox" /><span>Headquarters</span></label
+                    <label><input id="hq" type="checkbox" /><span id="hqLabel">Headquarters</span></label
                     ><label><input id="taskForce" type="checkbox" /><span>Task force</span></label
                     ><label><input id="feintDummy" type="checkbox" /><span>Feint / dummy</span></label>
                   </div>
@@ -198,7 +197,6 @@
                 <p class="text-summary"><span id="textSummary"></span
                   ><button id="textInfoButton" class="info-button" type="button" aria-expanded="false" aria-controls="textInfo" aria-label="About these fields" title="About these fields">i</button></p>
                 <div class="text-actions">
-                  <button id="toggleUnavailable" class="tool-toggle" type="button" aria-pressed="true">Hide unavailable</button>
                   <button id="clearText" class="quiet-button" type="button">Clear text</button>
                 </div>
               </div>
@@ -216,8 +214,20 @@
                   <div id="layoutMoreList" class="layout-more-list"></div>
                 </details>
               </section>
-              <div id="app6aTextFields" class="text-groups"></div>
-              <details id="profileExtras" class="profile-extras" hidden></details>
+              <div id="textList" class="text-list">
+                <div id="listTools" class="list-tools">
+                  <label class="list-search"><span class="visually-hidden">Find a text field by name or code</span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 4.5 4.5" /></svg
+                    ><input id="fieldFilter" type="search" placeholder="Find a field: name or code" autocomplete="off" spellcheck="false" aria-controls="app6aTextFields" /></label>
+                  <button id="filledOnly" class="tool-toggle" type="button" aria-pressed="false" aria-controls="app6aTextFields">Filled only</button>
+                </div>
+                <p id="filterStatus" class="filter-status" role="status" hidden></p>
+                <div id="app6aTextFields" class="text-groups"></div>
+                <p id="listHelp" class="list-help" aria-hidden="true"></p>
+              </div>
+              <details id="unavailableFields" class="unavailable-fields" hidden>
+                <summary id="unavailableSummary"></summary>
+                <div id="unavailableBody" class="unavailable-body"></div>
+              </details>
             </div>
 
             <div id="panel-style" role="tabpanel" aria-labelledby="tab-style" hidden>
@@ -238,7 +248,7 @@
                       <div class="direction-quick" role="group" aria-label="Quick headings">
                         <button type="button" data-direction="0">N</button><button type="button" data-direction="90">E</button><button type="button" data-direction="180">S</button><button type="button" data-direction="270">W</button><button type="button" data-direction="-1">Off</button>
                       </div>
-                      <label class="number-field"><span>Degrees</span><input id="directionNumber" type="number" min="0" max="360" step="1" placeholder="Off" /></label>
+                      <label class="number-field"><span>Degrees</span><input id="directionNumber" type="number" min="0" max="360" step="1" placeholder="Off" aria-describedby="directionNote" /></label>
                     </div>
                   </div>
                   <p class="field-note" id="directionNote"></p>
@@ -247,8 +257,8 @@
                 <section class="card-section">
                   <div class="section-head"><h3>Graphic amplifiers</h3></div>
                   <div class="control-group two-col">
-                    <label><span>Speed leader length <small>AJ</small></span><input id="speedLeader" type="number" min="0" max="500" value="0" /><span class="modifier-description">Movement line length in pixels. Set a direction; 0 uses the normal arrow.</span></label>
-                    <label><span>HQ staff length <small>S</small></span><input id="hqStaffLength" type="number" min="0" max="500" value="0" /><span class="modifier-description" id="hqStaffNote">Applies when Headquarters is selected. 0 uses the default length.</span></label>
+                    <label><span>Speed leader length <small>AJ</small></span><input id="speedLeader" type="number" min="0" max="500" value="0" aria-describedby="speedLeaderNote" /><span class="modifier-description" id="speedLeaderNote">Movement line length in pixels. Set a direction; 0 uses the normal arrow.</span></label>
+                    <label><span><span id="hqStaffLabel">HQ staff length</span> <small>S</small></span><input id="hqStaffLength" type="number" min="0" max="500" value="0" aria-describedby="hqStaffNote" /><span class="modifier-description" id="hqStaffNote">Applies when Headquarters is selected. 0 uses the default length.</span></label>
                   </div>
                 </section>
 
@@ -349,10 +359,10 @@
         current code. Messages below the box explain what was applied or why a code was rejected.
       </p>
       <p>
-        Edit text, under the preview, opens Text amplifiers in Field positions: a box for each field where its text is drawn
-        around the symbol; type in a box to set that field. The List view shows every field with its rules and tools. SVG
-        is a scalable
-        vector file; PNG is exported with a transparent background. Copying the SIDC alone does not include text or appearance
+        Edit text, under the preview, opens Text amplifiers in Field positions: a box for each field around the symbol, in
+        the order the standard places it (the boxes are spaced apart for typing; the preview shows the exact placement).
+        The List view shows the fields that apply to the symbol, with their rules and tools; the others are listed, closed,
+        under it. SVG is a scalable vector file; PNG is exported with a transparent background. Copying the SIDC alone does not include text or appearance
         settings.
       </p>
       <p>

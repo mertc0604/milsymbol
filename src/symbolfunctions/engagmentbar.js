@@ -13,22 +13,25 @@ export default function engagement(ms) {
     this.options.engagementBar !== "" &&
     !(this.metadata.app6a && this.options.sidc[0] === "S")
   ) {
-    // APP-6(D): AO sits above the B/C/D cell, so above a quantity text
-    // (Figure 3-3 PDF 84/3-4, Figure 3-14 PDF 161/3-81).
+    // APP-6(D) and MIL-STD-2525C: AO sits above the B/C/D cell, so above a
+    // quantity text (APP-6D Figure 3-3 PDF 84/3-4, Figure 3-14 PDF 161/3-81;
+    // 2525C Figure 2 PDF 27/21). 2525C draws C on the frame (no quantityTop).
     let aoLift = 0;
     if (
-      this.metadata.app6d &&
+      (this.metadata.app6d || this.metadata.std2525c) &&
       this.style.infoFields &&
       this.options.quantity &&
-      this.metadata.quantityTop !== undefined &&
       ((this.metadata.textLayout || {}).top || []).indexOf("quantity") >= 0
-    )
+    ) {
+      const quantityTop =
+        this.metadata.quantityTop !== undefined
+          ? this.metadata.quantityTop
+          : this.metadata.baseGeometry.bbox.y1;
       aoLift = Math.max(
         0,
-        bbox.y1 -
-          (this.metadata.quantityTop - 10 - this.style.infoSize * 0.75) -
-          1
+        bbox.y1 - (quantityTop - 10 - this.style.infoSize * 0.75) - 1
       );
+    }
     y1 -= 6 + aoLift;
     const fontFamily = this.style.fontfamily;
     const fontColor =

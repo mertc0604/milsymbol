@@ -5,14 +5,14 @@
 // APP-6D sector helpers are passed in, so this file works in the page and in
 // Node tests without importing the vendor copy.
 
-// SIDC-level problems of a candidate code. Every `*Errors` list a profile
-// reports counts (modifierErrors, sidcErrors, identityErrors, ...). Option
-// values are not part of the question, so validate() is called without any.
-export function profileErrors(profile, sidc) {
+// Problems of a candidate code. Every `*Errors` list a profile reports counts
+// (modifierErrors, sidcErrors, identityErrors, ...). For SIDC-level questions
+// option values are not part of the question, so validate() gets none.
+export function profileErrors(profile, sidc, options = {}) {
   if (!profile) return [];
   let details;
   try {
-    details = (profile.validate(sidc, {}) || {}).details || {};
+    details = (profile.validate(sidc, options) || {}).details || {};
   } catch {
     return [];
   }
@@ -101,6 +101,128 @@ export function explainUnavailable(state, extras = []) {
     short: same ? `${short}. ${humanize(same.reason)}` : short,
     full: same ? `${full} | ${same.reason}` : full
   };
+}
+
+// Errors that `options` add to the symbol over `base`.
+function addedErrors(profile, sidc, options, base) {
+  const before = profileErrors(profile, sidc, base);
+  return profileErrors(profile, sidc, options).filter(
+    (error) => !before.includes(error)
+  );
+}
+
+// ------------------------------------------------------ graphic amplifiers
+
+// Q (direction of movement) and AJ (speed leader) for this symbol, from the
+// edition profile: a control applies when the validator accepts it here. AJ
+// starts from the direction, so it applies only where Q does. A profile that
+// lists Q among its fields for the symbol (APP-6A Table III, 2525C Table IV)
+// also lists AJ when the symbol takes it. An edition without a profile, or a
+// symbol outside its field tables, keeps both. `title` names the edition's
+// table in the reasons.
+export function movementControls(profile, sidc, title = "This edition's field table") {
+  const yes = { applies: true, reason: "" };
+  const fields = profile && profile.fields(sidc);
+  if (!fields) return { direction: yes, speedLeader: yes };
+  const q = addedErrors(profile, sidc, { direction: 90 }, {});
+  if (q.length)
+    return {
+      direction: { applies: false, reason: q[0] },
+      speedLeader: {
+        applies: false,
+        reason: "AJ starts from the direction of movement (Q), which does not apply here"
+      }
+    };
+  const listed = (key) => fields.some((item) => item.key === key);
+  if (listed("direction") && !listed("speedLeader"))
+    return {
+      direction: yes,
+      speedLeader: { applies: false, reason: `${title} has no AJ speed leader` }
+    };
+  const aj = addedErrors(
+    profile,
+    sidc,
+    { direction: 90, speedLeader: 30 },
+    { direction: 90 }
+  );
+  return {
+    direction: yes,
+    speedLeader: aj.length ? { applies: false, reason: aj[0] } : yes
+  };
+}
+
+// The engagement bar type (the target designation colour of the bar) belongs
+// to AO; it is not a lettered field. It is offered where AO is and where the
+// edition's validator knows the option (it rejects an unknown value) and
+// accepts a type for this symbol: APP-6D colours hostile tracks only
+// (section 1.2.1 items 11-12 PDF 38-39). 2525C has no such option.
+export function engagementTypeState(profile, sidc, aoAvailable) {
+  if (!aoAvailable)
+    return { available: false, reason: "Set together with the engagement bar (AO)" };
+  if (!profile || !profile.fields(sidc)) return { available: true, reason: "" };
+  const base = { engagementBar: "ENG" };
+  const unknown = addedErrors(profile, sidc, { ...base, engagementType: "?" }, base);
+  if (!unknown.length)
+    return { available: false, reason: "This edition defines no engagement bar type" };
+  const target = addedErrors(profile, sidc, { ...base, engagementType: "TARGET" }, base);
+  return target.length
+    ? { available: false, reason: target[0] }
+    : { available: true, reason: "" };
+}
+
+// ------------------------------------------------- fields of an edition
+
+// A form key as the edition names it: {field, label}, or null when the
+// edition has no such field (the key is another edition's field: 2525C AC is
+// the installation graphic, not country text). `undefined` when the edition
+// has no field table here, so the form's own name stays. tables:
+// {app6a: app6aTextFields, "2525c": std2525cTableIV}.
+export function editionField(standardId, key, tables) {
+  const table = tables && tables[standardId];
+  if (!table) return undefined;
+  const entry = table.find((item) => item.key === key);
+  return entry ? { field: entry.field, label: entry.label || entry.title } : null;
+}
+
+// Graphics the edition defines for this symbol that this editor cannot set.
+// They need data the editor does not hold (map positions, tracks) or have no
+// SIDC position or renderer option. Rows: {field, label, reason}.
+export function editorGaps({ standardId, profile, sidc, tables, movement }) {
+  const rows = [];
+  const symbolClass = profile ? profile.symbolClass(sidc) : "";
+  if (standardId === "2525c" && tables && tables["2525c"] && symbolClass) {
+    const index = ["unit", "equipment", "installation"].indexOf(symbolClass);
+    for (const entry of tables["2525c"]) {
+      if (entry.support !== "dynamic" || index < 0 || entry.limits[index] === null) continue;
+      rows.push({
+        field: entry.field,
+        label: entry.title,
+        reason: "A dynamic map graphic built from track data (5.3.4.11); this editor has no position or track data"
+      });
+    }
+    if (index > -1)
+      rows.push({
+        field: "S",
+        label: "Offset Location Indicator",
+        reason: "Its elbow ends at the actual location (5.3.4.9), which this editor does not hold; the headquarters staff is set in the Symbol tab"
+      });
+  }
+  if (standardId === "app6a" && symbolClass === "installation")
+    rows.push({
+      field: "S",
+      label: "Location offset indicator",
+      reason: "Table III S applies to installations (505.1e), but SIDC position 11 holds the installation H and the renderer has no separate option"
+    });
+  if (standardId === "app6d") {
+    for (const extra of profileExtraFields(profile, sidc, [])) rows.push(extra);
+    if (symbolClass === "landInstallation" && movement && !movement.direction.applies)
+      rows.push({
+        field: "Q",
+        label: "Offset location indicator",
+        reason: "On installations Q is the offset location line, not a direction arrow (Table 3-22 PDF 217); the renderer cannot draw it"
+      });
+  }
+  return rows;
 }
 
 // ------------------------------------------------------------------ sectors

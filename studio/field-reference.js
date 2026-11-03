@@ -1,4 +1,6 @@
-// Reference tables shown under the focused text amplifier.
+// Code tables behind two text amplifiers: the J scale picker labels its
+// choices with the evaluation codes, and AO opens its code table on request in
+// the editions that use the A:BBB-CC grammar without a field table here.
 export const fieldReference = {
   evaluationRating: {
     title: "Evaluation rating codes",
@@ -43,25 +45,5 @@ export const fieldReference = {
       ["02–99", "CC: number of engagements"]
     ],
     note: "Example: R:ENG-M is a remote engagement with a missile."
-  },
-  dtg: {
-    title: "Date-time group format",
-    rows: [
-      ["DD", "Day of the month"],
-      ["HHMM", "Hour and minute"],
-      ["Z", "Time zone suffix, Z for UTC"],
-      ["MON", "Three-letter month, for example NOV"],
-      ["YY", "Year; YYYY where the symbol's field asks for four digits (APP-6D land units)"],
-      ["O/O", "On order"]
-    ],
-    note: "Example: 021435ZNOV26. Now (UTC) fills the current time in the format of this symbol's field."
-  },
-  location: {
-    title: "Location formats",
-    rows: [
-      ["MGRS", "35T PF 1234 5678"],
-      ["Degrees and minutes", "4100.5N02858.2E"]
-    ],
-    note: "Use the display format your plan or system requires."
   }
 };
