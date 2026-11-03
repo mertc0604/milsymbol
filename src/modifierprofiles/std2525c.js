@@ -12,6 +12,8 @@
 // field restriction, no layout, always valid) and keeps its current rendering.
 // See docs/std2525c-modifiers.md for the rule matrix and decision records.
 
+import { isBlank } from "./common.js";
+
 const CLASSES = ["unit", "equipment", "installation"];
 const IDENTITIES = "PUAFNSHGWMDLJK";
 const DIMENSIONS = "PAGSUFXZ";
@@ -171,8 +173,13 @@ export function normalizeSidc(sidc) {
 //   G Ground          function ID starts with I -> installation, E -> equipment,
 //                     anything else (U, or the generic ------) -> unit
 //   P A S U           space, air, sea surface, subsurface platforms -> equipment
-//   F SOF             unit (every catalogue entry is "SOF UNIT"; Table IV note 2
-//                     lists SOF under equipment, recorded as a source tension)
+//   F SOF             unit. Table IV note 2 (PDF 30 / 24) lists SOF under
+//                     equipment, but SOF aircraft are in the AIR dimension
+//                     (Table A-III, PDF 63-64), every F entry is a "SOF UNIT"
+//                     (Table A-III, PDF 94) and 5.3.1.3 (PDF 23 / 17) gives
+//                     units the rectangle frame. The note covers SOF platforms,
+//                     which are equipment through their own dimension. See
+//                     docs/std2525c-modifiers.md, decision 12.
 //   Z X               no object class is known -> "unknown"; only fields that
 //                     apply to units, equipment and installations alike are open
 // Limits: the H installation modifier (SIDC 11) does not change the class; a
@@ -209,11 +216,13 @@ function maxLengthOf(limit) {
   return limit === "G/8" ? 8 : null;
 }
 
-// Identity restriction: L is "a text modifier for hostile equipment" (Table IV).
-// Hostile is read as identity H or S; exercise and J/K roles are not included
-// (product policy, see docs).
+// Identity restriction: L is "a text modifier for hostile equipment" (Table IV,
+// PDF 28 / 22). Hostile is the identity H only. Suspect is a separate identity
+// defined as "potentially hostile" (3.2.42, PDF 16 / 10), so S is not hostile;
+// exercise identities and Joker/Faker (J, K) are not included either. The same
+// reading as APP-6A (Table III, definition 32). See docs, decision 13.
 function identityAllows(key, sidc) {
-  return key !== "signatureEquipment" || "HS".indexOf(sidc.charAt(1)) > -1;
+  return key !== "signatureEquipment" || sidc.charAt(1) === "H";
 }
 
 // One applicability rule used by fields, unavailableReason, validate and the
@@ -226,8 +235,9 @@ function applicable(key, sidc) {
   return limit !== null && identityAllows(key, sidc);
 }
 
+// A missing, empty or whitespace-only value is not present (common.js isBlank).
 function present(value, key) {
-  if (value === undefined || value === null || value === "") return false;
+  if (isBlank(value)) return false;
   return !(key === "speedLeader" && Number(value) === 0);
 }
 function length(value) {
@@ -395,10 +405,6 @@ export function std2525cValidate(sidc, options) {
         "Tables I/II draw P A S G M with an uncertainty contour while 5.3.1.4 maps dashed to planned; identity uncertainty and planned status are kept as separate data and the source gives no combining algorithm (the identity contour is drawn)"
       );
   }
-  if (cls === "unknown" && dimension === "F")
-    notes.push(
-      "Table IV note 2 lists SOF under equipment; SOF is treated as units"
-    );
 
   // SIDC 11-12.
   std2525cModifierRules(sidc).errors.forEach((message) => errors.push(message));
@@ -429,7 +435,7 @@ export function std2525cValidate(sidc, options) {
           ": not applicable to " +
           (cls === "unknown" ? "this symbol" : cls + " symbols") +
           (key === "signatureEquipment"
-            ? " (L is for hostile equipment, identity H or S)"
+            ? " (L is for hostile equipment, identity H only)"
             : " (Table IV)")
       );
       return;
@@ -542,7 +548,7 @@ export const std2525cProfile = {
       key === "signatureEquipment" &&
       limitOf(entry, std2525cSymbolClass(sidc)) !== null
     )
-      return "L is for hostile equipment (identity H or S)";
+      return "L is for hostile equipment (identity H only)";
     return (
       entry.field +
       " is not applicable to " +

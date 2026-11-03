@@ -26,7 +26,7 @@ Class is the real object class, derived from SIDC positions 3 and 5:
 | dimension G, function ID starts with `E` | equipment |
 | dimension G, any other (`U...`, `------`) | unit |
 | dimension P A S U (space, air, sea surface, subsurface) | equipment (Table IV note 2, PDF 30 / 24) |
-| dimension F (SOF) | unit (product policy, see decision 12) |
+| dimension F (SOF) | unit (see decision 12) |
 | dimension Z X | unknown: only fields that apply to U, E and I alike are open |
 
 Limits: the class is read from the first function letter, so a hand-written
@@ -52,7 +52,7 @@ the same table.
 | H | additionalInformation | 20 | 20 | 20 | free text |
 | J | evaluationRating | 2 | 2 | 2 | `[A-F][1-6]`, 36 pairs |
 | K | combatEffectiveness | 5 | - | 5 | free text, SO value 3 not carried |
-| L | signatureEquipment | - | 1 | - | `!` only, hostile (H, S) |
+| L | signatureEquipment | - | 1 | - | `!` only, hostile equipment: identity H only (decision 13) |
 | M | higherFormation | 21 | - | - | |
 | N | hostile | - | 3 | - | `ENY` only |
 | P | iffSif | 5 | 5 | 5 | |
@@ -77,6 +77,14 @@ the same table.
 | AM AN | distance, azimuth | - | - | - | Table XIV only |
 | AO | engagementBar | G/8 | G/8 | G/8 | length 8 only; no `A:BBB-CC` grammar in 2525C |
 
+A value that is only whitespace (what `String.prototype.trim()` removes, including
+no-break and ideographic spaces) is empty: it creates no row, reserves no
+separator, and is not "present" for validation. Non-blank text is not trimmed.
+This is product policy shared by all three edition profiles and implemented in
+`src/modifierprofiles/common.js` (`isBlank`, `joinFields`, `clearBlankText`,
+applied by `applyProfile` to the symbol's own options). The source does not
+define whitespace handling.
+
 Display length is counted in Unicode code points (a modern-display choice; the
 transmission lengths of Table XIV are ASCII and are a separate matter). The
 source gives no character set, so none is enforced.
@@ -84,8 +92,9 @@ source gives no character set, so none is enforced.
 ## Values
 
 - **J**: reliability A-F and credibility 1-6, 36 pairs (Table IV, PDF 28 / 22).
-- **L**: `!` only, and only on hostile equipment (identity H or S; product reading
-  of "text modifier for hostile equipment"; exercise Joker/Faker are not included).
+- **L**: `!` only, and only on equipment of identity H (decision 13). Suspect (S),
+  the exercise identities and Joker/Faker (J, K) are not hostile and are rejected;
+  the unavailable reason reads "L is for hostile equipment (identity H only)".
 - **N**: `ENY` only. Independent of identity H: choosing H does not generate it
   and `hostile: "ENY"` does not change the SIDC.
 - **F**: the API accepts the display forms `(+)`, `(-)`, `(±)`. The transmission
@@ -107,6 +116,23 @@ A planned (dashed frame); P present, "Units only"; C, D, X, F equipment and
 installations only (units are an error, the renderer draws no AL on units).
 P on equipment/installation is allowed and recorded as a note (decision 5).
 
+**AL operational condition, checked against the PDF (Tables III-1 and III-2, PDF 24-25 / 18-19;
+5.3.4.12, PDF 37 / 31).** Alternate form (default, `simpleStatusModifier` off, filled):
+a bar under the symbol, as wide as the frame (the PDF shows 92-100% of the symbol
+width), green fully capable (C), yellow damaged (D), red destroyed (X), blue full to
+capacity (F). The colours sampled from the PDF page render are (0,255,0), (255,255,0),
+(255,0,0) and (0,176,240); the renderer uses (0,255,0), (255,255,0), (255,0,0) and
+(0,180,240), so full-to-capacity differs by 4 in one channel and was not changed (a raster
+sample is not a normative value). Static form (`simpleStatusModifier`, monochrome or
+unfilled): a slash rising to the right for damaged, a cross for destroyed, nothing for
+fully capable (Table III-1 note 1: "fully capable ... or when the operational condition
+is unknown"), and nothing for full to capacity (N/A in III-1; a note records it).
+Applies to air, space, land equipment, land installations, sea surface and subsurface;
+never to units or the F (SOF) unit class. Planned A and present P draw no bar or slash.
+The P-on-equipment reading "rendered using the applicable operational condition modifier"
+(Table III, PDF 24 / 18) would give a green bar in the alternate form; the profile keeps the
+SIDC as given and records it as decision 5 instead of inventing a bar for P.
+
 ## Identities (Tables I/II, A-I)
 
 All 14 codes P U A F N S H G W M D L J K are accepted. Joker and Faker use the
@@ -124,8 +150,19 @@ echelon, task force, mobility and array are neither drawn nor accepted. For
 equipment and installations only `-`, `A`, `C`, `F`, `H-`, `HB` (HQ and
 feint/dummy, U/E/I per Table IV S and AB) are valid with an empty second
 character; echelon letters and task-force codes (B, D, E, G) are unit-only.
-Mobility is equipment-only and not intrinsic to the icon. Towed array on
-non-sonar equipment is not further restricted.
+Mobility is equipment-only and not intrinsic to the icon.
+
+**Towed array (AG, `NS` short, `NL` long).** Source: Table IV AG (PDF 30 / 24): "a
+graphic modifier for equipment" with U and I as dashes; 5.3.4.4 (PDF 33 / 27): "only
+used for towed equipment"; Table VII (PDF 34 / 28): short and long arrays drawn
+on a submarine in every identity; Table A-II (PDF 60 / 54): `NS`, `NL`. Enforced:
+equipment class only (units, installations and the SOF unit class get an AG error and
+draw nothing; an unknown-class symbol, dimension Z or X, is not rejected because its
+class cannot be told). Not enforced, because the source says nothing: restriction
+to sonar, subsurface or sea symbols (Table VII shows only a submarine, which is an
+example, not a rule). Short draws 3 markers and long 5 on a 100 unit line below the
+symbol, as Table VII. The inner marker glyph differs (the PDF shows a square with a
+tick, the renderer a diamond); it was not changed.
 
 ## Layout (Figure 2, PDF 27 / 21; 5.4.4, PDF 40 / 34)
 
@@ -161,10 +198,38 @@ AB, AO (above), R/AG and the AL bar (below) are graphics drawn by their parts.
 10. **AO grammar**: only the 8-character limit is enforced.
 11. **AB cross-reference** (5.3.4.7 says table III): the field definition in
     Table IV is used.
-12. **SOF class** (Table IV note 2 lists SOF under equipment; every catalogue
-    entry is "SOF UNIT" and 5.3.1.3 gives the unit frame): SOF is treated as
-    units. This is product policy; equipment-only fields (C L N R V) are errors
-    on SOF.
+12. **SOF class (F dimension stays a unit)**. Table IV note 2 (PDF 30 / 24) says
+    "Equipment includes air, space, sea surface, subsurface, and SOF, as well as
+    land-based equipment as shown in table I". Three pieces of evidence say that
+    the note covers SOF *platforms*, and those are already equipment through
+    another dimension, while the F dimension itself holds units only:
+    - SOF aircraft are in the AIR dimension (Table A-III, PDF 63-64 / 57-58:
+      `WAR.AIRTRK.MIL.FIXD.SOF` and `WAR.AIRTRK.MIL.FIXD.DRN.SOF` on PDF 63,
+      `WAR.AIRTRK.MIL.ROT.SOF` on PDF 64, all with SIDC dimension `A`), so they
+      take the equipment fields as air.
+    - Every F entry of the symbol hierarchy is a unit: 1.X.6 "SPECIAL OPERATIONS
+      FORCES (SOF) UNIT", and the children are "SOF UNIT ..." (Table A-III, PDF 94 /
+      88; catalogue pages from PDF 303; `WAR.SOFUNT`, SIDC dimension `F`). There
+      is no equipment entry under F.
+    - 5.3.1.3 (PDF 23 / 17): "All units, regardless of service affiliation ... are
+      depicted with a rectangle frame"; the SOF frame is the unit rectangle.
+    Result: dimension F is class "unit" (no code change, `std2525cSymbolClass`
+    returns "unit"). Equipment-only fields (C L N R V) are errors on F, and unit
+    fields (B D F K M AA) are open. This is a reading of the note against the
+    catalogue, recorded as product policy; no note is emitted per symbol because
+    no remaining ambiguity applies to the F catalogue entries.
+13. **L identity (H only)**. Table IV L (PDF 28 / 22): "A text modifier for hostile
+    equipment; ! indicates detectable electronic signatures". Hostile is the
+    identity H (Tables I/II). The standard defines Suspect separately, as an
+    identity that is "potentially hostile because of its characteristics,
+    behavior, origin, or nationality" (3.2.42, PDF 16 / 10), so S is not hostile
+    equipment. Joker, Faker (J, K) and the exercise identities are not hostile
+    either. L is therefore accepted only for equipment of identity H. APP-6A
+    (Table III "hostile equipment only", PDF 25 / 19; definition 32 Suspect, PDF 16
+    / 10) reads the same way. A previous reading of the 2525C profile allowed H and
+    S; that was removed. (The Studio helper `studio/editor-helpers.js` may still
+    mention H/S; it is not part of this profile and is reported to the Studio
+    owner.)
 
 ## Coverage limits
 

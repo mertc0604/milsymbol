@@ -25,13 +25,69 @@
 //                            keys in source order. top/inner/bottom list the
 //                            option keys allowed in those positions.
 
+// A value that is only whitespace (or missing) is empty. It does not create a
+// row, reserve a separator, or count as "present" for validation. Whitespace is
+// what String.prototype.trim() removes. Non-blank values are never trimmed.
+export function isBlank(value) {
+  return value == null || String(value).trim() === "";
+}
+
 // Join the non-empty values of one shared field position in source order.
-// Empty modifiers collapse: no separator is reserved for them.
+// Empty and whitespace-only modifiers collapse: no separator is reserved.
 export function joinFields(options, keys, separator = " ") {
   return (keys || [])
-    .map((key) => String(options[key] == null ? "" : options[key]))
-    .filter((value) => value !== "")
+    .map((key) => (options[key] == null ? "" : String(options[key])))
+    .filter((value) => !isBlank(value))
     .join(separator);
+}
+
+// Text options a symbol can carry (src/ms/symbol.js). Only these are touched by
+// clearBlankText; sidc and any unknown key are left alone.
+export const textOptionKeys = [
+  "quantity",
+  "reinforcedReduced",
+  "staffComments",
+  "additionalInformation",
+  "evaluationRating",
+  "combatEffectiveness",
+  "signatureEquipment",
+  "higherFormation",
+  "hostile",
+  "iffSif",
+  "sigint",
+  "uniqueDesignation",
+  "type",
+  "dtg",
+  "altitudeDepth",
+  "location",
+  "speed",
+  "specialHeadquarters",
+  "country",
+  "platformType",
+  "equipmentTeardownTime",
+  "commonIdentifier",
+  "auxiliaryEquipmentIndicator",
+  "headquartersElement",
+  "installationComposition",
+  "engagementBar",
+  "engagementType",
+  "guardedUnit",
+  "specialDesignator"
+];
+
+// Whitespace-only text options become "" and a whitespace-only direction
+// becomes undefined. This runs on the symbol's own options object (setOptions
+// copies the values the caller passes, so the caller's object is untouched),
+// before the profile validates or the renderer reads the options, so every
+// consumer sees the same "empty".
+export function clearBlankText(options) {
+  textOptionKeys.forEach((key) => {
+    if (typeof options[key] === "string" && isBlank(options[key]))
+      options[key] = "";
+  });
+  if (typeof options.direction === "string" && isBlank(options.direction))
+    options.direction = undefined;
+  return options;
 }
 
 // Every option key a layout can draw.
@@ -48,6 +104,7 @@ export function layoutKeys(layout) {
 
 // Store a profile's validation and layout on symbol metadata.
 export function applyProfile(profile, sidc, options, metadata) {
+  clearBlankText(options);
   metadata.profile = profile.id;
   metadata.validation = profile.validate(sidc, options);
   const layout = profile.textLayout(sidc);

@@ -3,6 +3,8 @@
 // 15-17), Table III (PDF 25-27 / 19-21), Figure 2a (PDF 28 / 22), 506.2 (PDF
 // 32-33 / 26-27), Table B-II (PDF 75-77 / 69-71). Not from current output.
 import { ms, app6a } from "../index.mjs";
+import { joinFields } from "../src/modifierprofiles/common.js";
+import { drawExtents, viewBoxOf, intersects, outside } from "./draw-extents.js";
 import {
   app6aProfile,
   getApp6aFields,
@@ -266,6 +268,128 @@ const offset = make("SFGPEWAL--A----");
 sizes["equipment A- is a location offset, units are headquarters"] = [[offset.isValid(), offset.metadata.headquarters, offset.metadata.locationOffset, single("A-").metadata.locationOffset], [true, true, true, false]];
 sizes["equipment may carry feint/dummy (Table III AB)"] = [valid("SFGPEWAL--F----"), true];
 sizes["HQ + TF + FD + echelon together, no duplicate glyphs"] = [(() => { const s = make("SFGPUCI---DI---"); return [count(s, "headquarters"), count(s, "taskforce"), count(s, "feintdummy"), s.isValid()]; })(), [hq1, tf1, fd1, true]];
+
+// ------------------------------------------- bounding box and row placement
+// HQ staff / location offset (S), direction arrow (Q), echelon (B), task force
+// (D), feint/dummy (AB) and mobility (R) together with a full set of text rows.
+// Q (505.1a, PDF 30 / 24; Figure 2a, PDF 28 / 22): land symbols get a bent arrow
+// from the bottom centre of the frame (also with a staff, Figure 2a shows S and
+// Q ground together); every other symbol an arrow from the centre. The headquarters
+// staff is one frame height long (Annex C.4.1c, PDF 124 / 118). AO is not an
+// APP-6A S field and is not drawn.
+const placement = section("Bounding box and row placement (S, Q, B, D, AB, R with text)");
+const rowText = { dtg: "021435ZNOV26", altitudeDepth: "100", location: "3N 4E", uniqueDesignation: "T1", speed: "9", reinforcedReduced: "(+)", staffComments: "G1", additionalInformation: "H1", higherFormation: "M1", evaluationRating: "B2", combatEffectiveness: "85", iffSif: "1", specialHeadquarters: "USCINCPAC" };
+const equipmentRowText = { dtg: "021435ZNOV26", altitudeDepth: "100", location: "3N 4E", uniqueDesignation: "T1", speed: "9", type: "TANK", quantity: "12", staffComments: "G1", additionalInformation: "H1", evaluationRating: "B2", iffSif: "1", hostile: "ENY", signatureEquipment: "!" };
+const combos = [];
+for (const first of "-ABCD") for (const second of "-AFIM") combos.push(["unit", `SAGPUCI---${first}${second}---`, rowText]);
+combos.push(["pending unit", "SPGPUCI---DM---", rowText]);
+for (const code of ["A-", "C-", "--", "MO", "MQ", "MS", "MY"]) combos.push(["equipment", `SHGPEWAL--${code}---`, equipmentRowText]);
+const installationRowText = Object.assign({}, rowText);
+for (const key of ["reinforcedReduced", "higherFormation", "specialHeadquarters"]) delete installationRowText[key];
+for (const code of ["H-", "HB"]) combos.push(["installation", `SFGPI-----${code}---`, installationRowText]);
+combos.push(["air", "SHAPMF---------", equipmentRowText], ["sea surface", "SHSPCL---------", equipmentRowText], ["subsurface", "SHUPSS--------", equipmentRowText]);
+const directions = [undefined, 0, 45, 90, 135, 180, 225, 270, 315];
+const round = (n) => Math.round(n * 1000) / 1000;
+// Echelon and task force glyphs are wider than the frame and may reach into the
+// first text rows (not source-defined, see docs); the arrow crosses the frame by design.
+const widerThanFrame = (e) => /echelon|taskforce/.test(e.part.cssClass || "");
+for (const [kind, sidc, text] of combos) {
+  for (const direction of directions) {
+    const name = `${kind} ${sidc} direction ${direction}`;
+    const symbol = make(sidc, direction === undefined ? text : Object.assign({}, text, { direction }));
+    const view = viewBoxOf(symbol.asSVG());
+    const all = drawExtents(symbol.drawInstructions, symbol.style.strokeWidth);
+    const frameBox = symbol.metadata.baseGeometry.bbox;
+    const rows = all.filter((e) => e.kind === "text" && !e.part.icon && e.part.textanchor !== "middle");
+    const label = (e) => e.part.text || String(e.part.d).slice(0, 30);
+    placement[`${name}: valid`] = [symbol.isValid(), true];
+    placement[`${name}: SVG viewBox contains every drawn part`] = [all.filter((e) => outside(e.outer, view)).map(label), []];
+    placement[`${name}: viewBox is the symbol bbox plus the stroke width`] = [[view.x1, view.y1, view.x2, view.y2].map(round), [symbol.bbox.x1 - 4, symbol.bbox.y1 - 4, symbol.bbox.x2 + 4, symbol.bbox.y2 + 4].map(round)];
+    placement[`${name}: text rows do not overlap the frame`] = [rows.filter((e) => intersects(e.box, frameBox)).map(label), []];
+    placement[`${name}: left rows end and right rows start outside the frame`] = [rows.every((e) => (e.part.textanchor === "end" ? e.part.x <= frameBox.x1 : e.part.x >= frameBox.x2)), true];
+    placement[`${name}: text rows clear of staff, feint/dummy and installation bar`] = [
+      rows.filter((r) => all.some((g) => g.kind !== "text" && /headquarters|feintdummy|installation/.test(g.part.cssClass || "") && intersects(r.box, g.box))).map(label),
+      []
+    ];
+    if (direction === undefined) {
+      placement[`${name}: text rows clear of every other graphic (mobility, frame)`] = [
+        rows.filter((r) => all.some((g) => g.kind !== "text" && !g.part.icon && !widerThanFrame(g) && intersects(r.box, g.box))).map(label),
+        []
+      ];
+    }
+    const arrowGroups = parts(symbol).filter((p) => p.type === "translate" || p.type === "rotate");
+    if (direction !== undefined) {
+      const land = kind === "unit" || kind === "pending unit" || kind === "equipment" || kind === "installation";
+      const stem = parts(symbol).filter((p) => p.type === "path" && p.d === `M 100,${frameBox.y2}l0,100`);
+      placement[`${name}: land arrow starts at the bottom centre of the frame, others at the centre`] = [
+        land ? [stem.length, arrowGroups.some((g) => g.type === "translate" && g.x === 0 && g.y === frameBox.y2)] : [stem.length, arrowGroups.some((g) => g.type === "translate")],
+        land ? [1, true] : [0, false]
+      ];
+    }
+    const staffed = /^S.G.[UE].{5}(A|B|C|D)/.test(sidc);
+    const staff = parts(symbol).filter((p) => /headquarters/.test(p.cssClass || ""));
+    if (staffed) {
+      const staffBox = all.filter((e) => /headquarters/.test(e.part.cssClass || ""))[0].box;
+      placement[`${name}: staff is on the left edge and one frame height below the frame`] = [[staff.length, staffBox.x1, staffBox.x2, staffBox.y1 >= frameBox.y1, staffBox.y2 - frameBox.y2], [1, frameBox.x1, frameBox.x1, true, 100]];
+    }
+  }
+}
+const withBar = make("SAGPUCI---AF---", Object.assign({ engagementBar: "A:BBB-CC", direction: 90 }, rowText));
+const withoutBar = make("SAGPUCI---AF---", Object.assign({ direction: 90 }, rowText));
+const coordinates = (symbol) => [symbol.bbox.x1, symbol.bbox.y1, symbol.bbox.x2, symbol.bbox.y2];
+placement["engagement bar AO is not drawn and does not enlarge the symbol"] = [[parts(withBar).some((p) => p.text === "A:BBB-CC"), coordinates(withBar)], [false, coordinates(withoutBar)]];
+const legacyHq = make("SAGPUCI---A----", { standard: "APP6", direction: 90 });
+const legacyFrame = legacyHq.metadata.baseGeometry.bbox;
+placement["APP-6B keeps the arrow at the end of the staff (unchanged)"] = [parts(legacyHq).filter((p) => p.type === "translate").map((p) => [p.x, p.y]), [[legacyFrame.x1 - 100, legacyFrame.y2 - (100 - ms._hqStaffLength)]]];
+
+// ------------------------------------------------- whitespace-only text
+// A whitespace-only value is empty: no row, no reserved separator, not
+// "present" for validation. Non-blank text is never trimmed (common.js).
+const blankSection = section("Whitespace-only text is empty");
+const textKeys = ["quantity", "reinforcedReduced", "staffComments", "additionalInformation", "evaluationRating", "combatEffectiveness", "signatureEquipment", "higherFormation", "hostile", "iffSif", "sigint", "uniqueDesignation", "type", "dtg", "altitudeDepth", "location", "speed", "specialHeadquarters", "country", "platformType", "equipmentTeardownTime", "commonIdentifier", "auxiliaryEquipmentIndicator", "headquartersElement", "installationComposition", "engagementBar", "engagementType", "guardedUnit", "specialDesignator"];
+const blanks = ["   ", "\t", " \n ", "\u00a0", "\u3000 "];
+const allBlank = (blank) => Object.fromEntries(textKeys.map((key) => [key, blank]));
+blankSection["joinFields drops whitespace-only values and their separators"] = [
+  [joinFields({ a: "  ", b: "x" }, ["a", "b"]), joinFields({ a: "x", b: " \t ", c: "y" }, ["a", "b", "c"]), joinFields({ a: "x", b: "\u00a0" }, ["a", "b"]), joinFields({ a: " ", b: "\n" }, ["a", "b"])],
+  ["x", "x y", "x", ""]
+];
+blankSection["joinFields keeps non-blank values untrimmed"] = [joinFields({ a: " x ", b: "y" }, ["a", "b"]), " x  y"];
+for (const sidc of ["SFGPUCI--------", "SHGPEWAL-------", "SFGPI-----H----", "SPGPUCI--------", "SAGPUCI--------", "SJGPUCI--------", "SFGAUCI--------", "GFCPPC--------"]) {
+  blanks.forEach((blank, i) => {
+    const name = `blank ${i} on ${sidc}`;
+    const blanked = make(sidc, allBlank(blank));
+    const plain = make(sidc);
+    blankSection[`${name}: renders exactly like no text`] = [blanked.asSVG(), plain.asSVG()];
+    blankSection[`${name}: same bounding box`] = [[blanked.bbox.x1, blanked.bbox.x2, blanked.bbox.y1, blanked.bbox.y2], [plain.bbox.x1, plain.bbox.x2, plain.bbox.y1, plain.bbox.y2]];
+    blankSection[`${name}: no validation error`] = [blanked.isValid(true).modifierErrors, plain.isValid(true).modifierErrors];
+    blankSection[`${name}: as valid as without text`] = [blanked.isValid(), plain.isValid()];
+  });
+}
+blankSection["blank is not present: inapplicable fields on a unit"] = [valid("SFGPUCI--------", { quantity: " ", type: " ", hostile: " ", signatureEquipment: "\t" }), true];
+blankSection["blank is not present: out-of-range choices"] = [valid("SFGPUCI--------", { evaluationRating: " ", reinforcedReduced: " " }), true];
+blankSection["blank is not present: later-edition fields"] = [valid("SFGPEWAL-------", { country: " ", headquartersElement: "  ", engagementBar: "   ", sigint: " " }), true];
+blankSection["blank L on friendly equipment is not an identity error"] = [valid("SFGPEWAL-------", { signatureEquipment: " " }), true];
+blankSection["blank on a G point: J, L, N and Q are not present"] = [make("GFCPPC--------", { evaluationRating: " ", signatureEquipment: " ", hostile: " ", direction: " " }).isValid(true).modifierErrors, []];
+blankSection["real J, L, N still fail on a G point (control)"] = [make("GFCPPC--------", { evaluationRating: "G9", signatureEquipment: "?", hostile: "X" }).isValid(true).modifierErrors.some((e) => /^J:/.test(e)) && true, true];
+blankSection["real text next to a blank is still checked"] = [[valid("SFGPUCI--------", { quantity: "5", staffComments: " " }), valid("SFGPUCI--------", { staffComments: "A".repeat(21) + " " })], [false, false]];
+blankSection["whitespace plus text counts as text (length includes spaces)"] = [valid("SFGPUCI--------", { staffComments: " ".repeat(10) + "A".repeat(11) }), false];
+const textsOf = (sidc, options) => texts(make(sidc, options)).map((t) => t.text);
+blankSection["blank X leaves no leading space before Y"] = [textsOf("SFGPUCI--------", { altitudeDepth: "   ", location: "3N 4E" }), ["3N 4E"]];
+blankSection["blank Y leaves no trailing space after X"] = [textsOf("SFGPUCI--------", { altitudeDepth: "100", location: "\t" }), ["100"]];
+blankSection["blank K does not split J and P"] = [textsOf("SFGPUCI--------", { evaluationRating: "B2", combatEffectiveness: "  ", iffSif: "7" }), ["B2 7"]];
+blankSection["blank J K L N leaves P alone"] = [textsOf("SHGPEWAL-------", { evaluationRating: " ", signatureEquipment: " ", hostile: " ", iffSif: "12" }), ["12"]];
+blankSection["blank F: E marker is drawn alone, without a trailing space"] = [textsOf("SAGPUCI--------", { reinforcedReduced: "  " }), ["?"]];
+blankSection["blank F: joker J alone"] = [textsOf("SJGPUCI--------", { reinforcedReduced: " " }), ["J"]];
+blankSection["blank F: pending ? stays inside the frame, once"] = [make("SPGPUCI--------", { reinforcedReduced: " " }).asSVG(), make("SPGPUCI--------").asSVG()];
+blankSection["blank quantity C: no top text, no extra height"] = [[textsOf("SFGPEWAL-------", { quantity: "  " }), make("SFGPEWAL-------", { quantity: "  " }).bbox.y1], [[], make("SFGPEWAL-------").bbox.y1]];
+blankSection["blank AA: no inner text, no extra width"] = [[textsOf("SFGPUCI--------", { specialHeadquarters: "          " }), make("SFGPUCI--------", { specialHeadquarters: "          " }).bbox.x2], [[], make("SFGPUCI--------").bbox.x2]];
+blankSection["blank direction Q draws no arrow"] = [make("SFGPUCI--------", { direction: " " }).asSVG(), make("SFGPUCI--------").asSVG()];
+blankSection["non-blank text keeps its spaces"] = [textsOf("SFGPUCI--------", { staffComments: " G1 " }), [" G1 "]];
+blankSection["the caller's options object is not modified"] = (() => {
+  const given = { quantity: "  ", staffComments: " " };
+  make("SFGPEWAL-------", given);
+  return [given, { quantity: "  ", staffComments: " " }];
+})();
 
 // ----------------------------------------------------------- compatibility
 const compat = section("Library exports and G-scheme");

@@ -8,6 +8,8 @@
 // Table III 25-27 / 19-21, Figure 2a 28 / 22, Table IV 30-31 / 24-25,
 // 505 and 506.2 32-33 / 26-27, Table B-I 74 / 68, Table B-II 75-77 / 69-71.
 
+import { isBlank } from "./common.js";
+
 // APP-6A (1998), Table III, printed pp. 19–21. Limits are character counts.
 // Order: unit, equipment, installation, ordinary point, nuclear point.
 // `identities` restricts a field to SIDC identities (L: hostile equipment only).
@@ -208,7 +210,8 @@ export function validateApp6aOptions(sidc, options) {
   for (const field of app6aTextFields) {
     const raw = options[field.key];
     const value = raw === undefined || raw === null ? "" : String(raw);
-    if (!value) continue;
+    // Missing, empty and whitespace-only values are not present (common.js).
+    if (isBlank(value)) continue;
     if (!fields.has(field.key)) {
       errors.push(field.identities && classes.indexOf(kind) > -1 && field.limits[classes.indexOf(kind)] > 0
         ? field.field + ": only for identity " + field.identities.join("/") + " (hostile equipment)"
@@ -220,13 +223,13 @@ export function validateApp6aOptions(sidc, options) {
     }
   }
   if (sidc[0] === "G") {
-    if (options.evaluationRating && !/^[A-F][1-6]$/.test(options.evaluationRating)) errors.push("J: use A1 through F6");
-    if (options.signatureEquipment && options.signatureEquipment !== "!") errors.push("L: use !");
-    if (options.hostile && options.hostile !== "ENY") errors.push("N: use ENY");
+    if (!isBlank(options.evaluationRating) && !/^[A-F][1-6]$/.test(options.evaluationRating)) errors.push("J: use A1 through F6");
+    if (!isBlank(options.signatureEquipment) && options.signatureEquipment !== "!") errors.push("L: use !");
+    if (!isBlank(options.hostile) && options.hostile !== "ENY") errors.push("N: use ENY");
   }
-  if (kind === "point" && options.direction !== undefined && options.direction !== null) errors.push("Q: not applicable to ordinary tactical points");
+  if (kind === "point" && !isBlank(options.direction)) errors.push("Q: not applicable to ordinary tactical points");
   for (const key of unsupportedKeys) {
-    if (options[key]) errors.push(`${key}: not an APP-6A Table III modifier`);
+    if (!isBlank(options[key])) errors.push(`${key}: not an APP-6A Table III modifier`);
   }
   return errors;
 }

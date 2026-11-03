@@ -119,7 +119,7 @@ tests share one decoder.
 |---|---|---|
 | Figure number | text says "figure 3a", the figure is "Figure 2a" (PDF 28 / 22; 505 PDF 24 / 18) | layout follows Figure 2a; applies to all dimensions |
 | B 10 / E 2 / I G | Table III (PDF 25 / 19) | recorded as a graphic only; no text option, no equipment echelon |
-| L "hostile equipment only" | Table III L; 302.17 hostile = positively identified enemy; 302.32 suspect = potentially hostile | strict: identity `H` and equipment only. S, J, K are not hostile; the source does not extend it |
+| L "hostile equipment only" | Table III L (PDF 25 / 19: "hostile equipment only"); definition 17 Hostile = "a contact positively identified as enemy" (PDF 15 / 9); definition 32 Suspect = "a track or contact which is potentially hostile" (PDF 16 / 10) | strict: identity `H` and equipment only. The source defines Suspect as a separate identity that is only potentially hostile, so S is not hostile; J, K and the exercise identities are not hostile either. MIL-STD-2525C reads its own "hostile equipment" the same way (Table IV, PDF 28 / 22 with 3.2.42 Suspect, PDF 16 / 10). The Studio helper `studio/editor-helpers.js` that says H/S is out of line with both |
 | N `ENY` | Table III N | equipment of any identity; H does not add the text and the text does not change identity (a note is recorded for non-H) |
 | E placement | 503.1a "field E or embedded"; Table I | pending inside, A/S in E by default; `uncertaintyMarker` selects the alternative; one mark only |
 | `O` identity | Table B-I lists it, Table I and C-II give no frame | no frame, no icon, `identityErrors`; never Unknown/Friend |
@@ -127,10 +127,33 @@ tests share one decoder.
 | Equipment HQ bit | Table III S (U/E/I) | drawn like a staff; `metadata.locationOffset` true and `headquarters` false semantics for units only (`staffRole`) |
 | F `(±)` glyph | PDF text shows `(+)` | image-checked: plus-minus |
 | Character count | not defined | product policy: Unicode code points, no normalization |
-| Whitespace-only text | not defined | not trimmed; callers should omit empty fields |
+| Whitespace-only text | not defined | product policy: a value that is only whitespace is empty. It creates no row, reserves no separator and is not "present" for validation (so an inapplicable or out-of-range field with a blank value is no error). Non-blank text is not trimmed. Implemented once in `src/modifierprofiles/common.js` (`isBlank`, `joinFields`, `clearBlankText`, which `applyProfile` runs on the symbol's own options) |
 | Q units | not defined | `direction` stays degrees (existing API); not source-defined |
+| Q ground arrow with a headquarters staff | 505.1a (PDF 30 / 24): "for land symbols ... bent arrow extending downward from the bottom center of the frame or icon"; Figure 2a (PDF 28 / 22) shows S (staff at the left edge) and Q (GROUND) together, the arrow starting at the bottom centre; 506.3 (PDF 33 / 27): the staff base marks the location | APP-6A land symbols always draw the arrow from the bottom centre of the frame, also for headquarters and offset-location symbols (`src/symbolfunctions/directionarrow.js`, guarded by `metadata.app6a`). The legacy 2525B/APP-6B habit of starting the arrow at the staff end is kept for those editions. The symbol anchor stays at the staff base. Non-land symbols: arrow from the centre (505.1a) |
+| Staff length | Annex C.4.1c (PDF 124 / 118): "one frame height below the bottom of the frame" | the existing staff length (one frame height) is kept; tests assert it |
+| Engagement bar AO | not an APP-6A Table III field | not drawn, no space reserved (tested for bbox equality) |
 | Catalogue image errors (Annex D PDF 136, 154, 163-167 / printed 130, 148, 157-161, 261) | duplicated SIDC columns, wrong frames in UF rows, `modifier c` wording for installations | unresolved and unchanged; no icon or restriction derived from them |
 | Faker defined as an aircraft (302.9) vs Table I other dimensions | Table I shows K in all five columns | K is not restricted to air |
+
+## Known visual limits (not source-defined, left unchanged)
+
+- The task force bracket (field D) and the widest echelon glyph (observed for Region `M`) are wider than the
+  frame (the bracket spans 215 units for Region, the frame 150). They can reach 5-13 units into the first
+  text rows on both sides. Figure 3 (PDF 29 / 23) draws a bracket that is narrower than the frame and Annex
+  C gives no numeric width, so the width is a geometry question, not a text-placement rule; it was not
+  changed. Tests exclude `milsymbol-echelon` and `milsymbol-taskforce` from the "rows clear of graphics" check.
+- A non-land arrow (from the centre, length one frame height) can cross a text row near the arrow tip
+  (for example direction 90 and the H or V row). 505.1a and Figure 2a show the same crossing; 506.2 (PDF 32 /
+  26) allows fields to be offset or dropped. Not changed.
+- Seen in the PNG review (`output/tactical-modifier-research/visual/app6a/`): with an icon the pending `?` sits in
+  the free upper quarter of the frame (Table I shows it centred only for empty frames) and touches the nose of
+  the air icon; a nine-character quantity C (top, centred) runs into the W (date-time) row when both are long;
+  the land arrow stem crosses the mobility glyph (both start at the bottom centre) and, pointing left, ends
+  at the staff base. None of these is prescribed by the source; nothing was changed.
+- The bounding box is the symbol geometry; the SVG viewBox adds the stroke width on every side. "Contains every
+  drawn part" is checked against that viewBox with half the stroke added to each stroked part
+  (`test/draw-extents.js`); the arrowhead of a land arrow pointing sideways sticks out of the bare bbox by one
+  unit and stays inside the viewBox.
 
 ## Coverage limits
 
@@ -139,7 +162,7 @@ tests share one decoder.
   mobility shapes (129-132) were not re-compared against the SVG paths.
 - Not done: image audit of catalogue cells against identity/frame, Annex D framing (F/FO/UF) metadata,
   Canvas execution in tests (Canvas and SVG share the same draw instructions; only SVG output
-  is asserted), visual comparison of HQ + offset + arrow + engagement clipping, bounding-box tests
-  for every graphic combination.
+  is asserted). Bounding-box and row-placement tests now cover 38 S combinations of HQ/offset staff,
+  task force, feint/dummy, echelon A-M subsets, mobility, and nine direction angles each.
 - The Studio still reads the legacy `getApp6aFields` shape; use `app6aProfile.fields()` for graphics,
   derived E and choice fields.
