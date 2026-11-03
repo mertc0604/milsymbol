@@ -86,6 +86,19 @@ commands in [APP-6A documentation](docs/app6a.md), then open
 `/audit/symbols/index.html` for publication / before / current / difference views.
 G graphics are excluded.
 
+## Edition profile controls (APP-6A, MIL-STD-2525C, APP-6D)
+
+For these three editions the Studio keeps no copy of the edition's rules. The profiles in `src/modifierprofiles/` are copied to `vendor/modifierprofiles/` and queried at runtime (`studio/profile-controls.js`):
+
+- **Offered values.** Each candidate identity, status, HQ/task force/feint flag, echelon, mobility, towed array or sector code is written into the SIDC and passed to `profile.validate(sidc, {})`. A value is offered only if it adds no `*Errors` entry. Errors that every candidate shares (a bad sector elsewhere in the code) are ignored, so one problem does not hide every choice.
+  - 2525C: identities D, L, M, J and K disappear for dimension Z; statuses C, D, X and F disappear for units; mobility and towed array appear for equipment only, echelon and task force for units only.
+  - APP-6D: context 1 and 2 are labelled "US only"; identity and status names come from `app6dIdentityName` and `app6dStatuses` (status 2-5 is not offered for Land Unit); HQ, task force, dummy and amplifier values follow the symbol class; the sector 1 and sector 2 selectors list only the codes of the Annex A dictionary for the symbol set, show where the sector sits (`sectorPlacement`, left and right for Air Missile) and disable codes the current entity may not use. The engagement bar AO is three dropdowns (A, BBB, CC) that compose `A:BBB-CC`; the counts for MLT come from the profile's own grammar.
+  - APP-6A: identity `O` is never offered; an imported `O` stays as a flagged chip. The `uncertaintyMarker` option (publication default, field E, inside the frame) appears for pending, assumed friend and suspect.
+- **Rejected selections.** When a symbol or edition change leaves a value the profile rejects, the Studio falls back (Present, Friend, unspecified echelon) and says so beside the control. An applied SIDC is never rewritten: its rejected values stay, flagged "not valid here".
+- **Field metadata.** `minLength`, `pattern`, `alternates`, `examples`, `unresolved` and `supported:false` from the field definitions drive hints, format warnings, datalist suggestions and a "Defined for this symbol, not editable here" list.
+- **Text that changes meaning.** The Studio remembers under which field definition each text was typed. When the edition or symbol makes the field absent, or gives the same code a different meaning (APP-6D K on units, equipment and installations; P as IFF/SIF or AIS; AC as country text or installation graphic), the text is kept and a non-blocking "Check these entries" list explains it, with a Clear button. A select value the new edition does not define is cleared with a note and returns when a list defines it again.
+- **Profile notes.** `details.notes`, `details.unresolved` and `details.versionExtension` appear under the SIDC console.
+
 ## Distribution and attribution
 
 This is an independent modified version of
