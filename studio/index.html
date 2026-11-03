@@ -52,17 +52,11 @@
               <div id="symbolPreview" class="symbol-preview" aria-label="Military symbol preview"></div>
             </div>
             <div class="preview-toolbar">
-              <span id="previewHint">Transparent background</span>
-              <div class="view-actions">
-                <button class="tool-toggle edit-text" id="positionsToggle" type="button" aria-label="Edit text amplifiers at their positions" title="Open Text amplifiers with a box for each field around the symbol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4Z" /><path d="m13.5 6.5 4 4" /></svg>Edit text</button
-                ><button class="tool-toggle active" id="gridToggle" type="button" aria-pressed="true">Grid</button
-                ><button class="tool-toggle" id="outlineToggle" type="button" aria-pressed="false" title="Draw a halo around the symbol">Outline</button>
+              <button class="tool-toggle edit-text" id="positionsToggle" type="button" aria-label="Edit text amplifiers at their positions" title="Open Text amplifiers with a box for each field around the symbol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4Z" /><path d="m13.5 6.5 4 4" /></svg>Edit text</button>
+              <div class="downloads" role="group" aria-label="Download">
+                <button class="download-link" id="downloadPng" type="button" aria-label="Download PNG" title="Download PNG (transparent background)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6.5A1.5 1.5 0 0 0 5 4.5v15A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V8Z" /><path d="M14 3v5h5M12 11v6m-3-3 3 3 3-3" /></svg>PNG</button
+                ><button class="download-link" id="downloadSvg" type="button" aria-label="Download SVG" title="Download SVG (vector, transparent background)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6.5A1.5 1.5 0 0 0 5 4.5v15A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V8Z" /><path d="M14 3v5h5M12 11v6m-3-3 3 3 3-3" /></svg>SVG</button>
               </div>
-            </div>
-            <div class="export-bar">
-              <button class="export-primary" id="downloadSvg" type="button">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 15v5h14v-5" /></svg>Download SVG</button
-              ><button id="downloadPng" type="button">PNG</button>
             </div>
           </section>
 
@@ -70,6 +64,7 @@
             <div class="sidc-heading">
               <label for="sidcInput">Symbol identification code</label>
               <span id="sidcLength">—</span>
+              <button id="copySidc" class="quiet-button copy-sidc" type="button" title="Copy the SIDC (text and style are not part of it)">Copy</button>
             </div>
             <div class="sidc-input-row">
               <textarea id="sidcInput" rows="1" spellcheck="false" autocomplete="off" aria-describedby="sidcStatus"></textarea>
@@ -81,10 +76,6 @@
               <details id="profileNotesBox"><summary id="profileNotesSummary"></summary><ul id="profileNotesList"></ul></details>
             </div>
             <div id="sidcSegments" class="sidc-segments" aria-label="Code breakdown"></div>
-            <div class="sidc-footer">
-              <span>Paste a code from a publication. * keeps the current identity or status.</span>
-              <button id="copySidc" class="quiet-button" type="button">Copy SIDC</button>
-            </div>
           </section>
 
           <div class="panel-notes">
@@ -269,9 +260,11 @@
                     ><label><input id="frame" type="checkbox" checked /><span>Frame</span></label
                     ><label><input id="icon" type="checkbox" checked /><span>Icon</span></label
                     ><label><input id="infoFields" type="checkbox" checked /><span>Text labels</span></label
-                    ><label><input id="showFlag" type="checkbox" checked /><span>Country flag</span></label>
+                    ><label><input id="showFlag" type="checkbox" checked /><span>Country flag</span></label
+                    ><label title="Draw a halo around the symbol"><input id="outlineToggle" type="checkbox" /><span>Outline</span></label
+                    ><label><input id="gridToggle" type="checkbox" checked /><span>Preview grid</span></label>
                   </div>
-                  <p class="field-note">Exports use the same switches. Turning a switch off keeps its values.</p>
+                  <p class="field-note">Exports use these switches, except Preview grid, which only helps in the editor: SVG and PNG have a transparent background. Turning a switch off keeps its values.</p>
                 </section>
 
                 <section class="card-section">
@@ -299,7 +292,7 @@
                     <label class="range-field"><span>Outline width <output id="outlineWidthOutput">7</output></span><input id="outlineWidth" type="range" min="1" max="20" step="1" value="7" /></label>
                     <div class="color-field"><span>Outline color</span><input id="outlineColor" type="color" value="#ffffff" aria-label="Outline color" /></div>
                   </div>
-                  <p class="field-note">Outline width and color apply when Outline is on in the preview. All style options are included in SVG and PNG exports.</p>
+                  <p class="field-note">Outline width and color apply when Outline is on (Display). All style options are included in SVG and PNG exports.</p>
                 </section>
               </div>
             </div>
@@ -356,7 +349,7 @@
       </p>
       <p>
         Paste a code into the Symbol identification code box and press <kbd>Enter</kbd> or Apply. <kbd>Esc</kbd> returns to the
-        current code. Messages below the box explain what was applied or why a code was rejected.
+        current code. In codes copied from a publication, * keeps the current identity or status. Messages below the box explain what was applied or why a code was rejected.
       </p>
       <p>
         Edit text, under the preview, opens Text amplifiers in Field positions: a box for each field around the symbol, in

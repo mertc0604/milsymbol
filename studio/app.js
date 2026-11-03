@@ -1752,11 +1752,14 @@ function renderSidcStatus(sidc) {
   }
   dom.sidcStatus.dataset.kind = kind;
   dom.sidcStatus.textContent = text;
+  // A valid code with nothing to report needs no line; Rendered says so.
+  dom.sidcStatus.hidden = kind === "idle";
   dom.sidcInput.classList.toggle("dirty", state.sidcDirty && kind === "pending");
   dom.sidcInput.classList.toggle("error", state.sidcDirty && kind === "error");
   dom.applySidc.classList.toggle("ready", state.sidcDirty);
   const length = dom.sidcInput.value.replace(/\s/g, "").length;
-  dom.sidcLength.textContent = `${length} characters`;
+  dom.sidcLength.innerHTML = `${length}<span class="unit"> characters</span>`;
+  dom.sidcLength.title = `${length} characters`;
   dom.sidcInput.style.height = "auto";
   dom.sidcInput.style.height = `${dom.sidcInput.scrollHeight + 2}px`;
 }
@@ -2330,8 +2333,7 @@ function resetControls() {
       true;
   dom.symbolSize.value = 100;
   dom.strokeWidth.value = 4;
-  dom.outlineToggle.classList.remove("active");
-  dom.outlineToggle.setAttribute("aria-pressed", "false");
+  dom.outlineToggle.checked = false;
   syncStandardControls();
   renderAll();
   renderCatalog();
@@ -2364,9 +2366,11 @@ function openField(key) {
   setTextView("list");
   activateTab(document.getElementById("tab-text"));
   setFocusField(key);
-  input.scrollIntoView({ block: "center" });
-  // The AO text is composed from dropdowns; focus the first one when the text is hidden.
-  (input.hidden ? input.closest("[data-field-wrapper]").querySelector('[data-ao-part="b"]') : input).focus({ preventScroll: true });
+  // Scroll to the field itself: the AO text is hidden when it is composed from
+  // lists, so the field's block is the target and the stage list gets focus.
+  const wrapper = input.closest("[data-field-wrapper]");
+  wrapper.scrollIntoView({ block: "center" });
+  (input.hidden ? wrapper.querySelector('[data-ao-part="b"]') : input).focus({ preventScroll: true });
 }
 
 function moveCardFocus(card, step) {
@@ -2537,11 +2541,7 @@ function bindEvents() {
     dom[id].addEventListener("input", () => {
       const toggle = { fillColor: "fillColorOn", monoColor: "monoColorOn", infoColor: "infoColorOn", infoBackground: "infoBackgroundOn" }[id];
       if (toggle) dom[toggle].checked = true;
-      if (id.startsWith("outline") && !state.outline) {
-        state.outline = true;
-        dom.outlineToggle.classList.add("active");
-        dom.outlineToggle.setAttribute("aria-pressed", "true");
-      }
+      if (id.startsWith("outline") && !state.outline) state.outline = dom.outlineToggle.checked = true;
       renderAll();
     });
   dom.directionNumber.addEventListener("input", () => {
@@ -2723,15 +2723,10 @@ function bindEvents() {
     () => currentSvg && download(currentSvg, exportName("svg"), "image/svg+xml")
   );
   dom.downloadPng.addEventListener("click", downloadPng);
-  dom.gridToggle.addEventListener("click", () => {
-    const active = dom.gridToggle.classList.toggle("active");
-    dom.stage.classList.toggle("no-grid", !active);
-    dom.gridToggle.setAttribute("aria-pressed", String(active));
-  });
-  dom.outlineToggle.addEventListener("click", () => {
-    state.outline = !state.outline;
-    dom.outlineToggle.classList.toggle("active", state.outline);
-    dom.outlineToggle.setAttribute("aria-pressed", String(state.outline));
+  // The grid is a preview aid only; exports stay transparent.
+  dom.gridToggle.addEventListener("change", () => dom.stage.classList.toggle("no-grid", !dom.gridToggle.checked));
+  dom.outlineToggle.addEventListener("change", () => {
+    state.outline = dom.outlineToggle.checked;
     renderAll();
   });
   dom.resetButton.addEventListener("click", resetControls);

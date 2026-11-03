@@ -248,7 +248,7 @@ textarea::placeholder {
   max-width: 1480px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 396px minmax(0, 1fr);
+  grid-template-columns: 420px minmax(0, 1fr);
   align-items: start;
   gap: 16px;
   padding: 16px 20px 28px;
@@ -363,16 +363,6 @@ textarea::placeholder {
   align-items: center;
   gap: 8px;
 }
-.preview-toolbar > span {
-  color: var(--faint);
-  font-size: 11px;
-  line-height: 1.4;
-}
-.view-actions {
-  display: flex;
-  gap: 4px;
-  flex: none;
-}
 .tool-toggle {
   min-height: 28px;
   padding: 3px 9px;
@@ -399,34 +389,35 @@ textarea::placeholder {
   stroke-width: 2;
   stroke-linejoin: round;
 }
-.export-bar {
-  display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
-  gap: 8px;
-}
-.export-bar button {
+/* Downloads: two small icon links under the preview. */
+.downloads {
   display: flex;
+  gap: 2px;
+}
+.download-link {
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 7px;
-  min-height: 38px;
-}
-.export-bar svg {
-  width: 15px;
-  height: 15px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-}
-.export-primary {
-  border-color: var(--blue);
-  background: var(--blue);
-  color: #fff;
+  gap: 5px;
+  min-height: 30px;
+  padding: 3px 8px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--text);
   font-weight: 600;
 }
-.export-primary:hover {
-  background: #205a9c;
-  border-color: #205a9c;
+.download-link:hover {
+  border-color: transparent;
+  background: #f1f4f7;
+  color: var(--blue-dark);
+}
+.download-link svg {
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linejoin: round;
+  stroke-linecap: round;
 }
 
 /* SIDC console */
@@ -435,12 +426,18 @@ textarea::placeholder {
 }
 .sidc-heading {
   display: flex;
-  justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
 }
 .sidc-heading label {
+  flex: 1;
   font-weight: 600;
+}
+.copy-sidc {
+  min-height: 24px;
+  padding: 2px 8px;
+  font-size: 12px;
+  color: var(--blue);
 }
 .sidc-heading > span {
   font-family: var(--mono);
@@ -462,7 +459,7 @@ textarea::placeholder {
   font-family: var(--mono);
   font-size: 14px;
   font-weight: 500;
-  letter-spacing: 0.6px;
+  letter-spacing: 0.4px;
   line-height: 1.5;
   word-break: break-all;
 }
@@ -474,7 +471,7 @@ textarea::placeholder {
 }
 .apply-button {
   min-height: 40px;
-  padding: 0 16px;
+  padding: 0 12px;
   border-color: #b9d0ea;
   color: var(--blue-dark);
   font-weight: 600;
@@ -539,23 +536,6 @@ textarea::placeholder {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.sidc-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-  color: var(--faint);
-  font-size: 11px;
-  line-height: 1.4;
-}
-.sidc-footer button {
-  flex: none;
-  min-height: 28px;
-  padding: 3px 10px;
-  font-size: 12px;
-  border-color: #cfd8e1;
-  color: var(--text);
 }
 .panel-notes {
   display: flex;
@@ -1997,6 +1977,16 @@ dialog p {
   }
   .control-scroll {
     padding: 14px 12px 18px;
+  }
+  /* A 30-digit SIDC keeps one line: Apply goes under the code. */
+  .sidc-input-row {
+    flex-direction: column;
+  }
+  .apply-button {
+    min-height: 36px;
+  }
+  .sidc-heading .unit {
+    display: none;
   }
   .unavailable-body li {
     grid-template-columns: 34px minmax(0, 1fr);
