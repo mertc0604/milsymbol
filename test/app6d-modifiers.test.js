@@ -1,6 +1,7 @@
 // APP-6(D) Edition D Version 1 modifier profile. Expected values come from the
 // PDF (page references are physical PDF page / printed page), not from output.
 import { ms, app6d } from "../index.mjs";
+import strWidth from "../src/symbolfunctions/string-width.js";
 import {
   app6dProfile,
   app6dAmplifierKind,
@@ -122,6 +123,245 @@ const equipText = new ms.Symbol(sidc({ set: "15" }), {
   additionalInformation: "H1",
   equipmentTeardownTime: "5"
 }).asSVG();
+
+// Geometry helpers for the rendering tests (numbers read from the SVG).
+const svgOf = (o, options) =>
+  new ms.Symbol(sidc(o), Object.assign({ standard: "APP6" }, options)).asSVG();
+const quantityBaseline = (svg) =>
+  Number(
+    /<text x="100" y="(-?[0-9.]+)"[^>]*class="milsymbol-textfields" >[0-9]+<\/text>/.exec(
+      svg
+    )[1]
+  );
+// Top edge of the echelon glyph: the group translate plus the smallest y of its
+// circles (cy - r) and M/m/L/l path commands.
+const echelonTop = (svg) => {
+  const g =
+    /<g transform="translate\(0,(-?[0-9.]+)\)"[^>]*>((?:<(?:path|circle)[^>]*class="milsymbol-echelon[^>]*><\/(?:path|circle)>)+)<\/g>/.exec(
+      svg
+    );
+  let top = Infinity;
+  const circle = /<circle cx="[-0-9.]+" cy="(-?[0-9.]+)" r="([0-9.]+)"/g;
+  let c;
+  while ((c = circle.exec(g[2]))) top = Math.min(top, c[1] - c[2]);
+  const pathRe = /<path d="([^"]*)"/g;
+  let p;
+  while ((p = pathRe.exec(g[2]))) {
+    const re = /([MmLl])([-0-9. ,]+)/g;
+    let y = 0;
+    let m;
+    while ((m = re.exec(p[1]))) {
+      const nums = m[2].trim().split(/[ ,]+/).map(Number);
+      for (let i = 1; i < nums.length; i += 2) {
+        y = m[1] === m[1].toUpperCase() ? nums[i] : y + nums[i];
+        top = Math.min(top, y);
+      }
+    }
+  }
+  return Number(g[1]) + top;
+};
+// Smallest y of an absolute M/L path with the given css class (task force).
+const pathTop = (svg, cssClass) => {
+  const d = new RegExp('<path d="([^"]*)"[^>]*class="' + cssClass + '"').exec(
+    svg
+  )[1];
+  const nums = d
+    .replace(/[A-Za-z]/g, " ")
+    .trim()
+    .split(/[ ,]+/)
+    .map(Number);
+  let top = Infinity;
+  for (let i = 1; i < nums.length; i += 2) top = Math.min(top, nums[i]);
+  return top;
+};
+// Bottom edge of the engagement bar rectangle (path M<x>,<y> l<w>,0 ...).
+const engagementBarBottom = (svg) =>
+  Number(/<path d="M[-0-9.]+,(-?[0-9.]+) l[-0-9.]+,0 0,-25/.exec(svg)[1]);
+
+// Sector glyph extents (library units; the bounding octagon has L = 100 and is
+// centred on 100,100). Figure 1-15 PDF 49/1-25 divides it into .3L / .4L / .3L:
+// sector 1 is 50-80 and sector 2 is 120-150, vertical for every set except Air
+// Missile, which is turned 90 degrees left (Figure 2-4 PDF 66/2-16) so sector 1
+// is the left band and sector 2 the right band. Curves are bounded by their
+// control points and text by the library's width table, so a few units of
+// tolerance are allowed.
+const BAND_TOLERANCE = 2.5;
+const SECTOR_BANDS = { 1: [50, 80], 2: [120, 150] };
+function pathExtent(d) {
+  const toks = d.match(/[a-zA-Z]|-?[0-9]*\.?[0-9]+(?:e-?[0-9]+)?/g) || [];
+  const box = { x1: Infinity, y1: Infinity, x2: -Infinity, y2: -Infinity };
+  const add = (x, y) => {
+    box.x1 = Math.min(box.x1, x);
+    box.x2 = Math.max(box.x2, x);
+    box.y1 = Math.min(box.y1, y);
+    box.y2 = Math.max(box.y2, y);
+  };
+  let i = 0;
+  let cmd = "";
+  let x = 0;
+  let y = 0;
+  let sx = 0;
+  let sy = 0;
+  const next = () => Number(toks[i++]);
+  while (i < toks.length) {
+    if (/[a-zA-Z]/.test(toks[i])) cmd = toks[i++];
+    const rel = cmd === cmd.toLowerCase();
+    const op = cmd.toUpperCase();
+    const pairs = { M: 1, L: 1, T: 1, S: 2, Q: 2, C: 3 }[op];
+    if (op === "Z") {
+      x = sx;
+      y = sy;
+    } else if (op === "H") {
+      const v = next();
+      x = rel ? x + v : v;
+      add(x, y);
+    } else if (op === "V") {
+      const v = next();
+      y = rel ? y + v : v;
+      add(x, y);
+    } else if (op === "A") {
+      // rx ry rotation large-arc sweep x y: bound the arc by its end points
+      for (let k = 0; k < 5; k++) next();
+      const px = next();
+      const py = next();
+      x = rel ? x + px : px;
+      y = rel ? y + py : py;
+      add(x, y);
+    } else if (pairs) {
+      for (let k = 0; k < pairs; k++) {
+        const px = next();
+        const py = next();
+        const ax = rel ? x + px : px;
+        const ay = rel ? y + py : py;
+        add(ax, ay);
+        if (k === pairs - 1) {
+          x = ax;
+          y = ay;
+        }
+      }
+      if (op === "M") {
+        sx = x;
+        sy = y;
+        cmd = rel ? "l" : "L";
+      }
+    } else {
+      i++;
+    }
+  }
+  return box;
+}
+function drawExtent(ins, tf, boxes) {
+  if (Array.isArray(ins)) {
+    ins.forEach((e) => drawExtent(e, tf, boxes));
+    return;
+  }
+  if (!ins || typeof ins !== "object") return;
+  let b = null;
+  if (ins.type === "translate")
+    return drawExtent(
+      ins.draw,
+      { s: tf.s, x: tf.x + ins.x * tf.s, y: tf.y + ins.y * tf.s },
+      boxes
+    );
+  if (ins.type === "scale")
+    return drawExtent(
+      ins.draw,
+      { s: tf.s * ins.factor, x: tf.x, y: tf.y },
+      boxes
+    );
+  if (ins.type === "path") b = pathExtent(ins.d);
+  if (ins.type === "circle")
+    b = {
+      x1: ins.cx - ins.r,
+      x2: ins.cx + ins.r,
+      y1: ins.cy - ins.r,
+      y2: ins.cy + ins.r
+    };
+  if (ins.type === "text") {
+    const w = strWidth(String(ins.text), ins.fontsize, 0);
+    const x1 =
+      ins.textanchor === "middle"
+        ? ins.x - w / 2
+        : ins.textanchor === "end"
+          ? ins.x - w
+          : ins.x;
+    const cap = ins.fontsize * 0.72;
+    const y2 = ins.alignmentBaseline === "middle" ? ins.y + cap / 2 : ins.y;
+    b = { x1: x1, x2: x1 + w, y1: y2 - cap, y2: y2 };
+  }
+  if (b && isFinite(b.x1))
+    boxes.push({
+      x1: b.x1 * tf.s + tf.x,
+      x2: b.x2 * tf.s + tf.x,
+      y1: b.y1 * tf.s + tf.y,
+      y2: b.y2 * tf.s + tf.y
+    });
+  else if (ins.draw) drawExtent(ins.draw, tf, boxes);
+}
+// Extent of the modifier glyph alone: no frame, no fill, no main icon.
+function glyphExtent(o) {
+  const boxes = [];
+  const symbol = new ms.Symbol(sidc(o), {
+    standard: "APP6",
+    frame: false,
+    fill: false,
+    infoFields: false
+  });
+  drawExtent(symbol.drawInstructions, { s: 1, x: 0, y: 0 }, boxes);
+  return boxes.reduce(
+    (a, c) => ({
+      x1: Math.min(a.x1, c.x1),
+      x2: Math.max(a.x2, c.x2),
+      y1: Math.min(a.y1, c.y1),
+      y2: Math.max(a.y2, c.y2)
+    }),
+    { x1: Infinity, x2: -Infinity, y1: Infinity, y2: -Infinity }
+  );
+}
+// Defined codes of one sector that fall outside the band, and how many exist.
+function bandReport(set, sector) {
+  const dict = sectorDictionary(set, sector);
+  const horizontal =
+    sectorPlacement(set, sector) === "left" ||
+    sectorPlacement(set, sector) === "right";
+  const band = SECTOR_BANDS[sector];
+  const outside = [];
+  let checked = 0;
+  dict.entries.forEach((entry) => {
+    const code = entry[0];
+    if (classifySectorCode(set, sector, code) !== "defined") return;
+    const o = { set: set };
+    o["s" + sector] = code;
+    // Air Missile sector 2 codes 07-11 are only used with sector 1 08
+    // Interceptor (Table 2-8 PDF 78-79/2-28..2-29): skip that glyph's own side.
+    const paired =
+      set === "02" && sector === 2 && Number(code) >= 7 && Number(code) <= 11;
+    if (paired) o.s1 = "08";
+    const e = glyphExtent(o);
+    checked++;
+    const lo = horizontal ? e.x1 : e.y1;
+    const hi = horizontal ? e.x2 : e.y2;
+    // set 20: the installation mark above the frame (y 40-50) is not the glyph
+    const loChecked = !paired && set !== "20";
+    if (
+      (loChecked && lo < band[0] - BAND_TOLERANCE) ||
+      hi > band[1] + BAND_TOLERANCE
+    )
+      outside.push(code);
+  });
+  return { outside: outside, checked: checked };
+}
+const bandSets = ["01", "02", "05", "10", "15", "20", "30", "35"];
+const bandChecks = {};
+bandSets.forEach((set) => {
+  [1, 2].forEach((sector) => {
+    if (!sectorDictionary(set, sector)) return;
+    const r = bandReport(set, sector);
+    bandChecks[
+      "set " + set + " sector " + sector + " (" + r.checked + " codes)"
+    ] = [r.outside, []];
+  });
+});
 
 export default {
   "APP-6D profile": {
@@ -391,31 +631,84 @@ export default {
       ],
       [true, false, true]
     ],
-    "Installation AE is figure-only and noted, Space H and Z are unresolved (D-INST-AE, D-SPACE)":
+    "Installation AE is figure-only and noted (D-INST-AE)": [
+      [
+        ok({ set: "20" }, { equipmentTeardownTime: "5" }),
+        check({ set: "20" }, { equipmentTeardownTime: "5" }).details.notes.some(
+          (n) => /D-INST-AE/.test(n)
+        )
+      ],
+      [true, true]
+    ],
+    // Decision 3 (D-SPACE): Table 6-2 PDF 362-363/6-5..6-6 lists G, H, T, V, X
+    // and Z; Figure 6-2 PDF 361/6-4 + section 6.2.4 + Air Figure 2-2 PDF 54/2-4.
+    "Space H and Z are ordinary valid fields with a product-policy note (D-SPACE)":
       [
         [
-          ok({ set: "20" }, { equipmentTeardownTime: "5" }),
-          check(
-            { set: "20" },
-            { equipmentTeardownTime: "5" }
-          ).details.notes.some((n) => /D-INST-AE/.test(n)),
           ok({ set: "05" }, { additionalInformation: "H" }),
           ok({ set: "05" }, { speed: "Z" }),
-          ok({ set: "05" }, { staffComments: "G" })
+          ok({ set: "05" }, { staffComments: "G" }),
+          ok(
+            { set: "05" },
+            {
+              uniqueDesignation: "TN:13579",
+              type: "V",
+              altitudeDepth: "FL150",
+              speed: "480KPH",
+              staffComments: "G",
+              additionalInformation: "H"
+            }
+          ),
+          check({ set: "05" }, { speed: "Z" }).details.unresolved,
+          check({ set: "05" }, { additionalInformation: "H" }).details
+            .unresolved,
+          check({ set: "05" }, { speed: "Z" }).details.notes.some((n) =>
+            /D-SPACE \(product policy\)/.test(n)
+          ),
+          check({ set: "05" }, { staffComments: "G" }).details.notes.some((n) =>
+            /D-SPACE/.test(n)
+          )
         ],
-        [true, true, false, false, true]
+        [true, true, true, true, [], [], true, false]
       ],
+    "Space H and Z are available fields, not marked unavailable": [
+      [
+        app6dProfile.unavailableReason("speed", sidc({ set: "05" })),
+        app6dProfile.unavailableReason(
+          "additionalInformation",
+          sidc({ set: "05" })
+        ),
+        app6dProfile.unavailableReason("quantity", sidc({ set: "05" })) !== ""
+      ],
+      ["", "", true]
+    ],
     "fields not defined for a class are rejected": [
       [
         ok({ set: "01" }, { quantity: "3" }),
         ok({ set: "30" }, { dtg: "301400ZSEP17" }),
         ok({ set: "35" }, { speed: "5" }),
         ok({ set: "20" }, { type: "X" }),
-        ok({ set: "10" }, { quantity: "3" }),
+        ok({ set: "01" }, { quantity: "3" }),
         ok({ set: "15" }, { quantity: "3" })
       ],
       [false, false, false, false, false, true]
     ],
+    // Decision 5: Figure 3-3 PDF 84/3-4 (B/C/D cell above the frame) and
+    // Table 3-2 PDF 85/3-5 (C row; "in an equipment symbol" is generic wording).
+    "Land Unit C quantity is accepted with a note, installations still reject it":
+      [
+        [
+          ok({ set: "10" }, { quantity: "3" }),
+          check({ set: "10" }, { quantity: "3" }).details.notes.some((n) =>
+            /Figure 3-3 PDF 84\/3-4/.test(n)
+          ),
+          ok({ set: "20" }, { quantity: "3" }),
+          ok({ set: "30" }, { quantity: "3" }),
+          app6dProfile.unavailableReason("quantity", sidc({ set: "10" })),
+          fieldKeys({ set: "10" }).indexOf("quantity") >= 0
+        ],
+        [true, true, false, false, "", true]
+      ],
     "SIGINT R2 and AG are not APP-6D fields": [
       [
         ok({ set: "15" }, { sigint: "X" }),
@@ -588,10 +881,45 @@ export default {
         ["specialDesignator"]
       ]
     ],
-    "Space is T; V; X; G only and does not copy the Air rows": [
-      layout({ set: "05" }).right.slice(1),
-      [["uniqueDesignation"], ["type"], ["altitudeDepth"], ["staffComments"]]
+    // Decision 3: Table 6-2 PDF 362-363/6-5..6-6 lists T, V, X, Z, G, H; Air
+    // Figure 2-2 PDF 54/2-4 gives the cells T; P; V; Z/X; G/H; the Space figure
+    // (PDF 361/6-4) is that column without P.
+    "Space right rows T; V; Z X; G H (no P, no left column, no top)": [
+      [
+        layout({ set: "05" }).right.slice(1),
+        layout({ set: "05" }).left,
+        layout({ set: "05" }).top
+      ],
+      [
+        [
+          ["uniqueDesignation"],
+          ["type"],
+          ["speed", "altitudeDepth"],
+          ["staffComments", "additionalInformation"]
+        ],
+        [],
+        []
+      ]
     ],
+    "Space has no IFF/SIF field": [
+      fieldKeys({ set: "05" }).indexOf("iffSif"),
+      -1
+    ],
+    "Space speed and altitude share a cell with one space between them": [
+      />480KPH FL150</.test(
+        new ms.Symbol(sidc({ set: "05" }), {
+          standard: "APP6",
+          speed: "480KPH",
+          altitudeDepth: "FL150"
+        }).asSVG()
+      ),
+      true
+    ],
+    "Land Unit quantity is drawn above the frame (B/C/D cell, Figure 3-3 PDF 84/3-4)":
+      [
+        [layout({ set: "10" }).top, layout({ set: "15" }).top],
+        [["quantity"], ["quantity"]]
+      ],
     "single space joins shared positions and collapses empty values": [
       [
         />T ELNOT 5</.test(unitText),
@@ -608,6 +936,8 @@ export default {
   },
   "Sector modifiers (Annex A PDF 735-815)": {
     "dictionary sizes incl. 00": sizeChecks,
+    "every defined glyph lies inside its bounding-octagon band (Figure 1-15 PDF 49/1-25, .3L/.4L/.3L)":
+      bandChecks,
     "reserved ranges, VEF and undefined codes": [
       [
         classifySectorCode("02", 2, "06"),
@@ -689,18 +1019,34 @@ export default {
       ],
       [true, false, true, true, true, false]
     ],
-    "Subsurface sector 1 code 19 is an unresolved source conflict (D-SUB19)": [
+    // Decision 4: Table 5-11 PDF 334/5-46 says TORPEDO only, Table A-38 PDF
+    // 814/A-100 says SUBMARINE only; each normative table permits one entity.
+    "Subsurface sector 1 code 19 is valid with a TORPEDO or SUBMARINE entity and noted (D-SUB19)":
       [
-        check({ set: "35", ent: ENT.torpedo, s1: "19" }).details.unresolved.map(
-          (u) => u.id
-        ),
-        check({ set: "35", ent: ENT.sub, s1: "19" }).details.unresolved.map(
-          (u) => u.id
-        ),
-        ok({ set: "35", ent: "110200", s1: "19" })
+        [
+          ok({ set: "35", ent: ENT.torpedo, s1: "19" }),
+          ok({ set: "35", ent: ENT.sub, s1: "19" }),
+          check({ set: "35", ent: ENT.torpedo, s1: "19" }).details.unresolved,
+          check({ set: "35", ent: ENT.sub, s1: "19" }).details.unresolved,
+          check({ set: "35", ent: ENT.torpedo, s1: "19" }).details.notes.some(
+            (n) => /D-SUB19 \(product policy\)/.test(n)
+          ),
+          check({ set: "35", ent: ENT.sub, s1: "19" }).details.notes.some((n) =>
+            /D-SUB19 \(product policy\)/.test(n)
+          )
+        ],
+        [true, true, [], [], true, true]
       ],
-      [["D-SUB19"], ["D-SUB19"], false]
-    ],
+    "Subsurface sector 1 code 19 with any other entity stays an error (D-SUB19)":
+      [
+        [
+          ok({ set: "35", ent: "110200", s1: "19" }),
+          ok({ set: "35", ent: ENT.auv, s1: "19" }),
+          check({ set: "35", ent: "110200", s1: "19" }).details.modifierErrors
+            .length
+        ],
+        [false, false, 1]
+      ],
     "reserved and VEF sector codes are not valid choices": [
       [
         ok({ set: "10", ent: "110000", s1: "71" }),
@@ -757,6 +1103,96 @@ export default {
       ],
       ["circle", true]
     ],
+    // Table A-3 PDF 719/A-5: Pending and Unknown share the Unknown frame, Friend
+    // and Assumed Friend the Friend frame, Hostile/Faker and Suspect/Joker the
+    // Hostile frame.
+    "frame group per standard identity (Table A-3 PDF 719/A-5)": [
+      "0123456"
+        .split("")
+        .map(
+          (i) =>
+            new ms.Symbol(sidc({ id: i }), { standard: "APP6" }).metadata
+              .affiliation
+        ),
+      [
+        "Unknown",
+        "Unknown",
+        "Friend",
+        "Friend",
+        "Neutral",
+        "Hostile",
+        "Hostile"
+      ]
+    ],
+    // Table 1-2 PDF 33/1-9 and section 1.2.1 item c: present = solid, planned =
+    // dashed, but never shown on an uncertain (Pending, Assumed Friend, Suspect)
+    // identity whose frame is dotted. 4,4 is the library's dotted pattern and
+    // 8,12 its dashed pattern.
+    "frame line style per identity and status (Table 1-2 PDF 33/1-9)": [
+      ["0", "1"].map((st) =>
+        "0123456"
+          .split("")
+          .map(
+            (i) =>
+              new ms.Symbol(sidc({ id: i, st: st }), { standard: "APP6" })
+                .metadata.notpresent
+          )
+      ),
+      [
+        ["4,4", "", "4,4", "", "", "4,4", ""],
+        ["4,4", "8,12", "4,4", "8,12", "8,12", "4,4", "8,12"]
+      ]
+    ],
+    // Table 1-3 PDF 35/1-11: Fully capable is the plain frame, Damaged one slash,
+    // Destroyed an X; Land Unit is N/A. Table 1-4 replaces them by coloured bars.
+    "operational condition: slash and X in monochrome, none for Land Unit (Table 1-3 PDF 35/1-11)":
+      [
+        ["15", "10"].map((set) =>
+          ["2", "3", "4", "5"].map((st) => {
+            const svg = svgOf(
+              { set: set, st: st, ent: set === "10" ? "121100" : "130200" },
+              { simpleStatusModifier: true }
+            );
+            return (
+              (svg.indexOf("M150,20 L50,180") >= 0 ? 1 : 0) +
+              (svg.indexOf("M50,20 L150,180") >= 0 ? 1 : 0)
+            );
+          })
+        ),
+        [
+          [0, 1, 2, 0],
+          [0, 0, 0, 0]
+        ]
+      ],
+    "operational condition names for the Table 1-4 colour bar": [
+      ["2", "3", "4", "5"].map(
+        (st) =>
+          new ms.Symbol(sidc({ set: "15", st: st }), { standard: "APP6" })
+            .metadata.condition
+      ),
+      ["FullyCapable", "Damaged", "Destroyed", "FullToCapacity"]
+    ],
+    // Exercise frames are left to MIL-STD-2525(D) (A.6 item 3 PDF 719/A-5); the
+    // renderer keeps its 2525(D) rule that an Exercise Unknown-dimension symbol
+    // exists only for Pending and Unknown.
+    "Exercise Unknown dimension draws a frame only for Pending and Unknown, with a note":
+      [
+        [
+          ["0", "1", "3", "5", "6"].map(
+            (i) => svgOf({ set: "00", ctx: "1", id: i }).indexOf("<path") >= 0
+          ),
+          check({ set: "00", ctx: "1", id: "3" }).details.notes.some((n) =>
+            /draws no frame/.test(n)
+          ),
+          check({ set: "00", ctx: "1", id: "1" }).details.notes.some((n) =>
+            /draws no frame/.test(n)
+          ),
+          check({ set: "00", ctx: "0", id: "3" }).details.notes.some((n) =>
+            /draws no frame/.test(n)
+          )
+        ],
+        [[true, true, false, false, false], true, false, false]
+      ],
     "Land Unit draws no operational condition bar": [
       [
         new ms.Symbol(sidc({ set: "10", st: "3" }), { standard: "APP6" })
@@ -765,6 +1201,104 @@ export default {
           .metadata.condition
       ],
       ["", "Damaged"]
+    ],
+    // Decision 5: quantity shares the B/C/D cell (Figure 3-3 PDF 84/3-4), so
+    // it is drawn above the echelon with its baseline clear of the glyph.
+    "Land Unit quantity baseline is above every echelon glyph (Figure 3-3 PDF 84/3-4)":
+      [
+        [
+          "11",
+          "12",
+          "13",
+          "14",
+          "15",
+          "16",
+          "17",
+          "18",
+          "21",
+          "22",
+          "23",
+          "24",
+          "25",
+          "26"
+        ].map((amp) => {
+          const svg = svgOf(
+            { set: "10", amp: amp, ent: "121100" },
+            { quantity: "3" }
+          );
+          return quantityBaseline(svg) <= echelonTop(svg) - 10;
+        }),
+        [
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true,
+          true
+        ]
+      ],
+    "Land Unit quantity is above the task force bracket and the echelon": [
+      (() => {
+        const svg = svgOf(
+          { set: "10", hq: "4", amp: "21", ent: "121100" },
+          { quantity: "12" }
+        );
+        return [
+          quantityBaseline(svg) <= pathTop(svg, "milsymbol-taskforce") - 10,
+          quantityBaseline(svg) <= echelonTop(svg) - 10
+        ];
+      })(),
+      [true, true]
+    ],
+    "Land Unit quantity without an echelon sits 10 above the frame": [
+      quantityBaseline(svgOf({ set: "10", ent: "121100" }, { quantity: "3" })),
+      40
+    ],
+    "Land Equipment quantity keeps its place 10 above the frame circle": [
+      quantityBaseline(svgOf({ set: "15", ent: "130200" }, { quantity: "3" })),
+      30
+    ],
+    "engagement bar AO sits above a quantity on Land Unit and Land Equipment (Figures 3-3, 3-14)":
+      [
+        [
+          { set: "10", amp: "15", ent: "121100" },
+          { set: "10", hq: "4", amp: "21", ent: "121100" },
+          { set: "15", ent: "130200" },
+          { set: "15", id: "6", ent: "130200" }
+        ].map((o) => {
+          const withQty = svgOf(o, { quantity: "3", engagementBar: "ENG-M" });
+          const without = svgOf(o, { engagementBar: "ENG-M" });
+          return [
+            // bar bottom clears the glyph top (cap height about 0.7 of 40)
+            engagementBarBottom(withQty) <= quantityBaseline(withQty) - 28,
+            engagementBarBottom(withQty) < engagementBarBottom(without)
+          ];
+        }),
+        [
+          [true, true],
+          [true, true],
+          [true, true],
+          [true, true]
+        ]
+      ],
+    "engagement bar position is unchanged when no quantity is shown": [
+      engagementBarBottom(
+        svgOf({ set: "10", ent: "121100" }, { engagementBar: "ENG-M" })
+      ),
+      engagementBarBottom(
+        svgOf(
+          { set: "10", ent: "121100" },
+          { engagementBar: "ENG-M", quantity: "" }
+        )
+      )
     ],
     "reserved sector codes and local-track sectors are not drawn": [
       [

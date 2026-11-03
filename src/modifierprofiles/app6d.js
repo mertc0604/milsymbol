@@ -386,6 +386,10 @@ const SHORT_DTG = {
   maxLength: 14
 };
 const sea = (key) => field(key);
+const SPACE_HZ_NOTE =
+  "D-SPACE (product policy): Table 6-2 PDF 362-363/6-5..6-6 lists this field for Space symbols, Figure 6-2 PDF 361/6-4 and section 6.2.4 item 2 (fields 1 through 5) show only T, V, X, G; it is accepted and drawn in the shared Z X / G H cells as in Air Figure 2-2 PDF 54/2-4 (the Space figure is the Air column without P)";
+const UNIT_QUANTITY_NOTE =
+  'C Quantity on a Land Unit: Figure 3-3 PDF 84/3-4 shows the B/C/D cell above the frame and Table 3-2 PDF 85/3-5 lists C; its description says "in an equipment symbol" (the generic wording repeated in every field table), so figure and table are read together and C is accepted and drawn above the echelon (Decision 5)';
 function rows() {
   const out = [[]];
   for (let i = 0; i < arguments.length; i++) out.push(arguments[i]);
@@ -417,32 +421,34 @@ const CLASS_DEF = {
       bottom: []
     }
   },
+  // D-SPACE (product policy, Decision 3): Table 6-2 PDF 362-363/6-5..6-6 lists
+  // G, H, T, V, X and Z for Space symbols; Figure 6-2 PDF 361/6-4 draws only the
+  // T, V, X, G cells and section 6.2.4 item 2 puts "fields 1 through 5" to the
+  // right of the symbol. The Air figure of the same edition (Figure 2-2 PDF
+  // 54/2-4) shows the right column T; P; V; Z/X; G/H, and the Space figure is
+  // that column without P. H and Z are therefore ordinary valid fields and
+  // share the cells Z X and G H, in the Air order (Z before X, G before H).
   space: {
     fields: [
       "uniqueDesignation",
       "type",
+      "speed",
       "altitudeDepth",
       "staffComments",
+      "additionalInformation",
       "engagementBar"
-    ]
-      .map(sea)
-      .concat([
-        field("additionalInformation", {
-          unresolved:
-            "D-SPACE: Table 6-2 lists H but Figure 6-2 shows no H cell"
-        }),
-        field("speed", {
-          unresolved:
-            "D-SPACE: Table 6-2 lists Z but Figure 6-2 shows no Z cell"
-        })
-      ]),
+    ].map((k) =>
+      k === "speed" || k === "additionalInformation"
+        ? field(k, { note: SPACE_HZ_NOTE })
+        : field(k)
+    ),
     layout: {
       left: [],
       right: rows(
         ["uniqueDesignation"],
         ["type"],
-        ["altitudeDepth"],
-        ["staffComments"]
+        ["speed", "altitudeDepth"],
+        ["staffComments", "additionalInformation"]
       ),
       top: [],
       inner: [],
@@ -475,6 +481,12 @@ const CLASS_DEF = {
       field("iffSif"),
       field("specialHeadquarters"),
       field("headquartersElement"),
+      // Decision 5: Figure 3-3 PDF 84/3-4 draws the B/C/D cell above the frame
+      // and Table 3-2 PDF 85/3-5 has a C (Quantity) row. Its description reads
+      // "A text amplifier in an equipment symbol", the generic wording that all
+      // APP-6 field tables repeat; figure and table together give the field to
+      // Land Unit, so it is accepted and drawn above the echelon.
+      field("quantity", { note: UNIT_QUANTITY_NOTE }),
       field("engagementBar"),
       {
         key: "installationIndicator",
@@ -503,7 +515,7 @@ const CLASS_DEF = {
         ["higherFormation"],
         ["evaluationRating", "combatEffectiveness", "iffSif"]
       ),
-      top: [],
+      top: ["quantity"],
       inner: ["specialHeadquarters"],
       bottom: ["headquartersElement"]
     }
@@ -875,16 +887,20 @@ function sectorRules(p, cls, errors, notes, unresolved, vef) {
             code +
             " is used with the SUBMARINE entity type only (Table 5-11 PDF 331-333/5-43..5-45)"
         );
+      // D-SUB19 (Decision 4): Table 5-11 PDF 334/5-46 says "TORPEDO entity type
+      // only" for 19 Anti-Torpedo Torpedo, Table A-38 PDF 814/A-100 says
+      // "SUBMARINE entity type only". Each normative table permits one entity
+      // type, so rejecting either would invalidate a symbol the other table
+      // allows: valid with a TORPEDO or a SUBMARINE entity, with a note
+      // (product policy). Any other entity stays an error.
       if (code === "19") {
         if (entityIs.torpedo(e) || entityIs.submarine(e))
-          unresolved.push({
-            id: "D-SUB19",
-            detail:
-              "sector 1 code 19: Table 5-11 PDF 334/5-46 says TORPEDO entity type only, Table A-38 PDF 814/A-100 says SUBMARINE; accepted with either, flagged"
-          });
+          notes.push(
+            "D-SUB19 (product policy): sector 1 code 19 Anti-Torpedo Torpedo is used with the TORPEDO entity type in Table 5-11 PDF 334/5-46 and with the SUBMARINE entity type in Table A-38 PDF 814/A-100; both are accepted"
+          );
         else
           errors.push(
-            "sector 1 code 19 is used with the TORPEDO (Table 5-11) or SUBMARINE (Table A-38) entity type only; sources conflict (D-SUB19)"
+            "sector 1 code 19 is used with the TORPEDO (Table 5-11 PDF 334/5-46) or SUBMARINE (Table A-38 PDF 814/A-100) entity type only (D-SUB19)"
           );
       }
     }
@@ -1131,6 +1147,7 @@ function validate(sidc, options) {
         return;
       }
       if (spec.unresolved) notes.push(spec.unresolved);
+      if (spec.note) notes.push(spec.note);
       if (spec.hostileOnly && !hostileGroup)
         errors.push(
           spec.field +
@@ -1185,6 +1202,15 @@ function validate(sidc, options) {
         );
     }
   }
+  if (
+    cls === "unknown" &&
+    p.context === "1" &&
+    p.identity !== "0" &&
+    p.identity !== "1"
+  )
+    notes.push(
+      "Exercise context with the Unknown dimension draws no frame unless the identity is Pending or Unknown: the renderer keeps the MIL-STD-2525(D) rule, and this edition leaves exercise frames to 2525(D) (Table A-2 note 1 and A.6 item 3 PDF 718-719/A-4..A-5)"
+    );
   if (cls === "unknown")
     notes.push(
       "Unknown dimension: no source layout or field matrix (Figure 1-4 PDF 34/1-10 has unlabeled cells); legacy rows kept, no field restrictions (policy)"
