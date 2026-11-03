@@ -72,7 +72,12 @@ export default {
     ],
     "APP-6A friend equipment: signature needs a hostile identity": [
       equipment.signatureEquipment.reason,
-      "Hostile or suspect only"
+      "Hostile (H) only"
+    ],
+    "APP-6A suspect equipment: signature needs identity H": [
+      byKey(fieldStates(textModifiers, app6aContext("SSGPEVATM------")))
+        .signatureEquipment.reason,
+      "Hostile (H) only"
     ],
     "APP-6A hostile equipment: signature applies": [
       hostileEquipment.signatureEquipment.available,

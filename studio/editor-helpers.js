@@ -13,7 +13,8 @@ const classLabels = {
 function unavailableReason(entry, kind, identity) {
   if (!entry) return "Not in APP-6A";
   const index = symbolClasses.indexOf(kind);
-  if (entry.limits[index] > 0) return entry.hostileOnly && !["H", "S"].includes(identity) ? "Hostile or suspect only" : "";
+  // L is for hostile equipment (Table III): the identities come from the table.
+  if (entry.limits[index] > 0) return entry.identities && !entry.identities.includes(identity) ? "Hostile (H) only" : "";
   if (index > 2) return `Not for ${classLabels[kind]}`;
   const allowed = classNames.filter((_, position) => entry.limits[position] > 0);
   if (!allowed.length) return `Not for ${classLabels[kind]}`;
