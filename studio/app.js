@@ -29,7 +29,7 @@ import {
   profileDetailLines
 } from "./profile-controls.js";
 
-import { fieldStates, profileFieldStates, dtgForField, evaluationRating, sidcParts, pushRecent, placeholderOptions, paletteProgress } from "./editor-helpers.js";
+import { fieldStates, profileFieldStates, dtgForField, evaluationRating, sidcParts, pushRecent, placeholderOptions, readTextRows, fieldValueChars, fitRowWidths, layoutFieldBoxes, paletteProgress } from "./editor-helpers.js";
 import { fieldReference } from "./field-reference.js";
 import { app6aIdentities, contextOptions, convertIdentity, decodeIdentity, identityCode, identityLabel, identityList } from "./identities.js";
 import { createCountryFlagPart } from "./country-flags.js";
@@ -196,7 +196,16 @@ const dom = Object.fromEntries(
     "gridToggle",
     "outlineToggle",
     "positionsToggle",
-    "previewHint",
+    "fieldLayout",
+    "layoutCanvas",
+    "layoutHelp",
+    "layoutMore",
+    "layoutMoreSummary",
+    "layoutMoreList",
+    "textViewSwitch",
+    "textInfoButton",
+    "textInfo",
+    "textApplies",
     "symbolClass",
     "sidcStatus",
     "identityChips",
@@ -317,7 +326,8 @@ const state = {
   customSidc: "",
   importedIcon: null,
   outline: false,
-  positions: false,
+  // Text amplifiers tab: boxes at the field positions, or the grouped list.
+  positions: storedTextView() !== "list",
   searchOpen: false,
   sidcDirty: false,
   sidcMessage: null,
@@ -1186,7 +1196,8 @@ function setFocusField(key) {
   state.focusField = key;
   for (const wrapper of document.querySelectorAll("[data-field-wrapper]"))
     wrapper.classList.toggle("focused", wrapper.dataset.fieldWrapper === key);
-  if (state.positions) renderAll();
+  for (const box of dom.layoutCanvas.querySelectorAll("[data-layout-key]"))
+    box.classList.toggle("focused", box.dataset.layoutKey === key);
 }
 
 function currentFieldStates(sidc = state.customSidc || buildSidc()) {
@@ -1289,6 +1300,7 @@ function syncApp6aTextFields() {
     }
     warning.hidden = !lines.length;
     warning.innerHTML = lines.map(escapeHtml).join("<br>");
+    fieldWarnings.set(field.key, lines);
   }
   renderCarryNotes([...carried.values()], extras, states);
   let available = 0;
@@ -1310,6 +1322,7 @@ function syncApp6aTextFields() {
   const unavailable = textModifiers.length - available;
   container.classList.toggle("hide-unavailable", !state.showUnavailable);
   dom.toggleUnavailable.hidden = !unavailable;
+  dom.toggleUnavailable.dataset.unavailable = String(unavailable);
   dom.toggleUnavailable.textContent = state.showUnavailable ? `Hide ${unavailable} unavailable` : `Show ${unavailable} unavailable`;
   dom.toggleUnavailable.setAttribute("aria-pressed", String(!state.showUnavailable));
   dom.toggleUnavailable.classList.toggle("active", !state.showUnavailable);
@@ -1328,9 +1341,10 @@ function syncApp6aTextFields() {
       counter.classList.toggle("full", Boolean(max) && input.value.length >= max);
     }
   }
-  dom.textSummary.textContent = active
-    ? `${profileTitles[state.standardId]} · ${available} of ${textModifiers.length} fields apply to ${({ unit: "units", equipment: "equipment", installation: "installations", point: "tactical points", nuclear: "nuclear points" })[kind] || (kind ? `${classWords(kind)} symbols` : "this symbol")} · ${filled} filled`
-    : `${textModifiers.length} text amplifiers · ${filled} filled · placement follows the renderer's symbol-set rules`;
+  dom.textSummary.textContent = active ? `${config().label} · ${available} applicable fields` : `${config().label} · ${textModifiers.length} fields`;
+  dom.textApplies.textContent = active
+    ? `${profileTitles[state.standardId]}: ${available} of ${textModifiers.length} fields apply to ${({ unit: "units", equipment: "equipment", installation: "installations", point: "tactical points", nuclear: "nuclear points" })[kind] || (kind ? `${classWords(kind)} symbols` : "this symbol")}.`
+    : `${config().label} has no field table here: all ${textModifiers.length} fields are offered, and placement follows the renderer's symbol-set rules.`;
   dom.textFilledBadge.hidden = !filled;
   dom.textFilledBadge.textContent = `${filled} filled`;
   dom.direction.disabled = state.standardId === "app6a" && app6aSymbolClass(sidc) === "point";
@@ -1355,7 +1369,7 @@ function renderCarryNotes(warnings, extras, states) {
     : "";
   dom.profileExtras.hidden = !extras.length;
   dom.profileExtras.innerHTML = extras.length
-    ? `<h4>Defined for this symbol, not editable here</h4>` +
+    ? `<summary>Not editable here · ${extras.length}</summary><p>The standard defines these for this symbol; this editor cannot set them.</p>` +
       extras.map((item) => `<div class="unavailable-row"><span><span class="field-code">${escapeHtml(item.field || "–")}</span><span>${escapeHtml(item.label)}</span></span><small>${escapeHtml(humanize(item.reason))}</small></div>`).join("")
     : "";
 }
@@ -1604,26 +1618,323 @@ function renderProfileDetails() {
   dom.profileDetails.hidden = !issues.length && !lines.notes.length;
 }
 
-let positionCodes = {};
+// Field positions (Text amplifiers tab): every applicable text field is a box
+// where the renderer draws its text, around the symbol drawn without text. A
+// probe rendering with each field set to its "[code]" marker gives the rows;
+// the boxes and the form fields hold the same values.
+const layoutScale = 38 / 40; // 38 px between two text rows of 40 symbol units
+let layoutSignature = "";
+let layoutFits = true;
+let layoutUndrawn = [];
+const fieldWarnings = new Map();
 
-// One shared row holds several tags ("[AR] [W]", legacy "[X]/[Y]"), so each tag
-// becomes its own tspan: every tag can be clicked and highlighted on its own.
-function markFieldTags() {
-  const svgNs = "http://www.w3.org/2000/svg";
-  for (const text of dom.symbolPreview.querySelectorAll("text")) {
-    const parts = text.textContent.split(/(\[[^\]]+\])/).filter(Boolean);
-    if (!parts.some((part) => positionCodes[part])) continue;
-    text.replaceChildren(...parts.map((part) => {
-      const key = positionCodes[part];
-      if (!key) return document.createTextNode(part);
-      const tag = document.createElementNS(svgNs, "tspan");
-      tag.textContent = part;
-      tag.classList.add("field-tag");
-      tag.classList.toggle("focused", key === state.focusField);
-      tag.dataset.field = key;
-      return tag;
-    }));
+function storedTextView() {
+  try {
+    return localStorage.getItem("symbol-studio:text-view") || "positions";
+  } catch {
+    return "positions";
   }
+}
+
+function setTextView(view) {
+  state.positions = view === "positions";
+  try {
+    localStorage.setItem("symbol-studio:text-view", view);
+  } catch {}
+  renderAll();
+}
+
+const svgViewBox = (svg) => {
+  const [x, y, width, height] = (/viewBox="([^"]+)"/.exec(svg)?.[1] || "0 0 0 0").split(/[\s,]+/).map(Number);
+  return { left: x * layoutScale, top: y * layoutScale, width: width * layoutScale, height: height * layoutScale };
+};
+
+// The current symbol without text, outline, direction or speed leader.
+function layoutOptions() {
+  const options = { ...currentOptions(), size: 100, infoSize: 40, outlineWidth: 0, direction: undefined, speedLeader: 0, infoColor: "", infoBackground: "" };
+  for (const { key } of textModifiers) options[key] = "";
+  return options;
+}
+
+function layoutStates(sidc) {
+  return currentFieldStates(sidc).filter((item) => item.available && item.field && item.key !== "engagementType");
+}
+
+function renderFieldLayout() {
+  const panel = document.getElementById("panel-text");
+  const list = document.getElementById("app6aTextFields");
+  if (!panel.hidden && state.positions) {
+    const sidc = state.customSidc || buildSidc();
+    const states = layoutStates(sidc);
+    // The stage's padding and border take 34 px of the panel width.
+    const room = panel.clientWidth - 34;
+    const options = layoutOptions();
+    const signature = JSON.stringify([sidc, state.standardId, room, states.map((item) => [item.key, item.field, item.maxLength]), options]);
+    if (signature !== layoutSignature) {
+      layoutSignature = signature;
+      try {
+        layoutFits = buildFieldLayout(sidc, states, options, room);
+      } catch {
+        layoutFits = false;
+      }
+    }
+  }
+  const showing = !panel.hidden && state.positions && layoutFits;
+  dom.fieldLayout.hidden = !showing;
+  list.hidden = showing;
+  dom.toggleUnavailable.hidden = showing || !Number(dom.toggleUnavailable.dataset.unavailable);
+  if (showing) syncLayoutBoxes();
+  for (const button of dom.textViewSwitch.querySelectorAll("[data-text-view]")) {
+    const active = (button.dataset.textView === "positions") === state.positions;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  }
+  const positionsButton = dom.textViewSwitch.querySelector('[data-text-view="positions"]');
+  positionsButton.disabled = !layoutFits;
+  positionsButton.title = layoutFits ? "Boxes at the positions where the text renders" : "Field positions need a wider window";
+}
+
+// Lays out the boxes; false when they do not fit the room.
+function buildFieldLayout(sidc, states, options, room) {
+  const tags = placeholderOptions(states, {});
+  const probe = new window.ms.Symbol(sidc, { ...options, ...tags.options, infoFields: true }).asSVG();
+  const plain = new window.ms.Symbol(sidc, { ...options, infoFields: false }).asSVG();
+  const texts = [...new DOMParser().parseFromString(probe, "image/svg+xml").querySelectorAll("text")].map((node) => ({
+    x: Number(node.getAttribute("x")),
+    y: Number(node.getAttribute("y")),
+    anchor: node.getAttribute("text-anchor"),
+    fontSize: Number(node.getAttribute("font-size")) || 40,
+    middle: node.getAttribute("dominant-baseline") === "middle",
+    content: node.textContent
+  }));
+  const rows = readTextRows(texts, tags.codes).map((row) => ({ ...row, x: row.x * layoutScale, y: row.y * layoutScale }));
+  const symbol = svgViewBox(plain);
+  const ends = rows.filter((row) => row.anchor === "end").map((row) => row.x);
+  const starts = rows.filter((row) => row.anchor === "start").map((row) => row.x);
+  const between = ends.length && starts.length ? Math.min(...starts) - Math.max(...ends) : symbol.width;
+  const drawn = new Set(rows.flatMap((row) => row.keys));
+  layoutUndrawn = states.filter((item) => !drawn.has(item.key));
+  // A box fits its code, the field's name and a usual value. chrome is all
+  // but the text: padding, border, gaps, and the "now" button of W, the arrow
+  // of a select or the chevron of a list link. Crowded rows give up names
+  // before the room for a value; a name is shown whole or not at all.
+  const kinds = new Map(states.map((item) => [item.key, layoutKind(item)]));
+  const extra = { select: 18, open: 16, input: 0 };
+  const chrome = (item) => 24 + textWidth(item.field, "layout-code") + extra[kinds.get(item.key)] + (item.key === "dtg" ? 28 : 0);
+  const value = (item) => 7.2 * fieldValueChars(item);
+  const named = Object.fromEntries(states.map((item) => [item.key, Math.ceil(chrome(item) + textWidth(item.label)) + 2]));
+  const codeOnly = Object.fromEntries(states.map((item) => [item.key, Math.ceil(chrome(item) + value(item)) + 2]));
+  const natural = Object.fromEntries(states.map((item) => [item.key, Math.max(named[item.key], codeOnly[item.key]) + 4]));
+  const widths = fitRowWidths(rows, natural, { room, between, plain: codeOnly });
+  if (!widths) return false;
+  const boxes = layoutFieldBoxes(rows, widths, { height: 30, gap: 8, center: 100 * layoutScale });
+  const all = [symbol, ...boxes];
+  const left = Math.min(...all.map((item) => item.left));
+  const top = Math.min(...all.map((item) => item.top));
+  const bounds = {
+    left,
+    top,
+    width: Math.max(...all.map((item) => item.left + item.width)) - left,
+    height: Math.max(...all.map((item) => item.top + item.height)) - top
+  };
+  if (bounds.width > room + 1) return false;
+
+  const canvas = dom.layoutCanvas;
+  const px = (value) => `${Math.round(value)}px`;
+  canvas.style.width = px(Math.ceil(bounds.width));
+  canvas.style.height = px(Math.ceil(bounds.height));
+  let art = canvas.querySelector(".layout-symbol");
+  if (!art) {
+    art = document.createElement("div");
+    art.className = "layout-symbol";
+    art.setAttribute("aria-hidden", "true");
+    canvas.prepend(art);
+  }
+  art.innerHTML = plain;
+  Object.assign(art.style, { left: px(symbol.left - bounds.left), top: px(symbol.top - bounds.top), width: `${symbol.width}px`, height: `${symbol.height}px` });
+
+  // Tab order: the left side, the middle, then the right side, top to bottom.
+  const leftEdge = ends.length ? Math.max(...ends) : -Infinity;
+  const rightEdge = starts.length ? Math.min(...starts) : Infinity;
+  const column = (item) => (item.left + item.width <= leftEdge + 1 ? 0 : item.left >= rightEdge - 1 ? 2 : 1);
+  const ordered = [...boxes].sort((a, b) => column(a) - column(b) || a.top - b.top || a.left - b.left);
+  const byKey = new Map(states.map((item) => [item.key, item]));
+  const kept = new Set();
+  for (const item of ordered) {
+    const definition = byKey.get(item.key);
+    const kind = kinds.get(item.key);
+    let box = canvas.querySelector(`[data-layout-key="${item.key}"]`);
+    if (box && box.dataset.kind !== kind) {
+      box.remove();
+      box = null;
+    }
+    if (!box) box = createLayoutBox(item.key, kind);
+    // A box over the symbol is placed by its centre, so it can shrink to a
+    // small target while empty.
+    const middle = item.top + item.height / 2;
+    const inside = column(item) === 1 && middle > symbol.top && middle < symbol.top + symbol.height;
+    box.classList.toggle("inside", inside);
+    box.style.left = px((inside ? item.left + item.width / 2 : item.left) - bounds.left);
+    box.style.top = px((inside ? middle : item.top) - bounds.top);
+    box.style.setProperty("--w", `${item.width}px`);
+    box.querySelector(".layout-code").textContent = definition.field;
+    box.dataset.label = definition.label;
+    // Without room for its whole name a box shows its code; the line under
+    // the boxes names it on hover and focus.
+    box.dataset.placeholder = item.width >= named[item.key] ? definition.label : "";
+    box.querySelector(".layout-about").textContent = layoutAbout(definition);
+    // Appending moves boxes into tab order; the one being typed in stays put.
+    if (!box.contains(document.activeElement)) canvas.append(box);
+    kept.add(box);
+  }
+  for (const box of canvas.querySelectorAll("[data-layout-key]")) if (!kept.has(box)) box.remove();
+
+  dom.layoutMore.hidden = !layoutUndrawn.length;
+  dom.layoutMoreSummary.textContent = `Not drawn here · ${layoutUndrawn.length}`;
+  dom.layoutMoreList.innerHTML = `${layoutUndrawn
+    .map((item) => `<span class="layout-chip"><span class="field-code">${escapeHtml(item.field)}</span>${escapeHtml(item.label)}</span>`)
+    .join("")}<span>The renderer does not draw these around this symbol. <button type="button" class="link-button" data-text-view="list">Edit them in the list</button></span>`;
+  return true;
+}
+
+// AO built from lists opens the list view; F and L are lists.
+function layoutKind(definition) {
+  if (definition.parts) return "open";
+  return textModifiers.find((field) => field.key === definition.key).choices ? "select" : "input";
+}
+
+// Text width as the boxes draw it: a field name, or a code with className
+// "layout-code".
+let measurer;
+function textWidth(text, className = "layout-name") {
+  if (!measurer) {
+    measurer = document.createElement("span");
+    measurer.setAttribute("aria-hidden", "true");
+    document.body.append(measurer);
+  }
+  measurer.className = `layout-measure ${className}`;
+  measurer.textContent = text;
+  return measurer.getBoundingClientRect().width;
+}
+
+function createLayoutBox(key, kind) {
+  const box = document.createElement("label");
+  box.className = "layout-box";
+  box.dataset.layoutKey = key;
+  box.dataset.kind = kind;
+  const code = document.createElement("span");
+  code.className = "layout-code";
+  // A box over the symbol shows its value as text until it is opened.
+  const shown = document.createElement("span");
+  shown.className = "layout-shown";
+  shown.setAttribute("aria-hidden", "true");
+  const about = document.createElement("span");
+  about.className = "layout-about visually-hidden";
+  about.id = `layout-about-${key}`;
+  box.append(code, shown, about);
+  if (kind === "open") {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "layout-open";
+    button.dataset.layoutOpen = key;
+    button.setAttribute("aria-describedby", about.id);
+    button.innerHTML = '<span class="layout-open-text"></span><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m6 4 4 4-4 4" /></svg>';
+    box.append(button);
+  } else {
+    const control = document.createElement(kind);
+    control.dataset.layoutInput = key;
+    control.setAttribute("aria-describedby", about.id);
+    if (kind === "input") control.autocomplete = "off";
+    box.append(control);
+  }
+  if (key === "dtg") {
+    const now = document.createElement("button");
+    now.type = "button";
+    now.className = "layout-now";
+    now.dataset.layoutNow = "";
+    now.title = "Now (UTC)";
+    now.setAttribute("aria-label", "Set the date-time group to now (UTC)");
+    now.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5V12l3 2" /></svg>';
+    box.append(now);
+  }
+  return box;
+}
+
+// Values, choices, limits and states follow the form fields.
+function syncLayoutBoxes() {
+  for (const box of dom.layoutCanvas.querySelectorAll("[data-layout-key]")) {
+    const key = box.dataset.layoutKey;
+    const field = textModifiers.find((item) => item.key === key);
+    const source = document.getElementById(field.id);
+    const code = box.querySelector(".layout-code").textContent;
+    const warnings = fieldWarnings.get(key) || [];
+    const name = `${code} ${box.dataset.label}`;
+    box.classList.toggle("filled", Boolean(source.value));
+    box.classList.toggle("problem", warnings.length > 0);
+    box.classList.toggle("focused", key === state.focusField);
+    // An empty box over the symbol is a small target until it is used.
+    box.classList.toggle("compact", box.classList.contains("inside") && !source.value);
+    box.querySelector(".layout-shown").textContent = source.value;
+    const control = box.querySelector("[data-layout-input]");
+    const open = box.querySelector("[data-layout-open]");
+    if (open) {
+      open.querySelector(".layout-open-text").textContent = source.value || box.dataset.placeholder;
+      open.setAttribute("aria-label", `${name}: ${source.value || "not set"}. Opens the list.`);
+    } else if (control.tagName === "SELECT") {
+      // The options show what is drawn; empty shows the field name.
+      const choices = [...source.options].map((item) => [item.value, item.value || box.dataset.placeholder]);
+      const signature = JSON.stringify(choices);
+      if (control.dataset.choices !== signature) {
+        control.innerHTML = choices.map(([value, label]) => option(value, label)).join("");
+        control.dataset.choices = signature;
+      }
+      control.value = source.value;
+      control.setAttribute("aria-label", name);
+    } else {
+      if (document.activeElement !== control) control.value = source.value;
+      control.placeholder = box.dataset.placeholder;
+      control.setAttribute("aria-label", name);
+      if (source.maxLength > 0) control.maxLength = source.maxLength;
+      else control.removeAttribute("maxlength");
+      if (source.getAttribute("list")) control.setAttribute("list", source.getAttribute("list"));
+      else control.removeAttribute("list");
+    }
+  }
+  syncLayoutHelp();
+}
+
+// The code, name, description and example of a field, as one sentence for
+// the box's screen-reader description.
+function layoutAbout(definition) {
+  const field = textModifiers.find((item) => item.key === definition.key);
+  const example = field.placeholder ? ` ${field.placeholder.replace(/^e\.g\./, "Example:")}.` : "";
+  return `${field.description}${example}`;
+}
+
+// Two lines under the boxes, always the same height: the field under the
+// pointer, else the one being edited (with its count and any problem), else
+// how the view works.
+let hoveredBox = null;
+function syncLayoutHelp() {
+  const focused = document.activeElement?.closest?.("[data-layout-key]");
+  const box = hoveredBox?.isConnected ? hoveredBox : focused && dom.layoutCanvas.contains(focused) ? focused : null;
+  if (!box) {
+    dom.layoutHelp.innerHTML = dom.layoutCanvas.querySelector("[data-layout-key]")
+      ? '<span class="layout-help-title">Click a box and type.</span><span class="layout-help-text">Each box sits where its text is drawn; empty boxes are left out of the symbol.</span>'
+      : '<span class="layout-help-title">No text amplifier is drawn around this symbol.</span>';
+    return;
+  }
+  const key = box.dataset.layoutKey;
+  const field = textModifiers.find((item) => item.key === key);
+  const source = document.getElementById(field.id);
+  const editing = box === focused;
+  const count = editing && source.maxLength > 0 && !field.choices ? `<span class="layout-count">${source.value.length} / ${source.maxLength}</span>` : "";
+  const warnings = editing ? fieldWarnings.get(key) || [] : [];
+  const definition = layoutStates(state.customSidc || buildSidc()).find((item) => item.key === key);
+  const text = definition?.parts ? `${field.description} Built from lists in the list view.` : box.querySelector(".layout-about").textContent;
+  dom.layoutHelp.innerHTML = `<span class="layout-help-title"><span class="field-code">${escapeHtml(box.querySelector(".layout-code").textContent)}</span><strong>${escapeHtml(box.dataset.label)}</strong>${count}</span>${
+    warnings.length ? `<span class="layout-help-text layout-warn">${escapeHtml(warnings.join(" "))}</span>` : `<span class="layout-help-text">${escapeHtml(text)}</span>`
+  }`;
 }
 
 function syncGraphicsControls() {
@@ -1677,18 +1988,7 @@ function renderAll() {
   try {
     currentSymbol = new window.ms.Symbol(sidc, currentOptions());
     currentSvg = currentSymbol.asSVG();
-    let previewSvg = currentSvg;
-    positionCodes = {};
-    if (state.positions) {
-      const values = Object.fromEntries(textModifiers.map(({ key, id }) => [key, document.getElementById(id)?.value || ""]));
-      const tags = placeholderOptions(currentFieldStates(sidc), values);
-      positionCodes = tags.codes;
-      try {
-        previewSvg = new window.ms.Symbol(sidc, { ...currentOptions(), infoFields: true, ...tags.options }).asSVG();
-      } catch {}
-    }
-    dom.symbolPreview.innerHTML = previewSvg;
-    if (state.positions) markFieldTags();
+    dom.symbolPreview.innerHTML = currentSvg;
     document.getElementById("compactPreview").innerHTML = currentSvg;
     const valid = Boolean(currentSymbol.isValid());
     dom.renderState.classList.toggle("invalid", !valid);
@@ -1722,7 +2022,7 @@ function renderAll() {
   renderChips(sidc);
   renderFlagSwatch();
   syncGraphicsControls();
-  dom.previewHint.textContent = state.positions ? "Tags mark empty fields. Click one to edit it." : "Transparent background";
+  renderFieldLayout();
   document.title = `${icon.name} — Military Symbol Editor`;
 }
 
@@ -1877,12 +2177,16 @@ function activateTab(tab) {
   // Section switches return the form to its top.
   const panel = document.querySelector(".editor-panel");
   if (panel.getBoundingClientRect().top < 0) panel.scrollIntoView({ block: "start" });
+  renderFieldLayout();
 }
 
+// Opens a field in the List view, with its tools (the AO builder, the rating
+// parts) next to it.
 function openField(key) {
   const field = textModifiers.find((item) => item.key === key);
   const input = field && document.getElementById(field.id);
   if (!input || input.disabled) return;
+  setTextView("list");
   activateTab(document.getElementById("tab-text"));
   setFocusField(key);
   input.scrollIntoView({ block: "center" });
@@ -2087,16 +2391,59 @@ function bindEvents() {
     renderAll();
     toast("Text amplifiers cleared");
   });
+  // Edit text opens the boxes under Text amplifiers.
   dom.positionsToggle.addEventListener("click", () => {
-    state.positions = !state.positions;
-    dom.positionsToggle.classList.toggle("active", state.positions);
-    dom.positionsToggle.setAttribute("aria-pressed", String(state.positions));
-    renderAll();
+    setTextView("positions");
+    activateTab(document.getElementById("tab-text"));
+    if (!layoutFits) toast("Field positions need a wider window");
+    else if (dom.fieldLayout.getBoundingClientRect().bottom > window.innerHeight) dom.fieldLayout.scrollIntoView({ block: "nearest" });
   });
-  dom.symbolPreview.addEventListener("click", (event) => {
-    const tag = event.target.closest("[data-field]");
-    if (tag) openField(tag.dataset.field);
+  dom.textInfoButton.addEventListener("click", () => {
+    const open = dom.textInfo.hidden;
+    dom.textInfo.hidden = !open;
+    dom.textInfoButton.setAttribute("aria-expanded", String(open));
   });
+  for (const container of [dom.textViewSwitch, dom.layoutMore])
+    container.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-text-view]");
+      if (button) setTextView(button.dataset.textView);
+    });
+  // Box edits go through the form field, so both stay one value.
+  dom.layoutCanvas.addEventListener("input", (event) => {
+    const key = event.target.dataset.layoutInput;
+    if (!key) return;
+    hoveredBox = null;
+    const source = document.getElementById(textModifiers.find((item) => item.key === key).id);
+    source.value = event.target.value;
+    source.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  dom.layoutCanvas.addEventListener("click", (event) => {
+    const open = event.target.closest("[data-layout-open]");
+    if (open) return openField(open.dataset.layoutOpen);
+    if (!event.target.closest("[data-layout-now]")) return;
+    const source = document.getElementById(textModifiers.find((item) => item.key === "dtg").id);
+    // The year length follows this symbol's W definition.
+    source.value = dtgForField(new Date(), currentFieldStates().find((item) => item.key === "dtg"));
+    source.dispatchEvent(new Event("input", { bubbles: true }));
+    dom.layoutCanvas.querySelector('[data-layout-input="dtg"]')?.focus();
+  });
+  dom.layoutCanvas.addEventListener("focusin", (event) => {
+    const box = event.target.closest("[data-layout-key]");
+    if (box) setFocusField(box.dataset.layoutKey);
+    syncLayoutHelp();
+  });
+  dom.layoutCanvas.addEventListener("focusout", () => requestAnimationFrame(syncLayoutHelp));
+  dom.layoutCanvas.addEventListener("mouseover", (event) => {
+    const box = event.target.closest("[data-layout-key]");
+    if (box === hoveredBox) return;
+    hoveredBox = box;
+    syncLayoutHelp();
+  });
+  dom.layoutCanvas.addEventListener("mouseleave", () => {
+    hoveredBox = null;
+    syncLayoutHelp();
+  });
+  new ResizeObserver(() => renderFieldLayout()).observe(document.getElementById("panel-text"));
   dom.sidcInput.addEventListener("input", () => {
     // "_" counts as "-"; replace it in place without moving the caret.
     if (dom.sidcInput.value.includes("_")) {

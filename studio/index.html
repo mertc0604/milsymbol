@@ -54,7 +54,7 @@
             <div class="preview-toolbar">
               <span id="previewHint">Transparent background</span>
               <div class="view-actions">
-                <button class="tool-toggle" id="positionsToggle" type="button" aria-pressed="false" title="Show where each text amplifier renders">Field positions</button
+                <button class="tool-toggle edit-text" id="positionsToggle" type="button" aria-label="Edit text amplifiers at their positions" title="Open Text amplifiers with a box for each field where its text is drawn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4Z" /><path d="m13.5 6.5 4 4" /></svg>Edit text</button
                 ><button class="tool-toggle active" id="gridToggle" type="button" aria-pressed="true">Grid</button
                 ><button class="tool-toggle" id="outlineToggle" type="button" aria-pressed="false" title="Draw a halo around the symbol">Outline</button>
               </div>
@@ -191,17 +191,33 @@
 
             <div id="panel-text" role="tabpanel" aria-labelledby="tab-text" hidden>
               <div class="text-toolbar">
-                <p id="textSummary" class="text-summary"></p>
+                <div id="textViewSwitch" class="segmented view-switch" role="group" aria-label="Text amplifier layout">
+                  <button type="button" data-text-view="positions" aria-pressed="true">Field positions</button
+                  ><button type="button" data-text-view="list" aria-pressed="false">List</button>
+                </div>
+                <p class="text-summary"><span id="textSummary"></span
+                  ><button id="textInfoButton" class="info-button" type="button" aria-expanded="false" aria-controls="textInfo" aria-label="About these fields" title="About these fields">i</button></p>
                 <div class="text-actions">
                   <button id="toggleUnavailable" class="tool-toggle" type="button" aria-pressed="true">Hide unavailable</button>
                   <button id="clearText" class="quiet-button" type="button">Clear text</button>
                 </div>
               </div>
-              <p id="app6aFieldNote" class="field-note" hidden>APP-6A Table III (pp. 19–21). Only applicable fields are editable; limits follow the publication.</p>
+              <div id="textInfo" class="text-info" hidden>
+                <p id="textApplies"></p>
+                <p id="app6aFieldNote" hidden>APP-6A Table III (pp. 19–21). Only applicable fields are editable; limits follow the publication.</p>
+                <p>Text amplifiers are included in SVG / PNG exports, separately from the SIDC. Placement depends on the symbol set.</p>
+              </div>
               <div id="carryNotes" class="carry-notes" role="status" aria-live="polite" hidden></div>
+              <section id="fieldLayout" class="field-layout" aria-label="Text amplifiers at their positions" hidden>
+                <div class="layout-stage"><div id="layoutCanvas" class="layout-canvas"></div></div>
+                <p id="layoutHelp" class="layout-help"></p>
+                <details id="layoutMore" class="layout-more" hidden>
+                  <summary id="layoutMoreSummary"></summary>
+                  <div id="layoutMoreList" class="layout-more-list"></div>
+                </details>
+              </section>
               <div id="app6aTextFields" class="text-groups"></div>
-              <section id="profileExtras" class="profile-extras" aria-label="Fields this symbol defines that the editor cannot set" hidden></section>
-              <p class="field-note">Text amplifiers are included in SVG / PNG exports, separately from the SIDC. Placement depends on the symbol set.</p>
+              <details id="profileExtras" class="profile-extras" hidden></details>
             </div>
 
             <div id="panel-style" role="tabpanel" aria-labelledby="tab-style" hidden>
@@ -333,7 +349,9 @@
         current code. Messages below the box explain what was applied or why a code was rejected.
       </p>
       <p>
-        Field positions shows where each empty text amplifier would render; click a tag to edit that field. SVG is a scalable
+        Edit text, under the preview, opens Text amplifiers in Field positions: a box for each field where its text is drawn
+        around the symbol; type in a box to set that field. The List view shows every field with its rules and tools. SVG
+        is a scalable
         vector file; PNG is exported with a transparent background. Copying the SIDC alone does not include text or appearance
         settings.
       </p>
