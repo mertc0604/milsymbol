@@ -9,7 +9,7 @@ import {
   app6dEngagementError
 } from "./vendor/modifierprofiles/app6d.js";
 import * as app6dSectors from "./vendor/modifierprofiles/app6d-sectors.js";
-import { decodeEditorSidc, editImportedSidc, numericSidcEdition } from "./sidc-editor.js";
+import { completeEditorSidc, decodeEditorSidc, editImportedSidc, numericSidcEdition } from "./sidc-editor.js";
 import { modifierGroups, textModifiers, collectTextModifiers } from "./modifier-fields.js";
 import {
   probeOffers,
@@ -2095,6 +2095,12 @@ function bindEvents() {
     if (tag) openField(tag.dataset.field);
   });
   dom.sidcInput.addEventListener("input", () => {
+    // "_" counts as "-"; replace it in place without moving the caret.
+    if (dom.sidcInput.value.includes("_")) {
+      const { selectionStart, selectionEnd } = dom.sidcInput;
+      dom.sidcInput.value = dom.sidcInput.value.replace(/_/g, "-");
+      dom.sidcInput.setSelectionRange(selectionStart, selectionEnd);
+    }
     state.sidcDirty = true;
     state.sidcMessage = null;
     renderSidcStatus(state.customSidc || buildSidc());
@@ -2106,20 +2112,16 @@ function bindEvents() {
     });
 
   dom.applySidc.addEventListener("click", () => {
-    let value = dom.sidcInput.value.trim().toUpperCase().replace(/\s/g, "");
-    const allowed =
-      config().family === "modern" ? /^\d{20,30}$/ : /^[A-Z0-9*-]{10,15}$/;
+    const completion = completeEditorSidc(dom.sidcInput.value, config().family);
+    const filler = config().family === "modern" ? "0" : "-";
+    let value = completion.value;
     const reject = (text) => {
       state.sidcDirty = true;
       state.sidcMessage = { kind: "error", text };
       renderSidcStatus(state.customSidc || buildSidc());
     };
-    if (!allowed.test(value)) {
-      reject(
-        config().family === "modern"
-          ? `Enter a numeric SIDC with 20–30 digits. This one has ${value.length} characters${/\D/.test(value) ? ", including letters" : ""}.`
-          : `Enter a letter-based SIDC with 10–15 characters (letters, digits, - or *). This one has ${value.length}.`
-      );
+    if (completion.error) {
+      reject(completion.error);
       return;
     }
     if (state.standardId === "app6a" && !value.startsWith("S")) {
@@ -2149,6 +2151,7 @@ function bindEvents() {
     renderAll();
     renderCatalog();
     const notes = [
+      completion.added ? `Completed with ${filler} to ${value.length} characters.` : "",
       hasWildcards ? "Wildcards resolved with the current identity and status; other fields left unspecified." : "",
       state.standardId !== startStandard ? `Standard switched to ${config().label}.` : "",
       state.importedIcon?.name === "Custom SIDC" ? "This function code is not in the catalog; it is kept as entered." : ""

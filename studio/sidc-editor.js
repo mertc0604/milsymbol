@@ -6,6 +6,21 @@ export function numericSidcEdition(sidc) {
   return "";
 }
 
+// Apply accepts the start of a code and fills the rest: letter SIDCs with "-"
+// to 15 characters (at least scheme, identity, dimension and status), numeric
+// SIDCs with "0" to 20 digits (at least version through symbol set). "_" is "-".
+export function completeEditorSidc(input, family) {
+  const value = String(input).trim().toUpperCase().replace(/\s/g, "").replace(/_/g, "-");
+  if (family === "modern") {
+    if (!/^\d{6,30}$/.test(value))
+      return { value, added: 0, error: `Enter at least the first 6 digits of a numeric SIDC (up to 30); the rest is filled with 0 to 20 digits. This one has ${value.length} characters${/\D/.test(value) ? ", including letters" : ""}.` };
+    return { value: value.padEnd(20, "0"), added: Math.max(0, 20 - value.length), error: "" };
+  }
+  if (!/^[A-Z0-9*-]{4,15}$/.test(value))
+    return { value, added: 0, error: `Enter at least the first 4 characters of a letter-based SIDC (up to 15: letters, digits, - or *); the rest is filled with -. This one has ${value.length}.` };
+  return { value: value.padEnd(15, "-"), added: 15 - value.length, error: "" };
+}
+
 export function decodeEditorSidc(value, { family, version, icons }) {
   const modern = family === "modern";
   const extended = (numericSidcEdition(value) || (version === "13" ? "e" : "d")) === "e";

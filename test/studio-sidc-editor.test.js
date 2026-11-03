@@ -1,4 +1,4 @@
-import { decodeEditorSidc, editImportedSidc } from "../studio/sidc-editor.js";
+import { completeEditorSidc, decodeEditorSidc, editImportedSidc } from "../studio/sidc-editor.js";
 
 const tank = { id: "S-G-EVAT--", name: "Tank", code: "EVAT--", battleDimension: "G", codingScheme: "S" };
 const legacy = { family: "legacy", version: "", icons: [tank] };
@@ -29,5 +29,17 @@ export default {
     "E modifier edits change only their own prefix and base field": [editImportedSidc("131610171812110001022180000792", "130310000012110003004000000000", "modifier1", modern), "131610171812110003024180000792"],
     "clearing common modifier clears its prefix without touching country": [editImportedSidc("131610171812110001022180000792", "130310000012110000000000000000", "modifier2", modern), "131610171812110001002080000792"],
     "frame shape edits preserve E country and modifiers": [editImportedSidc("131610171812110001022180000792", "130310000012110000000010000000", "frameShape", modern), "131610171812110001022110000792"]
+  },
+  "SIDC completion on Apply": {
+    "underscores count as dashes": [completeEditorSidc("sfgpuci_", "legacy").value, "SFGPUCI--------"],
+    "a short letter code is filled with dashes to 15": [completeEditorSidc("SFGPUCI", "legacy"), { value: "SFGPUCI--------", added: 8, error: "" }],
+    "a full letter code is unchanged": [completeEditorSidc("SFGPUCI----F---", "legacy"), { value: "SFGPUCI----F---", added: 0, error: "" }],
+    "wildcards stay for the identity and status resolution": [completeEditorSidc("S*G*UCI", "legacy").value, "S*G*UCI--------"],
+    "a letter code needs scheme, identity, dimension and status": [Boolean(completeEditorSidc("SFG", "legacy").error), true],
+    "a letter code longer than 15 is an error": [Boolean(completeEditorSidc("SFGPUCI----F---X", "legacy").error), true],
+    "a short numeric code is filled with zeros to 20": [completeEditorSidc("100310001211", "modern"), { value: "10031000121100000000", added: 8, error: "" }],
+    "numeric codes of 20 to 30 digits are unchanged": [completeEditorSidc("100310001612110102037921234567", "modern").added, 0],
+    "a numeric code needs version, context, identity and symbol set": [Boolean(completeEditorSidc("10031", "modern").error), true],
+    "letters in a numeric code are an error": [Boolean(completeEditorSidc("1003A0001211", "modern").error), true]
   }
 };
