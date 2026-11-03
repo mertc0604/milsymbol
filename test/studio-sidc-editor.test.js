@@ -31,10 +31,12 @@ export default {
     "frame shape edits preserve E country and modifiers": [editImportedSidc("131610171812110001022180000792", "130310000012110000000010000000", "frameShape", modern), "131610171812110001022110000792"]
   },
   "SIDC completion on Apply": {
-    "underscores count as dashes": [completeEditorSidc("sfgpuci_", "legacy").value, "SFGPUCI--------"],
-    "a short letter code is filled with dashes to 15": [completeEditorSidc("SFGPUCI", "legacy"), { value: "SFGPUCI--------", added: 8, error: "" }],
+    "underscores count as dashes": [completeEditorSidc("sfgpuci_", "legacy").value, "SFGPUCI---*****"],
+    "a short letter code fills the function with - and positions 11-15 with *": [completeEditorSidc("SFGPUCI", "legacy"), { value: "SFGPUCI---*****", added: 8, error: "" }],
+    "four characters leave the whole function as -": [completeEditorSidc("SFGP", "legacy").value, "SFGP------*****"],
+    "a code that reaches size/mobility fills only the rest with *": [completeEditorSidc("SFGPUCI----F", "legacy").value, "SFGPUCI----F***"],
     "a full letter code is unchanged": [completeEditorSidc("SFGPUCI----F---", "legacy"), { value: "SFGPUCI----F---", added: 0, error: "" }],
-    "wildcards stay for the identity and status resolution": [completeEditorSidc("S*G*UCI", "legacy").value, "S*G*UCI--------"],
+    "typed wildcards stay for the identity and status resolution": [completeEditorSidc("S*G*UCI", "legacy").value, "S*G*UCI---*****"],
     "a letter code needs scheme, identity, dimension and status": [Boolean(completeEditorSidc("SFG", "legacy").error), true],
     "a letter code longer than 15 is an error": [Boolean(completeEditorSidc("SFGPUCI----F---X", "legacy").error), true],
     "a short numeric code is filled with zeros to 20": [completeEditorSidc("100310001211", "modern"), { value: "10031000121100000000", added: 8, error: "" }],

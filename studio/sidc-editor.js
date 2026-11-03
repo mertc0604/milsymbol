@@ -6,9 +6,12 @@ export function numericSidcEdition(sidc) {
   return "";
 }
 
-// Apply accepts the start of a code and fills the rest: letter SIDCs with "-"
-// to 15 characters (at least scheme, identity, dimension and status), numeric
-// SIDCs with "0" to 20 digits (at least version through symbol set). "_" is "-".
+// Apply accepts the start of a code and fills the rest. Letter SIDCs need at
+// least scheme, identity, dimension and status; the function ID (positions
+// 5-10) is filled with "-" (no information) and positions 11-15 with "*"
+// (defined by the user), as in the code tables (APP-6A B.4.2, PDF 74 / 68).
+// Numeric SIDCs need version through symbol set and are filled with "0" to 20
+// digits. "_" is "-".
 export function completeEditorSidc(input, family) {
   const value = String(input).trim().toUpperCase().replace(/\s/g, "").replace(/_/g, "-");
   if (family === "modern") {
@@ -17,8 +20,8 @@ export function completeEditorSidc(input, family) {
     return { value: value.padEnd(20, "0"), added: Math.max(0, 20 - value.length), error: "" };
   }
   if (!/^[A-Z0-9*-]{4,15}$/.test(value))
-    return { value, added: 0, error: `Enter at least the first 4 characters of a letter-based SIDC (up to 15: letters, digits, - or *); the rest is filled with -. This one has ${value.length}.` };
-  return { value: value.padEnd(15, "-"), added: 15 - value.length, error: "" };
+    return { value, added: 0, error: `Enter at least the first 4 characters of a letter-based SIDC (up to 15: letters, digits, - or *); the function code is filled with - and positions 11–15 with *. This one has ${value.length}.` };
+  return { value: value.padEnd(10, "-").padEnd(15, "*"), added: 15 - value.length, error: "" };
 }
 
 export function decodeEditorSidc(value, { family, version, icons }) {

@@ -2113,7 +2113,11 @@ function bindEvents() {
 
   dom.applySidc.addEventListener("click", () => {
     const completion = completeEditorSidc(dom.sidcInput.value, config().family);
-    const filler = config().family === "modern" ? "0" : "-";
+    const completionNote = !completion.added ? ""
+      : config().family === "modern" ? `Completed with 0 to ${completion.value.length} digits.`
+        : `Completed as ${completion.value}; * positions left unspecified.`;
+    // Only wildcards the user typed get the wildcard note; completion adds its own *.
+    const typedWildcards = completion.value.slice(0, completion.value.length - completion.added).includes("*");
     let value = completion.value;
     const reject = (text) => {
       state.sidcDirty = true;
@@ -2151,8 +2155,8 @@ function bindEvents() {
     renderAll();
     renderCatalog();
     const notes = [
-      completion.added ? `Completed with ${filler} to ${value.length} characters.` : "",
-      hasWildcards ? "Wildcards resolved with the current identity and status; other fields left unspecified." : "",
+      completionNote,
+      typedWildcards ? "Wildcards resolved with the current identity and status; other fields left unspecified." : "",
       state.standardId !== startStandard ? `Standard switched to ${config().label}.` : "",
       state.importedIcon?.name === "Custom SIDC" ? "This function code is not in the catalog; it is kept as entered." : ""
     ].filter(Boolean);
