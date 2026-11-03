@@ -1229,5 +1229,200 @@ export default {
       icn["GR.IC.FF.HEADQUARTERS OR HEADQUARTERS ELEMENT"]
     ];
     sId["S-G-UHGL--"] = sId["S-G-GL----"] = [icn["GR.IC.LIAISON"]];
+    if (this.metadata.app6a) {
+      // Selected Annex D corrections. These compositions belong to APP-6A:
+      // later editions deliberately keep their own sizes and modifier positions.
+      const line = d => ({ ...icn["GR.IC.ENGINEER"], d });
+      const dot = (cx, cy, r, hollow = false) => ({
+        ...icn["GR.IC.FIELD ARTILLERY"], cx, cy, r,
+        ...(hollow ? { fill: false } : {})
+      });
+      const label = (text, x, y, fontsize) => ({
+        ...icn["GR.IC.SECURITY"], text, x, y, fontsize
+      });
+      const track = line("M125,75 C156,75 156,124 125,124 H75 C44,124 44,75 75,75 Z");
+      const wheels = [63, 100, 137].map(x => dot(x, 115, 4.5, true));
+      const wheelTrack = line("M120,68 C149,68 149,109 120,109 H80 C51,109 51,68 80,68 Z");
+      const put = (code, ...parts) => { sId[`S-G-${code}`] = parts; };
+      const identity = this.metadata.affiliation;
+      // Annex D's waterline is a smooth wave; the generic primitive has
+      // squared transitions and a different vertical placement.
+      const wave = (y = 100) => {
+        const [left, right] = {
+          Unknown: y > 115 ? [42, 158] : [30, 170], Friend: [25, 175], Neutral: [45, 155], Hostile: [28 + Math.abs(y - 100), 172 - Math.abs(y - 100)]
+        }[identity];
+        const step = (right - left) / 7;
+        let d = `M${left},${y}`;
+        for (let i = 0; i < 7; i++) {
+          const x = left + step * i;
+          const bend = y + (i % 2 ? 12 : -12);
+          d += ` C${x + step / 3},${bend} ${x + 2 * step / 3},${bend} ${x + step},${y}`;
+        }
+        return line(d);
+      };
+      put("UCDS--", icn["GR.IC.FF.AIR DEFENCE"], label("SRD", 100, { Unknown: 91, Friend: 107, Neutral: 115, Hostile: 90 }[identity], 32));
+      put("UCDO--", icn["GR.IC.FF.AIR DEFENCE"], label("TMD", 100, { Unknown: 91, Friend: 107, Neutral: 115, Hostile: 90 }[identity], 32));
+      put("UCDSV-", icn["GR.IC.FF.AIR DEFENCE"], icn["GR.IC.FF.MAIN GUN SYSTEM"],
+        line("M116,62 C139,62 139,94 116,94 H84 C61,94 61,62 84,62 Z"), label("V", 100, 80, 25));
+      put("UCATA-", ms._translate(0, -10, icn["GR.IC.ARMOUR"]),
+        line("M63,125 C63,109 100,109 100,125 C100,109 137,109 137,125"));
+      put("UCATW-", track, wave());
+      put("UCATWR", track, wave(), line("M80,132 H120 M76,125 C86,125 86,139 76,139 M124,125 C114,125 114,139 124,139"));
+      put("UCAWL-", wheelTrack, wheels, label("L", 100, 136, 28));
+      // The air-assault V is inside the antitank triangle in Annex D.
+      put("UCAAS-", icn["GR.IC.FF.ANTITANK/ANTIARMOUR"], line(`M${{ Unknown: 78.38, Friend: 77.04, Neutral: 81.31, Hostile: 79.61 }[identity]},82 100,113 ${{ Unknown: 121.62, Friend: 122.96, Neutral: 118.69, Hostile: 120.39 }[identity]},82`));
+      put("UCVV--", ms._translate(0, -15, ms._scale(1.05, icn["GR.IC.AVIATION FIXED WING"])),
+        label("VSTOL", 100, 114, 24));
+      const unmanned = { ...icn["GR.M1.UNMANNED AERIAL VEHICLE"],
+        d: "M70,67 100,86 130,67 V75 L100,97 70,75 Z" };
+      put("UCVUF-", icn["GR.IC.AVIATION FIXED WING"], unmanned);
+      put("UCVUR-", icn["GR.IC.AVIATION ROTARY WING"], unmanned);
+      put("UCEC--", ms._translate(0, 14, ms._scale(0.85, icn["GR.IC.ENGINEER"])), label("CBT", 100, 79, 30));
+      put("UCEN--", ms._translate(0, 23, ms._scale(0.7, icn["GR.IC.ENGINEER"])), label("CONST", 100, 96, 25));
+      put("UCENN-", ms._translate(0, 22, ms._scale(0.7, icn["GR.IC.ENGINEER"])),
+        line("M100,62 V103 M80,67 H120 M75,84 C75,99 88,106 100,106 C112,106 125,99 125,84 M75,84 78,97 85,93 M125,84 122,97 115,93"), dot(100, 57, 5, true));
+      // PDF 191–192: the chevrons of tracked launchers sit INSIDE the
+      // track, above their dot. Towed and truck dots sit on the wheel bar.
+      const trackedRocket = (code, multiple) => put(code, track,
+        line(multiple ? "M83,105 100,89 117,105 M83,96 100,80 117,96" : "M83,98 100,82 117,98"), dot(100, 110, 9));
+      trackedRocket("UCFRS-", true);
+      trackedRocket("UCFRSS", false);
+      trackedRocket("UCFRMS", true);
+      const rocket = (code, multiple, mounting) => put(code,
+        line(multiple ? "M77,91 100,68 123,91 M77,81 100,58 123,81" : "M77,87 100,64 123,87"),
+        dot(100, 101, 12), mounting);
+      const truck = [line("M60,114 H140"), dot(65, 119, 4.5, true), dot(135, 119, 4.5, true)];
+      const crossCountry = [line("M60,114 H140"), ...[65, 100, 135].map(x => dot(x, 119, 4.5, true))];
+      const towed = [line("M68,114 H132"), dot(64, 114, 4.5, true), dot(136, 114, 4.5, true)];
+      rocket("UCFRSR", false, truck);
+      rocket("UCFRST", false, towed);
+      rocket("UCFRM-", true, crossCountry);
+      rocket("UCFRMR", true, truck);
+      rocket("UCFRMT", true, towed);
+      const mortar = (cy, tip) => [dot(100, cy, 6, true), line(`M100,${cy - 6} V${tip + 5}`),
+        { ...icn["GR.IC.AVIATION ROTARY WING"], d: `M100,${tip} 95,${tip + 13} 105,${tip + 13} Z` }];
+      put("UCFMS-", mortar(105, 56), line("M72,111 H128 C149,111 149,130 128,130 H72 C51,130 51,111 72,111 Z"));
+      put("UCFMTS", mortar(110, 77), towed, line("M91,57 100,78 109,57"));
+      put("UCFML-", mortar(120, 53), wave(125));
+      put("UCRRF-", icn["GR.IC.FF.RECONNAISSANCE"], wave(), label("F", 83, 80, 30));
+      put("UCRRL-", ms._translate(0, -1, ms._scale(0.88, track)), icn["GR.IC.FF.RECONNAISSANCE"], wheels.map(p => ({ ...p, cy: 121 })));
+      put("UCSW--", label("SEC", 100, 100, 33), wave(128));
+      put("UUACCK", track, icn["GR.IC.CBRN"], label("SD", 100, 65, 24));
+      put("UUACSA", track, icn["GR.IC.CBRN"], label("S", 100, 65, 27));
+      const chemical = ms._translate(0, -2, ms._scale(0.72, icn["GR.IC.CBRN"]));
+      put("UUACRW", wheelTrack, chemical, icn["GR.IC.FF.RECONNAISSANCE"], wheels);
+      put("UUACRS", wheelTrack, ms._translate(0, 5, ms._scale(0.7, chemical)),
+        icn["GR.IC.FF.RECONNAISSANCE"], wheels, label("RS", 100, 79, 18));
+      put("UUMA--", { ...unmanned, d: "M70,70 100,87 130,70 V77 L100,98 70,77 Z" }, label("MI", 100, 128, 36));
+      put("UUMSEA", wheelTrack, label("EW", 88, 90, 27), icn["GR.IC.FF.RECONNAISSANCE"], wheels);
+      put("UUMRG-", line("M74,65 C70,94 84,108 117,108 M76,87 102,65 V86 L129,65"), label("MI", 100, 132, 36));
+      for (const [code, text] of [["UUSC--", "CCP"], ["UUSCL-", "LCCP"], ["UUSO--", "OPS"], ["UUSMN-", "NC"], ["UUSS--", "SPT"]]) {
+        put(code, icn["GR.IC.FF.SIGNAL"], label(text, { Unknown: 123, Friend: 128, Neutral: 126, Hostile: 116 }[identity], identity === "Unknown" || identity === "Hostile" ? 85 : 80, text.length === 4 ? 21 : 23));
+      }
+      sId["S-G-UUSCL-"].push(line("M70,133 C70,119 100,119 100,133 C100,119 130,119 130,133"));
+      // Radio and relay antennae occupy most of the frame height; their
+      // circular bases are separate from the diagonal signal bolt.
+      put("UUSR--", icn["GR.IC.FF.SIGNAL"], line("M100,121 V64 M73,72 82,64 91,72 100,64 109,72 118,64 127,72"), dot(100, 135, 14, true));
+      put("UUSRT-", icn["GR.IC.FF.SIGNAL"], line("M100,140 V65 M73,65 H127 M82,76 H118"), label("C", 100, 134, 35));
+      put("UUSRW-", icn["GR.IC.FF.SIGNAL"], line("M100,121 V65 M78,65 H122 M100,88 H86 L100,113"), dot(100, 135, 14, true));
+      put("USAPBC", icn["GR.IC.FF.CORPS SUPPORT"], label("BPAD", 100, 103, 29));
+      // Annex D support chevrons enter only a narrow strip at each side.
+      const support = side => {
+        const [left, right, top, bottom, inset] = {
+          Unknown: [40, 160, 75, 125, 12], Friend: [25, 175, 50, 150, 18],
+          Neutral: [45, 155, 50, 150, 12], Hostile: [50, 150, 80, 120, 12]
+        }[identity];
+        let d = "";
+        if (side === "T") d += ` M${left},${top} L${left + inset},100 ${left},${bottom}`;
+        if (side) d += ` M${right},${top} L${right - inset},100 ${right},${bottom}`;
+        return line(d);
+      };
+      const supply = side => {
+        const [left, right, y] = { Unknown: [42, 158, 120], Friend: [25, 175, 125], Neutral: [45, 155, 125], Hostile: [50, 150, 120] }[identity];
+        const inset = side ? (identity === "Friend" ? 9 : identity === "Neutral" ? 6 : 0) : 0;
+        return line(`M${left + (side === "T" ? inset : 0)},${y} H${right - inset} ${support(side).d}`);
+      };
+      put("USS3AT", supply("T"), line("M100,125 V102 L80,67 H120 L100,102"),
+        ms._translate(28, 6, ms._scale(0.4, icn["GR.IC.AVIATION ROTARY WING"])));
+      for (const [code, side] of [["USS4--", ""], ["USS4T-", "T"], ["USS4C-", "C"]]) {
+        put(code, supply(side), line("M62,113 V78 H138 V113 M100,78 V102"));
+      }
+      put("USS5--", supply(""), line("M82,119 V77 C82,56 118,56 118,77 V119 M77,119 H123"));
+      const medicalSupply = side => {
+        const [top, bottom, left, right] = {
+          Unknown: [31, 120, side === "T" ? 48 : 29, 152],
+          Friend: [50, 125, side === "T" ? 40 : 25, 160],
+          Neutral: [45, 125, side === "T" ? 55 : 45, 145],
+          Hostile: [28, 120, side === "T" ? 57 : 36, 143]
+        }[identity];
+        return line(`M100,${top} V${bottom} M${left},92 H${right}`);
+      };
+      put("USS8T-", supply("T"), medicalSupply("T"));
+      put("USSWPT", supply("T"), line("M60,85 H111 C124,85 135,98 135,111 M93,77 H117 M105,77 V85"), label("PURE", 100, 105, 20));
+      put("UCECS-", ms._translate(0, 10, ms._scale(0.85, icn["GR.IC.ENGINEER"])), line("M83,60 100,95.55 117,60"));
+      put("UCSM--", wheelTrack, wheels, label("SEC", 100, 91, 29));
+      put("UCSR--", label("SEC", 100, 96, 32), line("M60,110 H140"),
+        ...[65, 75, 125, 135].map(x => dot(x, 115, 4.5, true)));
+      put("USS8C-", supply("C"), medicalSupply("C"));
+      const airport = [line("M62,77 H138 M62,99 106,53 M100,90 V144 M76,103 124,131 M76,131 124,103"), dot(100, 117, 27, true)];
+      put("USTA--", airport);
+      put("USTAT-", support("T"), airport);
+      put("USTAC-", support("C"), airport);
+      // Preserve shared primitives: clone only the selected compositions
+      // before applying Annex D's fine interior strokes.
+      const fine = part => Array.isArray(part) ? part.map(fine) : part ? {
+        ...part,
+        ...(part.type === "path" || part.type === "circle" ? { strokewidth: 1.3, non_scaling_stroke: 1 } : {}),
+        ...(part.draw ? { draw: fine(part.draw) } : {})
+      } : part;
+      for (const code of ["UCDS--", "UCDSV-", "UCDO--", "UCATA-", "UCATW-", "UCATWR", "UCAWL-", "UCAAS-", "UCVV--", "UCVUF-", "UCVUR-", "UCEC--", "UCEN--", "UCENN-", "UCFRS-", "UCFRSS", "UCFRSR", "UCFRST", "UCFRM-", "UCFRMS", "UCFRMR", "UCFRMT", "UCFMS-", "UCFMTS", "UCFML-", "UCRRF-", "UCRRL-", "UCSW--", "UUACCK", "UUACSA", "UUACRW", "UUACRS", "UUMA--", "UUMSEA", "UUMRG-", "UUSC--", "UUSCL-", "UUSO--", "UUSMN-", "UUSR--", "UUSRT-", "UUSRW-", "UUSS--", "USAPBC", "USS3AT", "USS4--", "USS4T-", "USS4C-", "USS5--", "USS8T-", "USSWPT", "UCECS-", "UCSM--", "UCSR--", "USS8C-", "USTA--", "USTAT-", "USTAC-"]) {
+        sId[`S-G-${code}`] = fine(sId[`S-G-${code}`]);
+      }
+      if (!this.metadata.frame) {
+        // Unframed icons otherwise use the generic 50..150 viewport. Expand
+        // only selected compositions whose Annex D geometry reaches beyond it.
+        const extend = (codes, [x1, y1, x2, y2]) => {
+          if (x1 >= 50 && y1 >= 50 && x2 <= 150 && y2 <= 150) return;
+          for (const code of codes) {
+            const previous = bbox[`S-G-${code}`] || { x1: 50, y1: 50, x2: 150, y2: 150 };
+            bbox[`S-G-${code}`] = {
+              x1: Math.min(previous.x1, x1), y1: Math.min(previous.y1, y1),
+              x2: Math.max(previous.x2, x2), y2: Math.max(previous.y2, y2)
+            };
+          }
+        };
+        extend(["UCDS--", "UCDSV-", "UCDO--"], {
+          Unknown: [45, 50, 155, 150], Friend: [25, 50, 175, 150],
+          Neutral: [45, 45, 155, 155], Hostile: [49, 50, 151, 150]
+        }[identity]);
+        extend(["UCATW-", "UCATWR", "UCRRF-"], {
+          Unknown: [28, 50, 172, 150], Friend: [25, 50, 175, 150],
+          Neutral: [45, 45, 155, 155], Hostile: [28, 50, 172, 150]
+        }[identity]);
+        extend(["UCFML-", "UCSW--"], {
+          Unknown: [42, 50, 158, 150], Friend: [25, 50, 175, 150],
+          Neutral: [45, 50, 155, 150], Hostile: [50, 50, 150, 150]
+        }[identity]);
+        extend(["UCAAS-"], {
+          Unknown: [50, 33, 150, 150], Friend: [25, 50, 175, 150],
+          Neutral: [45, 47, 155, 150], Hostile: [50, 30, 150, 150]
+        }[identity]);
+        extend(["UCRRL-", "UUACRW", "UUACRS", "UUMSEA"], {
+          Unknown: [50, 50, 150, 150], Friend: [25, 50, 175, 150],
+          Neutral: [45, 45, 155, 155], Hostile: [50, 50, 150, 150]
+        }[identity]);
+        extend(["UUSC--", "UUSCL-", "UUSO--", "UUSMN-", "UUSR--", "UUSRT-", "UUSRW-", "UUSS--"], {
+          Unknown: [50, 50, 154, 150], Friend: [25, 50, 175, 150],
+          Neutral: [45, 45, 155, 155], Hostile: [50, 50, 150, 150]
+        }[identity]);
+        extend(["UUSRT-"], [50, 50, 150, 152]);
+        extend(["USAPBC", "USS3AT", "USS4--", "USS4T-", "USS4C-", "USS5--", "USS8T-", "USSWPT", "USS8C-", "USTAT-", "USTAC-"], {
+          Unknown: [40, 50, 160, 150], Friend: [25, 50, 175, 150],
+          Neutral: [45, 50, 155, 150], Hostile: [50, 50, 150, 150]
+        }[identity]);
+        extend(["USS8T-", "USS8C-"], [50, { Unknown: 31, Friend: 50, Neutral: 45, Hostile: 28 }[identity], 150, 150]);
+        extend(["USS8C-"], [{ Unknown: 29, Friend: 25, Neutral: 45, Hostile: 36 }[identity], 50, 150, 150]);
+      }
+    }
   }
 };

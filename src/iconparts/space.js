@@ -39,6 +39,7 @@ export default function (
   const iconFillColor = colors.iconFillColor[affiliation];
   const none = colors.none[affiliation];
   const black = colors.black[affiliation];
+  const white = colors.white[affiliation];
 
   //const numberSIDC = metadata.numberSIDC;
   const icn = {};
@@ -239,6 +240,22 @@ export default function (
     }
   ];
   icn["SP.I.MANUAL TRACK"] = text("MAN");
+  if (metadata.app6a) {
+    const station = icn["SP.I.FF.SPACE STATION"];
+    station[0].fill = white;
+    station[2].fill = white;
+    station[2].stroke = black;
+    station[2].d = "M77,94 118.1,75.6 121.6,77.5 80.5,95.9 Z";
+    for (const part of station) part.strokewidth = 1.2;
+    // Annex D PDF p. 136: the central mast projects above the thin antenna.
+    station.push({
+      type: "path",
+      d: "M98.6,74 V93",
+      fill: false,
+      stroke: black,
+      strokewidth: 1.8
+    });
+  }
   icn["SP.I.MILITARY"] = text("MIL");
   icn["SP.I.MINIATURIZED SATELLITE"] = [
     {

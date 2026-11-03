@@ -14,124 +14,145 @@ export default {
     sId["S-F-------"] = [icn["GR.IC.SPECIAL OPERATIONS FORCES"]];
     sId["S-F-A-----"] = [
       icn["AR.I.MILITARY ROTARY WING"],
-      icn["AIR.M1.SPECIAL OPERATIONS FORCES"],
+      icn["AIR.M1.SPECIAL OPERATIONS FORCES"]
     ];
     sId["S-F-AF----"] = [
       icn["AR.I.MILITARY FIXED WING"],
-      icn["AIR.M1.SPECIAL OPERATIONS FORCES"],
+      icn["AIR.M1.SPECIAL OPERATIONS FORCES"]
     ];
     sId["S-F-AFA---"] = [
       icn["AR.I.MILITARY FIXED WING"],
       icn["AIR.M1.SPECIAL OPERATIONS FORCES"],
-      icn["SOF.M2.ATTACK"],
+      icn["SOF.M2.ATTACK"]
     ];
     sId["S-F-AFK---"] = [
       icn["AR.I.MILITARY FIXED WING"],
       icn["AIR.M1.SPECIAL OPERATIONS FORCES"],
-      icn["SOF.M2.REFUEL"],
+      icn["SOF.M2.REFUEL"]
     ];
     sId["S-F-AFU---"] = [
       icn["AR.I.MILITARY FIXED WING"],
       icn["AIR.M1.SPECIAL OPERATIONS FORCES"],
-      icn["SOF.M2.UTILITY"],
+      icn["SOF.M2.UTILITY"]
     ];
     sId["S-F-AFUL--"] = [
       icn["AR.I.MILITARY FIXED WING"],
       icn["AIR.M1.SPECIAL OPERATIONS FORCES"],
-      icn["AIR.M2.LIGHT"],
+      icn["AIR.M2.LIGHT"]
     ];
     sId["S-F-AFUM--"] = [
       icn["AR.I.MILITARY FIXED WING"],
       icn["AIR.M1.SPECIAL OPERATIONS FORCES"],
-      icn["AIR.M2.MEDIUM"],
+      icn["AIR.M2.MEDIUM"]
     ];
     sId["S-F-AFUH--"] = [
       icn["AR.I.MILITARY FIXED WING"],
       icn["AIR.M1.SPECIAL OPERATIONS FORCES"],
-      icn["AIR.M2.HEAVY"],
+      icn["AIR.M2.HEAVY"]
     ];
     sId["S-F-AV----"] = [
       icn["AR.I.MILITARY FIXED WING"],
       icn["AIR.M1.SPECIAL OPERATIONS FORCES"],
-      icn["SOF.M2.VSTOL"],
+      icn["SOF.M2.VSTOL"]
     ];
     sId["S-F-AH----"] = _STD2525
       ? [
           icn["GR.IC.AVIATION ROTARY WING"],
           icn["AIR.M1.SPECIAL OPERATIONS FORCES"],
-          icn["GR.IC.AVIATION ROTARY WING 2525C"],
+          icn["GR.IC.AVIATION ROTARY WING 2525C"]
         ]
       : [
           icn["GR.IC.AVIATION ROTARY WING"],
-          icn["AIR.M1.SPECIAL OPERATIONS FORCES"],
+          icn["AIR.M1.SPECIAL OPERATIONS FORCES"]
         ];
     sId["S-F-AHH---"] = [
       icn["GR.IC.AVIATION ROTARY WING"],
       icn["AIR.M1.SPECIAL OPERATIONS FORCES"],
-      icn["SOF.M2.COMBAT SEARCH AND RESCUE"],
+      icn["SOF.M2.COMBAT SEARCH AND RESCUE"]
     ];
     sId["S-F-AHA---"] = [
       icn["GR.IC.AVIATION ROTARY WING"],
       icn["AIR.M1.SPECIAL OPERATIONS FORCES"],
-      icn["SOF.M2.ATTACK"],
+      icn["SOF.M2.ATTACK"]
     ];
     sId["S-F-AHU---"] = [
       icn["GR.IC.AVIATION ROTARY WING"],
       icn["AIR.M1.SPECIAL OPERATIONS FORCES"],
-      icn["SOF.M2.UTILITY"],
+      icn["SOF.M2.UTILITY"]
     ];
     sId["S-F-AHUL--"] = [
       icn["GR.IC.AVIATION ROTARY WING"],
       icn["AIR.M1.SPECIAL OPERATIONS FORCES"],
-      icn["AIR.M2.LIGHT"],
+      icn["AIR.M2.LIGHT"]
     ];
     sId["S-F-AHUM--"] = [
       icn["GR.IC.AVIATION ROTARY WING"],
       icn["AIR.M1.SPECIAL OPERATIONS FORCES"],
-      icn["AIR.M2.MEDIUM"],
+      icn["AIR.M2.MEDIUM"]
     ];
     sId["S-F-AHUH--"] = [
       icn["GR.IC.AVIATION ROTARY WING"],
       icn["AIR.M1.SPECIAL OPERATIONS FORCES"],
-      icn["AIR.M2.HEAVY"],
+      icn["AIR.M2.HEAVY"]
     ];
     sId["S-F-SN----"] = sId["S-F-N-----"] = [
       icn["GR.IC.NAVAL"],
-      icn["AIR.M1.SPECIAL OPERATIONS FORCES"],
+      icn["AIR.M1.SPECIAL OPERATIONS FORCES"]
     ];
     sId["S-F-SNS---"] = sId["S-F-NS----"] = [icn["GR.IC.SEA-AIR-LAND"]];
     sId["S-F-SNU---"] = sId["S-F-NU----"] = [
-      icn["SOF.IC.UNDERWATER DEMOLITION TEAM"],
+      icn["SOF.IC.UNDERWATER DEMOLITION TEAM"]
     ];
     sId["S-F-SNB---"] = sId["S-F-NB----"] = [
       icn["GR.IC.COMBATANT"],
-      icn["AIR.M1.SPECIAL OPERATIONS FORCES"],
+      icn["AIR.M1.SPECIAL OPERATIONS FORCES"]
     ];
     sId["S-F-SNN---"] = sId["S-F-NN----"] = [
       icn["GR.IC.SUBMARINE NUCLEAR PROPULSION"],
-      icn["AIR.M1.SPECIAL OPERATIONS FORCES"],
+      icn["AIR.M1.SPECIAL OPERATIONS FORCES"]
     ];
     sId["S-F-G-----"] = [
       icn["GR.IC.FF.INFANTRY"],
-      icn["GR.IC.SPECIAL OPERATIONS FORCES"],
+      icn["GR.IC.SPECIAL OPERATIONS FORCES"]
     ];
     sId["S-F-GS----"] = [icn["GR.IC.SPECIAL FORCES"]];
     sId["S-F-GR----"] = sId["S-F-GSR---"] = [
       icn["GR.IC.FF.INFANTRY"],
       icn["AIR.M1.RECONNAISSANCE"],
-      icn["GR.M2.AIRBORNE"],
+      icn["GR.M2.AIRBORNE"]
     ];
     sId["S-F-GP----"] = sId["S-F-GSP---"] = [
-      icn["GR.EQ.PSYCHOLOGICAL OPERATIONS EQUIPMENT"],
+      icn["GR.EQ.PSYCHOLOGICAL OPERATIONS EQUIPMENT"]
     ];
     sId["S-F-GPA---"] = sId["S-F-GSPA--"] = [
       icn["GR.EQ.PSYCHOLOGICAL OPERATIONS EQUIPMENT"],
-      ms._translate(0, -30, ms._scale(0.7, icn["AR.I.MILITARY FIXED WING"])),
+      ms._translate(0, -30, ms._scale(0.7, icn["AR.I.MILITARY FIXED WING"]))
     ];
     sId["S-F-GC----"] = sId["S-F-GCA---"] = [icn["GR.IC.CIVIL AFFAIRS"]];
     sId["S-F-GB----"] = sId["S-F-B-----"] = [
       icn["GR.IC.SPECIAL OPERATIONS FORCES"],
-      icn["GR.M2.SUPPORT"],
+      icn["GR.M2.SUPPORT"]
     ];
-  },
+    if (this.metadata.app6a) {
+      // Annex D retains the rotor mast and uses two equally sized support lines.
+      sId["S-F-AH----"] = [
+        {
+          ...icn["GR.IC.AVIATION ROTARY WING"],
+          d: "M60,80 100,100 140,80 V120 L100,100 60,120 Z"
+        },
+        { ...icn["AIR.M1.SPECIAL OPERATIONS FORCES"], y: 76 },
+        {
+          ...icn["GR.IC.AVIATION ROTARY WING"],
+          d: "M100,100 V150",
+          fill: false,
+          stroke: icn["GR.IC.AVIATION ROTARY WING"].fill,
+          strokewidth: 1.5
+        }
+      ];
+      sId["S-F-GB----"] = [
+        { ...icn["GR.IC.SPECIAL OPERATIONS FORCES"], y: 85, fontsize: 32 },
+        { ...icn["GR.M2.SUPPORT"], y: 116, fontsize: 32 }
+      ];
+    }
+  }
 };

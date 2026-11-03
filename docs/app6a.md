@@ -155,8 +155,9 @@ recovery as a bar with end wheels, a centre line in the ordnance missile, eight
 sun rays for equipment manufacture, crossed picks for mines, a claymore drawn
 like the less than lethal mine, and one wheel under a wing for airports.
 Unframed less than lethal, claymore and armoured-vehicle icons are no longer
-clipped by their bounding box. Size-only and position-only differences from
-Annex D are intentionally left as rendered by milsymbol.
+clipped by their bounding box. Size-only and position-only differences normally
+remain as rendered by milsymbol, except for the 90 entries explicitly selected
+for correction in the local triage review described below.
 The subsurface review also corrects the ten sea-mine variants, underwater decoy,
 and man-made seabed installation in the existing subsurface primitive module.
 Annex D's smaller horns, oval bodies, mooring stems, bottom/wave/side marks and
@@ -178,6 +179,49 @@ The Unknown `S-U-WMFD--` cell (PDF 165) also differs from the other three identi
 it shows a solid arrow in a circle rather than a crossed floating mine.
 The original `before.json` is never overwritten. `--resume` on the comparison
 script reuses unchanged image results; omit it after changing the metric itself.
+
+### Selected triage corrections (2–3 November 2026)
+
+The local comparison tool's 90 `fix` decisions select 58 ground-unit entries,
+17 equipment/installation entries, and 15 space, air, naval and SOF entries.
+Their Annex D icon shapes, internal line weights, relative component sizes and
+positions are corrected only when `metadata.app6a` is active. Shared drawing
+primitives and other editions retain their existing behavior. Triage decisions
+remain the user's review history and are not changed into automatic approvals.
+
+The selected AD missile-launcher and antitank-gun entries explicitly follow the
+illustration printed beside their SIDC in Annex D, including its disagreement
+with the Annex B names:
+
+| Function ID | Annex B meaning | Annex D illustration used by APP-6A |
+| --- | --- | --- |
+| EWMAT- | Theatre AD launcher | Short range, one bar |
+| EWMAL- | Long range AD launcher | Intermediate range, two bars |
+| EWMAI- | Intermediate range AD launcher | Long range, three bars |
+| EWMAS- | Short range AD launcher | Theatre, T |
+| EWGR-- | Recoilless antitank gun | Light, one bar |
+| EWGL-- | Light antitank gun | Medium, two bars |
+| EWGM-- | Medium antitank gun | Heavy, three bars |
+| EWGH-- | Heavy antitank gun | Recoilless arrow |
+
+Catalog names continue to describe Annex B. This is an explicit illustration
+choice for the selected rows, not a resolution of the publication's conflicting
+code meanings. The marine-life entry follows the consistent Unknown, Friend and
+Neutral cells; its erroneous Hostile merchant-ship illustration is retained as
+a source conflict rather than reproduced as marine life.
+
+Regression tests are grouped in `test/app6a-triage-ground.test.js`,
+`test/app6a-triage-equipment.test.js`, and `test/app6a-triage-other.test.js`.
+The local pre-change snapshot is
+`output/app6a-audit/triage-pre-fix-2026-11-02.json`; it includes all 713 S-scheme
+entries, four affiliations and both frame modes for APP-6A, APP-6B and 2525.
+The final comparison changes exactly those 90 APP-6A entries, with no changes
+to the other 623 APP-6A entries or the 11,408 APP-6B/2525 SVG outputs. Selected
+unframed ground bounds also retain full waves, support marks and medical stems.
+The root test suite passes 21,178 assertions; the Studio build and the changed
+files' ESLint check (using ECMAScript 2022 for the repository's existing syntax)
+pass. The 3,300 publication comparisons and local triage data were regenerated;
+automatic scores remain review aids rather than conformity certificates.
 
 ## Integration and distribution
 

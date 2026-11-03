@@ -582,6 +582,120 @@ export default {
     sId["S-G-EXMC--"] = [icn["GR.EQ.ANTIPERSONNEL LAND MINE"]];
     sId["S-G-EXML--"] = [icn["GR.EQ.ANTIPERSONNEL LAND MINE LESS THAN LETHAL"]];
 
+    if (this.metadata.app6a) {
+      // APP-6A Annex D, PDF pp. 236–237: the printed SIDCs do not agree
+      // with the range names in Annex B. Follow the drawing attached to each
+      // exact SIDC, without changing the later-edition code mappings above.
+      const line = (template, d) => ({
+        ...template,
+        type: "path",
+        d,
+        fill: false,
+        strokewidth: 1.5,
+      });
+      const launcher = line(
+        icn["GR.EQ.AIR DEFENCE MISSILE LAUNCHER SURFACE-TO-AIR"],
+        "M86,130 V65 C86,45 114,45 114,65 V130 M100,50 V127 M86,130 Q100,125 114,130 L120,140 H80 Z"
+      );
+      sId["S-G-EWMA--"] = [launcher];
+      for (const [code, heights] of [
+        ["EWMAT-", [89]],
+        ["EWMAL-", [84, 93]],
+        ["EWMAI-", [79, 88, 97]],
+      ]) {
+        sId["S-G-" + code] = [
+          launcher,
+          ...heights.map((y) => line(launcher, `M86,${y} H114`)),
+        ];
+      }
+      sId["S-G-EWMAS-"] = [
+        ms._translate(0, -10, ms._scale(0.8, launcher)),
+        {
+          ...icn["GR.EQ.AIR DEFENCE MISSILE LAUNCHER SURFACE-TO-AIR THEATRE"],
+          y: 150,
+          fontsize: 35,
+        },
+      ];
+
+      // Annex D, PDF pp. 247–248 has the same code/name disagreement for
+      // light, medium, heavy and recoilless antitank guns.
+      const antitank = line(
+        icn["GR.EQ.ANTITANK GUN"],
+        "M100,50 V130 L86,145 M100,130 L114,145 M85,78 V116 M115,78 V116"
+      );
+      for (const [code, heights] of [
+        ["EWGR--", [97]],
+        ["EWGL--", [91, 103]],
+        ["EWGM--", [85, 97, 109]],
+      ]) {
+        sId["S-G-" + code] = [
+          antitank,
+          ...heights.map((y) => line(antitank, `M85,${y} H115`)),
+        ];
+      }
+      sId["S-G-EWGH--"] = [
+        line(
+          antitank,
+          "M85,75 L100,50 L115,75 M100,50 V140 M85,90 V128 M115,90 V128"
+        ),
+      ];
+
+      // Annex D, PDF pp. 251, 256: wider, higher vehicle bodies with the
+      // wheels at the outer ends. These local parts affect only the selected
+      // parent entries, not the tank and support-vehicle descendants.
+      const vehicle =
+        icn[
+          "GR.EQ.ARMOURED PROTECTED VEHICLE WITH LIMITED CROSS COUNTRY MOBILITY"
+        ];
+      const body = line(
+        vehicle[0],
+        "M57,112 H143 M77,70 H123 C151,70 151,112 123,112 H77 C49,112 49,70 77,70 Z"
+      );
+      const wheels = [63, 137].map((cx) => ({
+        ...vehicle[1][0],
+        cx,
+        cy: 117,
+        r: 5,
+        strokewidth: 1.5,
+      }));
+      sId["S-G-EV----"] = [body, wheels];
+      sId["S-G-EVA---"] = [
+        body,
+        wheels,
+        { ...icn["GR.EQ.ARMOURED VEHICLE"], y: 93, fontsize: 36 },
+      ];
+      sId["S-G-EVE---"] = [
+        body,
+        wheels,
+        line(body, "M73,105 V78 H127 V105 M100,78 V96"),
+      ];
+
+      // Annex D, PDF p. 255: the light-armoured diamond ends at the
+      // chassis; it must not extend into the middle of the three wheels.
+      sId["S-G-EVAL--"] = [
+        line(
+          icn["GR.EQ.ARMOURED FIGHTING VEHICLE"],
+          "M70,70 V118 M130,70 V118 M100,70 L130,94 L100,118 L70,94 Z M65,118 H135"
+        ),
+        [70, 100, 130].map((cx) => ({ ...wheels[0], cx, cy: 124 })),
+      ];
+
+      // Annex D, PDF p. 258: trailer triangle has a tall tow stem, and its
+      // wheels sit below its single base. Volcano's V sits inside the bed.
+      sId["S-G-EVEMT-"] = [
+        line(
+          icn["GR.EQ.MINE CLEARING EQUIPMENT"],
+          "M100,50 V80 L65,117 H135 L100,80"
+        ),
+        [68, 132].map((cx) => ({ ...wheels[0], cx, cy: 122 })),
+      ];
+      sId["S-G-EVEML-"] = [
+        line(icn["GR.EQ.UTILITY VEHICLE"], "M65,70 Q100,88 135,70 V118 H65 Z"),
+        [72, 128].map((cx) => ({ ...wheels[0], cx, cy: 124 })),
+        { ...icn["GR.EQ.ARMORED CARRIER WITH VOLCANO"], y: 100, fontsize: 39 },
+      ];
+    }
+
     //This sets up the bounding boxes for equipment to have the bottom at the right place. (this will be used for mobility when unframed)
     const equipmentBottom = {
       "E-----": 0,
@@ -750,10 +864,18 @@ export default {
       "EXMC--": 122,
       "EXML--": 122,
     };
-    // APP-6A: the larger mines reach y 145 and the armoured vehicle's wheels
-    // y 138; do not clip them.
+    // APP-6A: allow the larger mines and selected antitank guns to reach
+    // y 145, and keep the armoured vehicle mobility attachment at its wheels.
     if (this.metadata.app6a) {
-      Object.assign(equipmentBottom, { "EXMC--": 147, "EXML--": 147, "EVA---": 139 });
+      Object.assign(equipmentBottom, {
+        "EXMC--": 147,
+        "EXML--": 147,
+        "EVA---": 124,
+        "EWMAS-": 153,
+        "EWGR--": 147,
+        "EWGL--": 147,
+        "EWGM--": 147,
+      });
     }
     for (const key in equipmentBottom) {
       if (!equipmentBottom.hasOwnProperty(key)) continue;
