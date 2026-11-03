@@ -36,13 +36,19 @@ export function fieldStates(textModifiers, app6a) {
 }
 
 // Field states from an edition modifier profile (src/modifierprofiles). A
-// profile whose fields() returns null leaves every field available.
+// profile whose fields() returns null leaves every field available. A field
+// the class table lists can still be ruled out for this SIDC: APP-6D lists L
+// and N for all equipment, and its unavailableReason() limits them to hostile
+// identities, as its validator does. The field's own unresolved note is not a
+// rule-out; it is shown as a warning on an editable field.
 export function profileFieldStates(textModifiers, profile, sidc) {
   const available = profile ? profile.fields(sidc) : null;
   if (!available) return fieldStates(textModifiers, null);
   return textModifiers.map(({ key, field, label }) => {
     const definition = available.find((item) => item.key === key);
-    if (definition)
+    const reason = profile.unavailableReason(key, sidc);
+    const ruledOut = definition && reason && reason !== definition.unresolved;
+    if (definition && !ruledOut)
       return {
         key,
         field: definition.field || field,
@@ -64,15 +70,28 @@ export function profileFieldStates(textModifiers, profile, sidc) {
         nonBlocking: Boolean(definition.nonBlocking),
         requiresEchelonDivisionOrBelow: Boolean(definition.requiresEchelonDivisionOrBelow)
       };
-    return { key, field, label, available: false, maxLength: null, choices: null, reason: profile.unavailableReason(key, sidc) || "Not available" };
+    return { key, field: definition?.field || field, label: definition?.label || label, available: false, maxLength: null, choices: null, reason: reason || "Not available" };
   });
 }
 
 const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
 const twoDigits = (value) => String(value).padStart(2, "0");
 
-export function formatDtg(date) {
-  return `${twoDigits(date.getUTCDate())}${twoDigits(date.getUTCHours())}${twoDigits(date.getUTCMinutes())}Z${months[date.getUTCMonth()]}${twoDigits(date.getUTCFullYear() % 100)}`;
+// DDHHMMZMONYY, or DDHHMMZMONYYYY with fourDigitYear.
+export function formatDtg(date, { fourDigitYear = false } = {}) {
+  const year = fourDigitYear ? String(date.getUTCFullYear()).padStart(4, "0") : twoDigits(date.getUTCFullYear() % 100);
+  return `${twoDigits(date.getUTCDate())}${twoDigits(date.getUTCHours())}${twoDigits(date.getUTCMinutes())}Z${months[date.getUTCMonth()]}${year}`;
+}
+
+// Now (UTC) for the W field of the current symbol: the year length the field's
+// own pattern asks for (APP-6D Land Unit W1 four digits, Table 3-2 PDF 87/3-7;
+// equipment and installations two). A field without a pattern gets two digits.
+export function dtgForField(date, definition) {
+  const short = formatDtg(date);
+  const pattern = definition && definition.pattern;
+  if (!pattern || pattern.test(short)) return short;
+  const long = formatDtg(date, { fourDigitYear: true });
+  return pattern.test(long) ? long : short;
 }
 
 export function evaluationRating(reliability, credibility) {

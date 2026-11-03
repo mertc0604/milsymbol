@@ -51,10 +51,10 @@ export const fieldReference = {
       ["HHMM", "Hour and minute"],
       ["Z", "Time zone suffix, Z for UTC"],
       ["MON", "Three-letter month, for example NOV"],
-      ["YY", "Year"],
+      ["YY", "Year; YYYY where the symbol's field asks for four digits (APP-6D land units)"],
       ["O/O", "On order"]
     ],
-    note: "Example: 021435ZNOV26. Now (UTC) fills the current time in this format."
+    note: "Example: 021435ZNOV26. Now (UTC) fills the current time in the format of this symbol's field."
   },
   location: {
     title: "Location formats",

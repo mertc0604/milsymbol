@@ -29,7 +29,7 @@ import {
   profileDetailLines
 } from "./profile-controls.js";
 
-import { fieldStates, profileFieldStates, formatDtg, evaluationRating, sidcParts, pushRecent, placeholderOptions, paletteProgress } from "./editor-helpers.js";
+import { fieldStates, profileFieldStates, dtgForField, evaluationRating, sidcParts, pushRecent, placeholderOptions, paletteProgress } from "./editor-helpers.js";
 import { fieldReference } from "./field-reference.js";
 import { app6aIdentities, contextOptions, convertIdentity, decodeIdentity, identityCode, identityLabel, identityList } from "./identities.js";
 import { createCountryFlagPart } from "./country-flags.js";
@@ -1099,7 +1099,9 @@ function createTextFields() {
     const button = event.target.closest("[data-dtg-now]");
     if (!button) return;
     const input = document.getElementById(button.dataset.dtgNow);
-    input.value = formatDtg(new Date()).slice(0, input.maxLength > 0 ? input.maxLength : undefined);
+    // The year length follows this symbol's W definition, not the input length.
+    const definition = currentFieldStates().find((item) => item.key === input.dataset.modifierField);
+    input.value = dtgForField(new Date(), definition);
     input.dispatchEvent(new Event("input", { bubbles: true }));
     input.focus();
   });
