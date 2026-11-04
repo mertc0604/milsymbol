@@ -145,10 +145,11 @@ export function metadata(ms, metadata, mapping) {
   metadata.baseDimension = metadata.dimension;
   metadata.baseAffilation = metadata.affiliation;
 
-  //Joker and faker should have the shape of friendly
-  if (standardIdentity2 == "5" && standardIdentity1 == "1")
+  // Table A-II contexts 5/6 are also Exercise. Resolve the context before
+  // choosing Joker/Faker so restricted/no-strike entities retain their identity.
+  if (standardIdentity2 == "5" && metadata.context === "Exercise")
     metadata.joker = true;
-  if (standardIdentity2 == "6" && standardIdentity1 == "1")
+  if (standardIdentity2 == "6" && metadata.context === "Exercise")
     metadata.faker = true;
   // APP-6(D) Table A-3 (PDF 719/A-5): identities 5 and 6 belong to the Hostile group,
   // so Joker/Faker keep the hostile frame (no Friend-shaped 2525 frame).
@@ -284,6 +285,19 @@ export function metadata(ms, metadata, mapping) {
     applyProfile(editionProfile, this.options.sidc, this.options, metadata);
     if (!editionProfile.showsCondition(this.options.sidc))
       metadata.condition = "";
+  }
+
+  // Rendering is permissive, but an unknown version must never bypass the
+  // edition checks simply because no modifier profile could be selected.
+  if (!["10", "11", "12", "13", "14", "15", "16"].includes(version)) {
+    metadata.validation = {
+      valid: false,
+      details: {
+        sidcErrors: [
+          `Position 1–2: version ${version} is not supported. Supported versions are 10–16.`
+        ]
+      }
+    };
   }
 
   return metadata;

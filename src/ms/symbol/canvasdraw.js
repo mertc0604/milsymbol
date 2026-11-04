@@ -118,6 +118,7 @@ export default function canvasDraw(ctx, instruction) {
             if (instruction[i].hasOwnProperty("clipPath")) {
               ctx.restore();
             }
+            if (ctx.globalAlpha != 1) ctx.globalAlpha = 1;
             if (
               typeof instruction[i].stroke === "undefined" ||
               (typeof instruction[i].stroke !== "undefined" &&

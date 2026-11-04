@@ -223,6 +223,163 @@ files' ESLint check (using ECMAScript 2022 for the repository's existing syntax)
 pass. The 3,300 publication comparisons and local triage data were regenerated;
 automatic scores remain review aids rather than conformity certificates.
 
+### Additional triage corrections (3 November 2026)
+
+The next 28 `fix` decisions add 22 ground-unit entries and six equipment,
+naval, underwater and SOF entries, bringing the selected total to 118. The
+additional shapes and their bounds are guarded by `metadata.app6a`; the shared
+drawing primitives and other editions keep their existing output. The user's
+triage decisions remain unchanged.
+
+The round's snapshot is
+`output/app6a-audit/review-2026-11-03/before.json`. Comparing all 713 S-scheme
+entries across four affiliations, two frame modes and three editions changes
+exactly the 28 newly selected APP-6A entries. The other APP-6A entries, including
+the previous 90 corrections, and all 11,408 APP-6B/2525 outputs are unchanged.
+The new regression files are `test/app6a-triage-ground-round2.test.js` and
+`test/app6a-triage-naval-round2.test.js`; they also exercise unframed bounds and
+different stroke widths. The root test suite passes 23,027 assertions; the
+isolation check covers 17,112 SVG comparisons.
+
+### Third pass over the selected rows (4 November 2026)
+
+The remaining differences in the `fix` rows were measured directly. Each
+publication cell was mapped into milsymbol's SVG units through the symbol's
+frame box, then compared with the current drawing on the same grid. Lines,
+arcs, circles, labels and part positions were fitted per identity, and the
+drawings were redrawn to those measurements. Every change is guarded by
+`metadata.app6a` and limited to the selected rows; the shared icon parts are
+unchanged:
+
+- **Ground units (`ground.js`):**
+  - The signal bolt is flatter in the Unknown and Hostile frames, and each
+    signal label sits individually above it. The same flatter geometry applies
+    to the reconnaissance diagonal in the Unknown and Hostile frames.
+  - Chemical units draw their dots lower and further in, with the lines ending
+    at the bottom of the body.
+  - Supply rows: the Neutral supply bar sits lower; ammunition, medical and
+    aviation-fuel (glass and rotor) shapes follow the publication's
+    proportions.
+  - Individual shapes follow the publication's proportions and placements: the
+    airport wheel and bar, the antitank air-assault V (and the Unknown legs),
+    the Vulcan barrel and the Friend/Neutral air-defence dome, the tracked
+    mortar, the engineer bracket, the wheeled security body, the rocket
+    launchers on wheels, and the riverine waterline (Unknown and Hostile).
+  - The large-configuration arcs and the EW label are repositioned.
+- **Installations (`installations.js`):** the naval-base and ship-construction
+  rings are octagons, with the ring and crossbar per frame.
+- **Sea surface (`sea.js`):** the law-enforcement vessel has a narrower keel
+  and a thin line beside the stripe.
+- **Subsurface (`subsurface.js`):** the conventional submarine and the other
+  submersible are positioned and sized per frame.
+
+Unframed bounds are extended to these drawings.
+`test/app6a-triage-round3.test.js` records the measured geometry, and the
+earlier triage tests were updated where they asserted the replaced shapes.
+Compared with the pre-round-2 snapshot, 68 APP-6A rows changed in total. All of
+them are rows marked `fix`; APP-6 and 2525 are byte-identical and every symbol
+stays valid (`output/app6a-audit/review-2026-11-04/verify-isolation.mjs`). The
+root test suite passes 23,111 assertions.
+
+For the 118 rows marked `fix`, the report's row verdicts changed from 36 UYUMLU,
+71 KONTROL and 3 FARKLI to 65 UYUMLU, 43 KONTROL and 2 FARKLI. Their cells
+changed from 292 UYUMLU and 174 KONTROL to 391 UYUMLU and 79 KONTROL.
+
+The local sheet `output/app6a-audit/APP6A-son-durum-karsilastirma.pdf` (built by
+`review-2026-11-04/before-after.py`) shows, for the 54 rows whose drawing
+changed in this pass, the publication cell, the drawing before the pass and the
+current drawing for each identity.
+
+The remaining flags are of four kinds:
+
+- **Installation frames:** the publication's installation frames place the top
+  bar differently (`IBN`, `IMS`).
+- **Air and subsurface frames:** their Unknown and Neutral frames have other
+  proportions.
+- **Typography:** the condensed publication typeface is wider or taller than
+  Arial.
+- **Solid shapes:** small centre-line artefacts on solid shapes (hulls, dots).
+
+The space-station ring is the same drawing in a slightly flatter perspective.
+
+### Report verdicts and their limits
+
+`scripts/report-app6a-symbol-pdf.py` turns the comparison into the PDF report
+and the local triage data. Its metrics are pure functions in
+`scripts/app6a_visual_verdicts.py` and are tested with synthetic drawings (and,
+when the local audit corpus exists, publication cells) by
+`scripts/tests/test_app6a_visual_verdicts.py`:
+
+```sh
+PYTHONPATH=scripts python3 -m unittest discover -s scripts/tests -v
+python3 scripts/report-app6a-symbol-pdf.py
+```
+
+Besides the direct in-place similarity, the registered icon pattern and the
+part layout, every cell gets a local shape comparison:
+
+- The icon line work, without the frame band, is reduced to stroke centre lines.
+  Thin grey scanned lines count as ink, and solid shapes add an inner outline.
+  The lines are split into parts: long straight lines, and the letters and
+  shapes that remain once those lines are removed. A letter standing on a line
+  is therefore judged at its own size.
+- The whole icon is registered by its boxes, or by the uniform scale and shift
+  that best explains it, within 0.75–1.33× and 15 % of the canvas. Each part
+  may then move by 20 % of its size (4–6 px) and change size by ±12 % to allow
+  for another typeface. Long lines may only move by 3 px.
+- Every centre-line pixel must then lie within 8 % of its part's size of the
+  other drawing (1.25–6 px, plus slack for bold strokes). A connected run of
+  unexplained pixels longer than 15 % of its part is a local difference: a
+  changed letter, a missing or added line or part, or a resized part. The limit
+  is 3–12 px, plus the shorter stroke ends of a bolder partner. A local
+  difference blocks every pass route.
+- Theater and corps chevrons are compared by a separate decoration signature.
+  The frame's side strips that hold them are left out of the local comparison.
+
+A cell passes when its direct score is at least 92 % and it shows no local
+difference. A cell scoring at least 78 % also passes when it shows no local
+difference itself and at least two cells (and at least half) of its row show
+none either. Wrong colour and wrong frame still fail first. The percentage
+printed under a cell is always the raw direct score.
+
+The thresholds were calibrated on 3 November 2026 against three sets:
+synthetic labels, the pre-fix renderings of the 118 rows marked `fix`
+(rasterized from the preserved snapshots), and visual review of the cells whose
+verdict changed.
+
+- **Synthetic labels.** Every letter change among 17 Arial 22 letters is
+  rejected, both free-standing and standing on a line (264 pairs each,
+  including L→T and H→X). The same letters drawn bolder pass.
+- **Pre-fix renderings.** 475 cells differ from the current rendering. They
+  are rejected in 109 of 110 row groups. 21 cells still pass, mostly entries
+  whose fix only thinned strokes or nudged parts by a few pixels. The previous
+  direct-score rule let 26 of these cells pass.
+- **User's example.** MAINTENANCE RECOVERY CORPS (`S-G-USXRC-`, PDF 233) passes
+  in all four identities. The THEATER (`USXRT`) and OPS (`UUSO`) rows drawn in
+  its place do not.
+
+The report now counts 1,377 UYUMLU, 1,646 KONTROL and 198 FARKLI image pairs,
+plus 79 publication conflicts. Compared with the previous triage data:
+
+| Verdict change | Image pairs | Reason |
+| --- | --- | --- |
+| KONTROL → UYUMLU | 412 | Mostly equivalent drawings at another scale or stroke width |
+| FARKLI → UYUMLU | 18 | All in rows already fixed or marked `skip` |
+| UYUMLU → KONTROL | 396 | Mostly a measured local difference, such as a second arrow chevron, a different crossbar or a misplaced line |
+
+Limits:
+
+- **No text recognition.** The comparison is geometric and does not read
+  letters.
+- **Lines near the frame.** Lines within 12 px of the frame, such as side lines
+  hugging it, are seen only by the direct score.
+- **Theater/corps rows.** The side strips are not compared locally.
+- **Solid shapes.** Solid shapes are compared by an inner outline, so very small
+  dots carry little weight.
+- **Borderline cases.** Changes at the part limits (a part 12 % larger, a line
+  3 px away) remain judgement calls. The verdicts are review aids, not
+  conformance certificates.
+
 ## Integration and distribution
 
 APP-6A follows the normal `ms.addIcons(app6a)` registration path. Its bundle is

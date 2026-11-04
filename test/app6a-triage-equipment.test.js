@@ -122,16 +122,17 @@ for (const affiliation of ["U", "F", "N", "H"]) {
       [["V", 100, 39]],
     ];
   }
-  for (const [code, radius] of [
-    ["IBN---", 6],
-    ["IMS---", 5],
+  // Third pass: both rings are octagons, centred per frame (PDF pp. 267–268).
+  for (const [code, start, ring] of [
+    ["IBN---", "M96.5,", { U: 64.5, F: 69.5, N: 67.5, H: 61 }[affiliation] - 8.5],
+    ["IMS---", "M97.7,", { U: 60.5, F: 67, N: 65, H: 56.25 }[affiliation] - 5.5],
   ]) {
     const p = iconParts(
       new ms.Symbol(`S${affiliation}GP${code}H----`, { standard: "APP6A" })
     );
     result[`Annex D installation anchor ring ${code}/${affiliation}`] = [
-      p.filter((x) => x.type === "circle").map((x) => x.r),
-      [radius],
+      [p.filter((x) => x.type === "circle").length, p.some((x) => x.fill === false && x.d?.startsWith(`${start}${ring} `))],
+      [0, true],
     ];
   }
 }

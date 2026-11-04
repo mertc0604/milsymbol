@@ -153,7 +153,14 @@
                     ><button data-mode="mobility" type="button">Mobility</button
                     ><button data-mode="none" type="button">None</button>
                   </div>
-                  <label class="full-field"><span id="amplifierLabel">Echelon</span><select id="amplifierValue"></select></label>
+                  <div class="full-field">
+                    <span id="amplifierLabel">Echelon</span>
+                    <div class="glyph-picker">
+                      <button id="amplifierButton" class="glyph-select" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="amplifierList" aria-labelledby="amplifierLabel amplifierButton"></button>
+                      <div id="amplifierList" class="glyph-list" role="listbox" tabindex="-1" aria-labelledby="amplifierLabel" hidden></div>
+                    </div>
+                    <select id="amplifierValue" class="visually-hidden" tabindex="-1" aria-hidden="true"></select>
+                  </div>
                   <p class="field-note" id="amplifierNote"></p>
                   <p class="field-note warn" id="amplifierAdjust" role="status" hidden></p>
                 </section>

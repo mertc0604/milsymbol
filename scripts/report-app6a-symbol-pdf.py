@@ -2,7 +2,7 @@
 
 Run after compare-app6a-symbol-images.py. For every illustrated cell of
 Annex D (printed pp. 130-261) the report shows the publication image, the
-current milsymbol rendering and a difference overlay. Two automatic scores
+current milsymbol rendering and a difference overlay. Automatic metrics
 triage visual review (they do not certify conformance):
 
 - direct similarity: frame silhouette and stroke-width-independent line
@@ -15,12 +15,17 @@ triage visual review (they do not certify conformance):
 - part layout: the icon may be resized as a whole, but its parts (text
   lines, shapes) must keep their proportions to each other. SOF over a much
   smaller SPT, where the publication draws both alike, is FARKLI.
+- local shape comparison (geometry): stroke centre lines of the icon, split
+  into parts (letters, shapes, long lines), compared after a bounded
+  whole-icon registration and small per-part moves; a changed letter, a
+  missing or added part or line leaves an unexplained run and blocks UYUMLU.
+  An equivalent drawing can pass with a lower raw in-place score.
 
     python3 scripts/report-app6a-symbol-pdf.py [output.pdf]
 
 Requires Pillow, NumPy, SciPy, scikit-image and reportlab.
 """
-import itertools
+import hashlib
 import json
 import multiprocessing
 import statistics
@@ -43,98 +48,26 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 from reportlab.platypus import Paragraph
-from scipy import ndimage
-from scipy.optimize import linear_sum_assignment
-from scipy.signal import fftconvolve
-from skimage.morphology import skeletonize
+
+import app6a_visual_verdicts as visual_metrics
+from app6a_visual_verdicts import (
+    TOLERANCE, PASS, REVIEW, PATTERN_OK, PATTERN_TOLERANCE, LAYOUT_WARN, LAYOUT_FAIL,
+    ICON_SCALE, ICON_DISPLACEMENT, PART_SHIFT_SHARE, MIN_PART_SHIFT, PART_SHIFT, PART_SCALES, LINE_SHIFT,
+    PART_TOLERANCE, RUN_SHARE,
+    fit, aspect, masks, outline, measure, icon_metrics, judge, colour_mismatch,
+)
 
 SYMBOLS = Path("output/app6a-audit/symbols")
 OUTPUT = Path(sys.argv[1] if len(sys.argv) > 1 else "output/app6a-audit/APP6A-karsilastirma-raporu.pdf")
-SIZE = 256
-TOLERANCE = 6  # px on the 256px normalized canvas (~2.3 %)
-PASS, REVIEW = 0.92, 0.78
-PATTERN_OK = 0.80  # registered icon pattern: same drawing at another size/position
-PATTERN_TOLERANCE = 0.04  # of the publication icon's size, at least 4 px, after registration
-LAYOUT_WARN, LAYOUT_FAIL = 1.0, 1.6  # part layout deviation (1.0 = parts 25 % off in size or 15 % in position)
-EDGE_BAND = 12  # px of the frame (and decorations hugging it) ignored for the icon
-SCALES = np.geomspace(0.4, 3.0, 21)
-ANGLES = (-6, 0, 6)
 PATTERN_CACHE = SYMBOLS / "pattern-cache.json"
-PATTERN_VERSION = 11  # bump when the pattern metric changes
+PATTERN_VERSION = 14  # wrapper version; pure metric changes also invalidate by content hash
+METRIC_SIGNATURE = hashlib.sha256(Path(visual_metrics.__file__).read_bytes()).hexdigest()[:16]
 
 # ---------------------------------------------------------------- metric
 
 
 def load(path):
     return np.asarray(Image.open(path).convert("RGB"))
-
-
-def fit(a, stretch):
-    """Crop to the drawn foreground and fit it on a 256px canvas. With
-    stretch=True both axes fill the box, which removes a pure frame aspect
-    ratio difference so the icon inside the frame can still be compared."""
-    y, x = np.where(a.min(axis=2) < 215)
-    if not len(x):
-        return a
-    crop = Image.fromarray(a[y.min():y.max() + 1, x.min():x.max() + 1])
-    inner = SIZE - 32
-    if stretch:
-        size = (inner, inner)
-    else:
-        scale = inner / max(crop.size)
-        size = (max(1, round(crop.width * scale)), max(1, round(crop.height * scale)))
-    crop = crop.resize(size, Image.Resampling.LANCZOS)
-    out = Image.new("RGB", (SIZE, SIZE), "white")
-    out.paste(crop, ((SIZE - size[0]) // 2, (SIZE - size[1]) // 2))
-    return np.asarray(out)
-
-
-def aspect(a):
-    y, x = np.where(a.min(axis=2) < 215)
-    return (x.max() - x.min() + 1) / (y.max() - y.min() + 1) if len(x) else 1.0
-
-
-def masks(a):
-    a = a.astype(int)
-    luma = (a[..., 0] * 299 + a[..., 1] * 587 + a[..., 2] * 114) // 1000
-    return a.min(axis=2) < 215, luma < 130
-
-
-def f1(a, b):
-    if not a.any() and not b.any():
-        return 1.0
-    if not a.any() or not b.any():
-        return 0.0
-    da, db = ndimage.distance_transform_edt(~a), ndimage.distance_transform_edt(~b)
-    recall, precision = float((db[a] <= TOLERANCE).mean()), float((da[b] <= TOLERANCE).mean())
-    return 2 * precision * recall / max(1e-9, precision + recall)
-
-
-def outline(mask):
-    return mask & ~ndimage.binary_erosion(mask, iterations=2)
-
-
-def measure(e, a):
-    fe, de = masks(e)
-    fa, da = masks(a)
-    shape = f1(outline(fe), outline(fa))
-    # Outer contour only (holes filled): the frame for framed symbols.
-    frame = f1(outline(ndimage.binary_fill_holes(fe)), outline(ndimage.binary_fill_holes(fa)))
-    se, sa = skeletonize(de), skeletonize(da)
-    if se.sum() >= 15 and sa.sum() >= 15:
-        detail = f1(se, sa)
-    else:
-        # Unframed coloured icons may have no black line work: compare the
-        # skeleton of everything drawn instead.
-        detail = f1(skeletonize(fe), skeletonize(fa))
-    return shape, detail, frame
-
-
-def coloured_share(a):
-    """Share of drawn pixels that are saturated (identity colour, not black)."""
-    a = a.astype(int)
-    fg = a.min(axis=2) < 215
-    return float(((a.max(axis=2) - a.min(axis=2))[fg] > 60).mean()) if fg.any() else 0.0
 
 
 def score(key):
@@ -144,176 +77,16 @@ def score(key):
     stretched = measure(fit(e, True), fit(a, True))
     use_stretch = min(stretched[:2]) > min(plain[:2]) + 0.01
     shape, detail, frame = stretched if use_stretch else plain
-    # Unframed icons carry the identity only through their colour.
-    colour = key.endswith("-unframed") and abs(coloured_share(e) - coloured_share(a)) > 0.5
+    colour = colour_mismatch(e, a)
     return key, shape, detail, bool(colour), ratio, use_stretch, max(plain[2], stretched[2])
 
 
-def without_side_strips(mask, fg):
-    """Clear the frame's left and right 22 %, where theater/corps chevrons sit."""
-    xs = np.nonzero(fg.any(axis=0))[0]
-    w = xs.max() - xs.min()
-    mask = mask.copy()
-    mask[:, :int(xs.min() + 0.22 * w)] = False
-    mask[:, int(xs.max() - 0.22 * w) + 1:] = False
-    return mask
-
-
-def icon_mask(a, framed, echelon_marks):
-    """Central icon line work, without the frame. Theater/corps chevrons at
-    the frame's left and right edges are excluded as frame decorations."""
-    fg, dark = masks(a)
-    if framed:
-        ic = dark & (ndimage.distance_transform_edt(fg) >= EDGE_BAND)
-        if echelon_marks:
-            ic = without_side_strips(ic, fg)
-    else:
-        ic = dark if dark.sum() >= 40 else fg
-    lab, n = ndimage.label(ic)
-    if n:
-        sizes = ndimage.sum(ic, lab, range(1, n + 1))
-        ic = np.isin(lab, [i + 1 for i, size in enumerate(sizes) if size >= 12])
-    return ic
-
-
-def line_work(a, framed, marks):
-    """Stroke-width-independent drawing: centre lines. A coloured unframed
-    icon without black line work is a filled shape, whose form a centre line
-    alone would not describe, so its contour is added."""
-    mask = icon_mask(a, framed, marks)
-    if not framed and masks(a)[1].sum() < 40:
-        return skeletonize(mask) | outline(ndimage.binary_opening(mask, iterations=6))
-    return skeletonize(mask)
-
-
-def parts(mask, join):
-    """Letters and shapes of an icon: bounding box, centroid and pixel count.
-    `join` is the gap (share of the icon size) still treated as one part."""
-    y, x = np.nonzero(mask)
-    if not len(x):
-        return []
-    size = max(y.max() - y.min(), x.max() - x.min()) + 1
-    labels, n = ndimage.label(ndimage.binary_dilation(mask, iterations=max(1, round(join * size))))
-    total = mask.sum()
-    found = []
-    for i in range(1, n + 1):
-        part = mask & (labels == i)
-        if part.sum() >= 0.01 * total:
-            py, px = np.nonzero(part)
-            found.append((py.min(), px.min(), py.max() + 1, px.max() + 1, int(part.sum()), py.mean(), px.mean()))
-    return found
-
-
-def free_parts(a, framed, marks):
-    """Icon line work without the parts attached to the frame (bars or lines
-    spanning the frame keep the frame's size, not the icon's)."""
-    if not framed:
-        return icon_mask(a, framed, marks)
-    # Attached = connected to the frame line in the full drawing (decided
-    # before the theater/corps strips are cleared, which would cut a spanning
-    # bar loose). Parts merely close to the frame stay.
-    fg, dark = masks(a)
-    labels, _ = ndimage.label(dark)
-    on_frame = np.unique(labels[dark & (ndimage.distance_transform_edt(fg) <= 3)])
-    mask = icon_mask(a, framed, False) & ~np.isin(labels, on_frame[on_frame > 0])
-    return without_side_strips(mask, fg) if marks else mask
-
-
-def layout(e_mask, a_mask):
-    """How far the rows of the milsymbol icon (text lines, stacked shapes)
-    deviate from the publication's proportions once the whole icon is scaled
-    alike; None without at least two comparable rows. 1.0 = a row 25 % larger
-    or smaller, or displaced by 15 %, relative to the whole icon (SOF over a
-    small SPT where the publication draws both alike scores about 4).
-
-    Letters and shapes are matched between the images first; rows are built
-    from the publication's parts and carried over through that matching, so
-    both images are grouped the same way. Rows holding less than a quarter of
-    the drawing count proportionally less."""
-    for join in (0.015, 0.025, 0.04):
-        pe, pa = parts(e_mask, join), parts(a_mask, join)
-        if len(pe) == len(pa) and 2 <= len(pe) <= 16:
-            break
-    else:
-        return None
-
-    def frame_of(ps):
-        y0, x0 = min(p[0] for p in ps), min(p[1] for p in ps)
-        return y0, x0, max(p[2] for p in ps) - y0, max(p[3] for p in ps) - x0
-
-    fe, fa = frame_of(pe), frame_of(pa)
-    norm = lambda p, f: ((p[5] - f[0]) / f[2], (p[6] - f[1]) / f[3])
-    cost = np.array([[np.hypot(*np.subtract(norm(e, fe), norm(a, fa))) for a in pa] for e in pe])
-    rows_idx, cols_idx = linear_sum_assignment(cost)
-    match = dict(zip(rows_idx, cols_idx))
-    # Rows: publication parts overlapping each other vertically.
-    groups = [[i] for i in range(len(pe))]
-    merged = True
-    while merged:
-        merged = False
-        for g, h in itertools.combinations(range(len(groups)), 2):
-            ga, gb = frame_of([pe[i] for i in groups[g]]), frame_of([pe[i] for i in groups[h]])
-            overlap = min(ga[0] + ga[2], gb[0] + gb[2]) - max(ga[0], gb[0])
-            if overlap > 0.5 * min(ga[2], gb[2]):
-                groups[g] += groups.pop(h)
-                merged = True
-                break
-    if len(groups) < 2:
-        return None
-    total = sum(p[4] for p in pe)
-    deviation = 0.0
-    for group in groups:
-        re, ra = frame_of([pe[i] for i in group]), frame_of([pa[match[i]] for i in group])
-        he, we, ha, wa = re[2] / fe[2], re[3] / fe[3], ra[2] / fa[2], ra[3] / fa[3]
-        ye, xe = (re[0] + re[2] / 2 - fe[0]) / fe[2], (re[1] + re[3] / 2 - fe[1]) / fe[3]
-        ya, xa = (ra[0] + ra[2] / 2 - fa[0]) / fa[2], (ra[1] + ra[3] / 2 - fa[1]) / fa[3]
-        row = max(abs(np.log(max(ha, .02) / max(he, .02))) / np.log(1.25),
-                  abs(np.log(max(wa, .02) / max(we, .02))) / np.log(1.25), abs(ya - ye) / 0.15, abs(xa - xe) / 0.15)
-        share = sum(pe[i][4] for i in group) / total
-        deviation = max(deviation, row * min(1.0, share / 0.25))
-    return float(deviation)
-
-
 def pattern(args):
-    """Register the milsymbol icon onto the publication icon: the best F1 over
-    scale, small rotation and (FFT cross-correlation) shift. Returns
-    (key, score, scale, angle, shift) or (key, None) without line work."""
+    """Icon pattern registration, part layout and geometry of one cell:
+    (key, score, scale, angle, shift, layout, geometry); see icon_metrics."""
     key, framed, marks = args
     e_img, a_img = load(SYMBOLS / f"{key}-expected.png").astype(int), load(SYMBOLS / f"{key}-actual.png").astype(int)
-    e_sk, a_sk = line_work(e_img, framed, marks), line_work(a_img, framed, marks)
-    if e_sk.sum() < 10 or a_sk.sum() < 10:
-        return key, None
-    deviation = layout(free_parts(e_img, framed, marks), free_parts(a_img, framed, marks))
-    n = SIZE
-    blur = ndimage.gaussian_filter(e_sk.astype(float), 3)
-    ys, xs = np.nonzero(a_sk)
-    cy, cx = ys.mean(), xs.mean()
-    ey, ex = np.nonzero(e_sk)
-    ecy, ecx = ey.mean(), ex.mean()
-    tolerance = max(4.0, PATTERN_TOLERANCE * max(ey.max() - ey.min(), ex.max() - ex.min()))
-    de = ndimage.distance_transform_edt(~e_sk)
-    best = (0.0, 1.0, 0, 0.0)
-    for s in SCALES:
-        for angle in ANGLES:
-            t = np.deg2rad(angle)
-            y, x = (ys - cy) * s, (xs - cx) * s
-            raster = np.zeros((n, n), bool)
-            raster[np.clip(np.round(y * np.cos(t) - x * np.sin(t) + ecy).astype(int), 0, n - 1),
-                   np.clip(np.round(y * np.sin(t) + x * np.cos(t) + ecx).astype(int), 0, n - 1)] = True
-            if s > 1.15:
-                raster = skeletonize(ndimage.binary_dilation(raster))
-            corr = fftconvolve(blur, raster[::-1, ::-1].astype(float), mode="same")
-            c = n // 2
-            window = corr[c - 40:c + 41, c - 40:c + 41]
-            dy, dx = np.unravel_index(np.argmax(window), window.shape)
-            moved = np.roll(raster, (dy - 40, dx - 40), axis=(0, 1))
-            da = ndimage.distance_transform_edt(~moved)
-            recall = float((da[e_sk] <= tolerance).mean())
-            precision = float((de[moved] <= tolerance).mean())
-            f = 2 * precision * recall / max(1e-9, precision + recall)
-            if f > best[0]:
-                best = (f, float(s), angle, float(np.hypot(dy - 40, dx - 40)))
-    return (key,) + best + (deviation,)
+    return (key,) + icon_metrics(e_img, a_img, framed, marks)
 
 
 def patterns(jobs):
@@ -322,8 +95,10 @@ def patterns(jobs):
         cache = json.loads(PATTERN_CACHE.read_text())
     except (OSError, ValueError):
         cache = {}
-    stamp = {k: max((SYMBOLS / f"{k}-{s}.png").stat().st_mtime for s in ("expected", "actual")) for k, _, _ in jobs}
-    todo = [j for j in jobs if cache.get(j[0], {}).get("stamp") != [PATTERN_VERSION, stamp[j[0]]]]
+    stamp = {k: [[(SYMBOLS / f"{k}-{s}.png").stat().st_mtime_ns,
+                   (SYMBOLS / f"{k}-{s}.png").stat().st_size] for s in ("expected", "actual")]
+             for k, _, _ in jobs}
+    todo = [j for j in jobs if cache.get(j[0], {}).get("stamp") != [PATTERN_VERSION, METRIC_SIGNATURE, stamp[j[0]]]]
     if todo:
         try:
             pool = ProcessPoolExecutor(mp_context=multiprocessing.get_context("fork"))
@@ -331,7 +106,7 @@ def patterns(jobs):
             pool = ThreadPoolExecutor(8)
         with pool:
             for result in pool.map(pattern, todo, chunksize=16):
-                cache[result[0]] = {"stamp": [PATTERN_VERSION, stamp[result[0]]], "result": list(result[1:]) if result[1] is not None else None}
+                cache[result[0]] = {"stamp": [PATTERN_VERSION, METRIC_SIGNATURE, stamp[result[0]]], "result": list(result[1:])}
         PATTERN_CACHE.write_text(json.dumps(cache))
     return {k: cache[k]["result"] for k, _, _ in jobs}
 
@@ -395,39 +170,13 @@ def median(values):
     return statistics.median(values) if values else None
 
 
-def judge(c, row_pattern, row_failing, row_layout):
-    """Cell verdict. Reasons explain a KONTROL/FARKLI result in the cell note."""
-    c["reasons"] = []
-    if c["colour"]:
-        c["reasons"].append("renk")
-        return "fail"
-    if c["frame"] and c["frameScore"] < REVIEW:
-        c["reasons"].append("çerçeve")
-        return "fail"
-    if row_layout is not None and row_layout >= LAYOUT_FAIL:
-        # Parts drawn out of proportion to each other (e.g. SOF over a small
-        # SPT): resizing the whole icon cannot explain this.
-        c["reasons"].append("düzen")
-        return "fail"
-    if c["score"] >= PASS:
-        return "pass"
-    same_pattern = row_pattern is not None and row_pattern >= PATTERN_OK
-    if c["score"] >= REVIEW and (same_pattern or not row_failing):
-        return "review"
-    if same_pattern:
-        c["reasons"].append("boyut/konum")
-        return "review"
-    c["reasons"].append("desen")
-    return "fail"
-
-
 for row in rows:
     for c in row.get("cases", []):
         shape, detail, colour, ratio, stretched, frame = scores[c["key"]]
         c.update(shape=shape, detail=detail, colour=colour, ratio=ratio, stretched=stretched, frameScore=frame,
                  score=min(shape, detail))
         p = pattern_scores.get(c["key"])
-        c["pattern"], c["iconScale"], c["iconAngle"], c["iconShift"], c["layout"] = p if p else (None,) * 5
+        c["pattern"], c["iconScale"], c["iconAngle"], c["iconShift"], c["layout"], c["geometry"] = p if p else (None,) * 6
     # The icon glyph is identical in all identities: decide its pattern once
     # per frame mode from the median, so raster noise in one cell cannot flip it.
     for framed in (True, False):
@@ -435,11 +184,14 @@ for row in rows:
         row_pattern = median(c["pattern"] for c in group)
         row_layout = median(c["layout"] for c in group)
         row_failing = sum(c["score"] < REVIEW for c in group) * 2 > len(group)
+        support = sum(bool((c.get("geometry") or {}).get("equivalent")) for c in group)
+        row_geometry = support >= max(2, (len(group) + 1) // 2)
         for c in row.get("cases", []):
             if c["frame"] != framed:
                 continue
             c["rowPattern"], c["rowLayout"] = row_pattern, row_layout
-            verdict = judge(c, row_pattern, row_failing, row_layout)
+            c["rowGeometry"] = row_geometry
+            verdict = judge(c, row_pattern, row_failing, row_layout, row_geometry)
             if row.get("notInCatalog"):
                 verdict = "missing"
             elif c.get("sourceConflict"):
@@ -806,12 +558,12 @@ if missing_rows:
         f"{esc(missing_rows[0]['name'])} … {esc(missing_rows[-1]['name'])})")
 reasons = Counter(r for c in all_cases if c["verdict"] == "fail" for r in c["reasons"])
 findings.append(f"<b>FARKLI hücrelerin nedeni:</b> ikon deseni farklı {reasons['desen']}, ikon parçalarının birbirine "
-                f"göre oranı bozuk (düzen) {reasons['düzen']}, çerçevesiz ikon rengi yanlış {reasons['renk']}, çerçeve "
+                f"göre oranı bozuk (düzen) {reasons['düzen']}, kimlik rengi yanlış {reasons['renk']}, çerçeve "
                 f"biçimi farklı {reasons['çerçeve']}.")
 resized = [c for c in all_cases if c["verdict"] == "review" and "boyut/konum" in c["reasons"]]
 if resized:
-    findings.append(f"<b>{len(resized)} hücrede yalnızca boyut/konum farkı:</b> ikon deseni yayınla aynı (hizalama sonrası "
-                    f"≥ %{PATTERN_OK * 100:.0f}) ama farklı ölçekte, yerde veya hafif açıyla çizilmiş; FARKLI yerine "
+    findings.append(f"<b>{len(resized)} hücre boyut/konum incelemesinde:</b> geniş hizalama puanı yüksek (hizalama sonrası "
+                    f"≥ %{PATTERN_OK * 100:.0f}); sınırlı geometrik eşleşme doğrulanmadığı için "
                     "KONTROL sayıldı.")
 worst = sorted(section_avg, key=section_avg.get)[0]
 findings.append(f"<b>En düşük ortalama benzerlik:</b> {SECTIONS[worst]} ({pct(section_avg[worst])}). "
@@ -834,6 +586,7 @@ header("Yöntem ve okuma kılavuzu")
 pdf.bookmarkPage("method")
 pdf.addOutlineEntry("Yöntem ve okuma kılavuzu", "method", 0)
 y = H - M - 40
+icon_scales = f"{1 / ICON_SCALE:.2f}–{ICON_SCALE:.2f}".replace(".", ",")
 method = [
     "<b>1. Kapsam.</b> APP-6A Annex D, Tablo D-I (basılı s. 130–261 / PDF s. 136–268) içindeki <b>tüm</b> S-şeması "
     f"satırları: {len(ordered)} satır (uzay, hava, kara, su üstü, su altı, özel kuvvetler). Satırlar katalogdan bağımsız "
@@ -849,25 +602,27 @@ method = [
     f"<b>şekil</b> (çerçeve/silüet sınırları) ve <b>çizim</b> (siyah çizgilerin kalınlıktan bağımsız iskeletleri) ±{TOLERANCE} "
     "px toleransla F1 örtüşmesiyle ölçülür, küçüğü alınır. Çerçeve en-boy oranı %5'ten fazla farklıysa <i>oran</i> "
     "notu gösterilir ve görüntüler ayrıca aynı kareye sığdırılarak da ölçülür.",
-    "<b>5. İkon deseni.</b> Çerçeve (ve THEATER/CORPS satırlarında çerçeve kenarındaki &gt; &lt; işaretleri) çıkarılır; "
-    "milsymbol ikonu yayındaki ikonun üzerine 0,4–3 kat ölçek, ±6° dönme ve kaydırma ile <b>hizalanır</b> ve "
-    f"ikon boyutunun ±%{100 * PATTERN_TOLERANCE:.0f}'ü (en az 4 px) toleransla örtüşmesi ölçülür. İkon dört kimlikte aynı glif olduğundan karar, o satırın "
-    f"hücrelerindeki desen puanının ortancasıyla verilir. Ortanca ≥ %{PATTERN_OK * 100:.0f} ise ikon aynı çizimdir; "
-    "fark yalnızca boyut, konum veya açıdır. Örneğin ikon yayındakinden küçük çizilmişse sonuç KONTROL olur. "
-    "<b>Parça düzeni:</b> ikon bütün olarak büyüyüp küçülebilir, ama parçaları (yazı satırları, şekiller) birbirine "
-    "göre oranını ve yerini korumalıdır. Harf ve şekiller iki görüntüde eşleştirilir, yayındaki satırlara göre "
-    "gruplanır (çerçeve çizgisine bağlı çizgiler hariç) ve her satırın ikonun bütününe göre boyutu ve yeri karşılaştırılır. "
-    f"Bir satır yaklaşık %{100 * (1.25 ** LAYOUT_FAIL - 1):.0f}'tan fazla büyük/küçükse veya ikonun "
-    f"%{100 * 0.15 * LAYOUT_FAIL:.0f}'i kadar kaymışsa (sapma ≥ {LAYOUT_FAIL:.1f}) sonuç FARKLI olur; daha küçük sapmalar "
-    "<i>düzen</i> notuyla KONTROL'de kalır. Örnek: yayında eşit boyutlu ve ortalı SOF/SPT yazılarının büyük SOF ve küçük "
-    "SPT olarak çizilmesi. Çizimin dörtte birinden azını tutan satırlar ağırlıklarıyla orantılı sayılır.",
-    f"<b>6. Karar.</b> Doğrudan benzerlik ≥ %{PASS * 100:.0f} → UYUMLU. %{REVIEW * 100:.0f}–%{PASS * 100:.0f} → KONTROL; "
-    "ancak satırın çoğu hücresi düşükse ve desen de tutmuyorsa FARKLI. Daha düşük puanlarda desen aynıysa KONTROL "
-    "(<i>boyut</i>/<i>konum</i> notu), değilse FARKLI (<i>desen</i> notu). Parça düzeni bozuksa (<i>düzen</i>), "
-    "çerçevesiz ikon kimlik renginde değilse (<i>renk</i>) veya çerçeve biçimi farklıysa (<i>çerçeve</i>), sonuç "
-    "doğrudan benzerlikten bağımsız olarak FARKLI olur. "
-    "<font name='B'>isValid()</font> false → GEÇERSİZ. Yayının kendi içinde çelişkili olduğu bilinen hücreler "
-    "KAYNAK HATASI olarak ayrılır. Sembolün kararı, en kötü hücresinin kararıdır.",
+    "<b>5. Desen ve düzen.</b> Çerçeve çıkarılıp ikon 0,4–3 kat ölçek, ±6° dönme ve kaydırmayla hizalanır; "
+    f"±%{100 * PATTERN_TOLERANCE:.0f} (en az 4 px) çizgi toleransı uygulanır. Kimlikler arasındaki desen puanının "
+    f"ortancası ≥ %{PATTERN_OK * 100:.0f} ise bu yalnızca KONTROL lehine kanıttır; aynı glif olduğunun garantisi değildir. "
+    "Harf/şekil parçaları eşleştirilip satırların birbirine göre boyut ve yeri de ölçülür. "
+    f"Düzen sapması ≥ {LAYOUT_FAIL:.1f} ise (ör. büyük SOF / küçük SPT) FARKLI olur; geometrik eşleşmenin "
+    "doğruladığı çizimde parça gruplama kaynaklı sapma bu kararı tek başına değiştirmez.",
+    "<b>6. Yerel şekil karşılaştırması ve karar.</b> İkon çizgileri kalınlıktan bağımsız merkez çizgilerine "
+    "indirilip parçalara ayrılır: uzun düz çizgiler ve bunlar çıkınca kalan harf/şekiller (çizgiye değen harf de "
+    f"kendi boyutuyla ölçülür). İkon bütün olarak {icon_scales} kat ölçek ve "
+    f"%{100 * ICON_DISPLACEMENT:.0f}'e kadar kaydırmayla hizalanır; sonra her parça boyutunun %{100 * PART_SHIFT_SHARE:.0f}'si "
+    f"({MIN_PART_SHIFT}–{PART_SHIFT} px) kayabilir, ±%{100 * (PART_SCALES[-1] - 1):.0f} büyüyüp küçülebilir (yazı tipi); "
+    f"uzun çizgiler yalnız {LINE_SHIFT} px kayar. Her merkez çizgisi pikseli diğer çizimde parça boyutunun "
+    f"%{100 * PART_TOLERANCE:.0f}'i içinde karşılık bulmalıdır; karşılıksız bitişik bir koşu parçanın "
+    f"%{100 * RUN_SHARE:.0f}'ini aşarsa yerel farktır: değişen harf, eksik/fazla çizgi veya parça. Yerel fark varsa "
+    "hücre hiçbir yoldan UYUMLU olamaz (<i>geometri kontrolü</i>); THEATER/CORPS işaretleri ayrıca denetlenir. "
+    "Satırın en az iki ve yarı hücresinde fark yoksa, kendisinde de fark olmayan ve doğrudan puanı ≥ "
+    f"%{REVIEW * 100:.0f} olan hücre UYUMLU (<i>geometri</i>). Hücre altındaki yüzde daima ham doğrudan puandır. "
+    f"Diğer hücrelerde ≥ %{PASS * 100:.0f} UYUMLU; %{REVIEW * 100:.0f}–%{PASS * 100:.0f} genelde KONTROL; daha düşükte "
+    "desen tutuyorsa KONTROL, yoksa FARKLI. Kimlik rengi veya çerçeve yanlışsa FARKLI. OCR yapılmaz; belirsiz "
+    "çizimler gözle incelenir. isValid() false → GEÇERSİZ; yayın içi çelişkiler KAYNAK HATASI. Sembolün kararı "
+    "en kötü hücresidir.",
 ]
 for text in method:
     y -= para(text, body_style, M, y, W - 2 * M) + 6
@@ -901,7 +656,7 @@ for colour, text in [(HexColor("#2d323c"), "Koyu gri: iki görüntüde de buluna
     yy -= 14
 yy -= 4
 for text in ["Hücre altı: doğrudan benzerlik, karar rozeti ve notlar: desen (ikon deseni puanı), düzen (parça oranları),",
-             "boyut (milsymbol ikonunun yayına göre boyutu), konum, renk, oran, çerçeve; ÇS = çerçevesiz biçim.",
+             "boyut, konum, renk, oran, çerçeve; geometri = ham puandan bağımsız yapısal eşleşme; ÇS = çerçevesiz.",
              "Kimlikler ve bölüm adları tıklanabilir; PDF okuyucunun yer imleri panelinde her sembol listelenir."]:
     pdf.setFont("R", 8.4)
     pdf.setFillColor(INK)
@@ -912,7 +667,7 @@ pdf.setFont("B", 10)
 pdf.drawString(M, y, "Kararlar")
 y -= 14
 x = M
-for key, text in [("pass", "benzerlik yüksek"), ("review", "küçük fark — göz ile kontrol"),
+for key, text in [("pass", "benzerlik / geometri uygun"), ("review", "küçük fark — göz ile kontrol"),
                   ("fail", "belirgin fark"), ("invalid", "isValid() false"),
                   ("missing", "profilde tanımlı değil"), ("conflict", "yayın kendi içinde çelişkili"),
                   ("none", "yayında çizim yok")]:
@@ -992,6 +747,8 @@ def draw_cell(c, x, y):
     bx = x + pdf.stringWidth(score_text, "B", 6.8) + 3
     bx += badge(bx, y - 9.5, c["verdict"], 5.3) + 3
     notes = [] if c["frame"] else ["ÇS"]
+    if "geometri" in c["reasons"]:
+        notes.append("geometri" if c["verdict"] == "pass" else "geometri kontrolü")
     if c["colour"]:
         notes.append("renk")
     if "çerçeve" in c["reasons"]:

@@ -145,6 +145,35 @@ export default {
       ];
       sId["S-S-NN----"] = icn["SE.IC.STATION NONCOMBATANT"];
       sId["S-S-NNR---"] = icn["SE.IC.STATION RESCUE"];
+      // Annex D, PDF pp. 152, 155: the same raised rectangle and clear
+      // lower mast as the ASW station, with the role below the mast.
+      for (const [code, name] of [
+        ["S-S-SP----", "PICKET"],
+        ["S-S-NNR---", "RESCUE"]
+      ]) {
+        sId[code] = [
+          {
+            ...icn[`SE.IC.STATION ${name}`][0],
+            d: "M70,65 H130 V108 H70 Z M100,54 V119",
+            strokewidth: 1.5
+          },
+          { ...icn[`SE.IC.STATION ${name}`][1], y: 138, fontsize: 28 }
+        ];
+      }
+      // Annex D, PDF p. 160: a hull with a narrower keel and a thin line
+      // beside the broad stripe (measured in these units from the cells).
+      sId["S-S-XL----"] = [
+        {
+          ...icn["SE.IC.MERCHANT SHIP, GENERAL"],
+          d: "M80,92 V68.5 H120 V92 H146.7 L124.2,130 H75.7 L53.3,92 Z"
+        },
+        {
+          ...icn["SE.IC.LAW ENFORCEMENT VESSEL"][1],
+          d: "M128.3,92 H135.3 L113.2,130 H106.2 Z",
+          stroke: false
+        },
+        { ...icn["SE.IC.MERCHANT SHIP, GENERAL"], fill: false, d: "M123.3,92 L101.2,130" }
+      ];
     }
   }
 };

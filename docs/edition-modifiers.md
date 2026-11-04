@@ -102,6 +102,16 @@ E is the Joker or Faker letter, from SIDC position 2. Unlike 2525C, Z applies to
 
 ## Errors and warnings
 
+Numeric SIDCs with versions 10–16 select an edition profile. Unsupported versions
+remain renderable but return `isValid() === false` with a position 1–2 error in
+`details.sidcErrors`; the absence of a profile never implies validity.
+
+Edition E contexts 5 and 6 retain the Exercise Joker/Faker identity and descriptor,
+alongside their restricted-target or no-strike markers. APP-6(E)'s AS field accepts
+exactly three alphanumeric characters (Table 1-5 PDF 87/53); the geographical entity
+code list is outside that publication's scope. This differs from the three-letter
+country rule used by the MIL profiles.
+
 `details.modifierErrors` is for a wrong SIDC and for a field the symbol does not take. Those make `isValid()` false, and the Studio shows Check code / modifiers.
 
 `details.fieldWarnings` lists text values that break a length, list or format rule, as `{ key, message }`. The text is still drawn and the symbol stays valid, and the Studio shows the message under the field. All seven editions work this way. A rule that ties text to the code stays an error: APP-6D F above division, 2525C W O/O without status A.

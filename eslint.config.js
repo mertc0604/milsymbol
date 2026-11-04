@@ -1,50 +1,13 @@
-// eslint.config.js
 export default [
   {
+    files: ["src/**/*.js", "test/**/*.{js,mjs}", "studio/**/*.js"],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module"
+    },
     rules: {
-      semi: "error",
-      "prefer-const": "error",
-    },
-    languageOptions: {
-      ecmaVersion: 6,
-      sourceType: "module",
-    },
-    plugins: {
-      prettier: {
-        "prettier/prettier": "error",
-        //"linebreak-style": ["error", "windows"],
-        "no-console": ["error", { allow: ["info", "warn", "error"] }],
-        "no-unused-vars": ["error", { vars: "all", args: "none" }],
-        semi: ["error", "always"],
-      },
-    },
-  },
-  {
-    files: ["test/**/*.mjs"],
-    languageOptions: {
-      ecmaVersion: 2022,
-    },
-  },
-];
-
-/*
-module.exports = {
-  //extends: "eslint:recommended",
-  //env: {
-  //  browser: true
-  //commonjs: true
-  //},
-  parserOptions: {
-    ecmaVersion: 6,
-    sourceType: "module"
-  },
-  plugins: ["prettier"],
-  rules: {
-    "prettier/prettier": "error",
-    //"linebreak-style": ["error", "windows"],
-    "no-console": ["error", { allow: ["info", "warn", "error"] }],
-    "no-unused-vars": ["error", { vars: "all", args: "none" }],
-    semi: ["error", "always"]
+      semi: ["error", "always"],
+      "prefer-const": "error"
+    }
   }
-};
-*/
+];

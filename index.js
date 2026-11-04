@@ -33,3 +33,19 @@ This draws the symbol octagon, can be good for debugging.
 //ms.addSymbolPart(debug);
 
 export default ms;
+
+// Keep the named ESM API on the same fully registered singleton as the default.
+// Binding registry methods lets callers import and invoke them directly.
+export const Symbol = ms.Symbol;
+export const ColorMode = ms.ColorMode;
+export const getColorMode = ms.getColorMode.bind(ms);
+export const setColorMode = ms.setColorMode.bind(ms);
+export const getHqStaffLength = ms.getHqStaffLength.bind(ms);
+export const setHqStaffLength = ms.setHqStaffLength.bind(ms);
+export const getDashArrays = ms.getDashArrays.bind(ms);
+export const setDashArrays = ms.setDashArrays.bind(ms);
+export const getVersion = ms.getVersion.bind(ms);
+export const setStandard = ms.setStandard.bind(ms);
+export const addSymbolPart = ms.addSymbolPart.bind(ms);
+export const addIconParts = ms.addIconParts.bind(ms);
+export const outline = ms.outline.bind(ms);

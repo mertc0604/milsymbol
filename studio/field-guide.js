@@ -48,6 +48,7 @@ const guides = {
     headquartersElement: { description: "The element of a headquarters shown, such as TOC or MAIN2 (Table VI).", example: "MAIN2" }
   },
   app6e: {
+    country: { description: "A three-character alphanumeric geographical entity code (Table 1-5). Use your system's code list; APP-6E does not define the list.", example: "792" },
     // Table 1-5 W PDF 74/40: four-digit year.
     dtg: { format: "DDHHMMSSZMMMYYYY or O/O (Table 1-5)", example: "03143000ZNOV2026", printed: { seconds: true, fourDigitYear: true } },
     altitudeDepth: { example: "FL280" },

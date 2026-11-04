@@ -15,7 +15,6 @@
 // docs/edition-modifiers.md.
 import {
   buildProfile,
-  countryPattern,
   def,
   designatorChoices,
   effectivenessChoices,
@@ -89,7 +88,14 @@ const definitions = {
     maxLength: 3,
     choices: designatorChoices
   }),
-  AS: def("AS", "Geographical entity", countryPattern),
+  // Table 1-5 PDF 87/53 permits three alphanumeric characters. The
+  // geographical entity code list is explicitly outside this standard.
+  AS: def("AS", "Geographical entity", {
+    maxLength: 3,
+    minLength: 3,
+    pattern: /^[A-Za-z0-9]{3}$/,
+    patternText: "three alphanumeric characters"
+  }),
   AT: def("AT", "Capacity of installation", { maxLength: 20 }),
   AW: def("AW", "Headquarters element", { maxLength: 8 }),
   AX: def("AX", "Installation composition", {

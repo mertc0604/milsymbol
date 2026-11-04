@@ -11,7 +11,9 @@ const version = packageJSON.version;
 
 export default [
   {
-    input: "index.js",
+    // A default-only entry preserves the historical UMD/CommonJS registry shape
+    // while index.js also exposes the declared named ESM API.
+    input: "milsymbol-umd",
     output: {
       file: "dist/milsymbol.development.js",
       format: "umd",
@@ -48,6 +50,24 @@ export default [
       name: "ms"
     },
     plugins: [
+      {
+        name: "milsymbol-umd-entry",
+        resolveId(id) {
+          if (id === "milsymbol-umd") return "\0milsymbol-umd";
+        },
+        load(id) {
+          if (id === "\0milsymbol-umd") {
+            return `export { default } from ${JSON.stringify(path.resolve("index.js"))};`;
+          }
+        },
+        generateBundle() {
+          this.emitFile({
+            type: "asset",
+            fileName: "package.json",
+            source: JSON.stringify({ type: "commonjs" }) + "\n"
+          });
+        }
+      },
       copyStandards(),
       replace({
         __version__: JSON.stringify(version),

@@ -130,7 +130,29 @@ export default {
         ];
       };
       sId["S-G-IMS---"] = [anchor(true), icn["GR.IN.M2.SHIP CONSTRUCTION"]];
-      sId["S-G-IBN---"] = anchor(false);
+      // Both rings are octagons in Annex D; ring and crossbar stand at a
+      // slightly different height in each frame.
+      const octagon = (part, cy, r, cut) => ({
+        ...part, fill: false,
+        d: `M${100 - cut},${cy - r} H${100 + cut} L${100 + r},${cy - cut} V${cy + cut} L${100 + cut},${cy + r} ` +
+          `H${100 - cut} L${100 - r},${cy + cut} V${cy - cut} Z`
+      });
+      const place = values => values[["Unknown", "Friend", "Neutral", "Hostile"].indexOf(this.metadata.affiliation)];
+      const [ring, stock] = place([[64.5, 78.5], [69.5, 82.5], [67.5, 81.5], [61, 75]]);
+      const [shank, , arms] = anchor(false);
+      sId["S-G-IBN---"] = [
+        { ...shank, d: `M67,${stock} H133 M100,${ring + 8.5} V134` },
+        octagon(shank, ring, 8.5, 3.5),
+        arms
+      ];
+      const [yardRing, yardStock] = place([[60.5, 71], [67, 76.5], [65, 75], [56.25, 67]]);
+      const [yardShank, , yardArms] = anchor(true);
+      sId["S-G-IMS---"] = [
+        { ...yardShank, d: `M74,${yardStock} H126 M100,${yardRing + 5.5} V113` },
+        octagon(yardShank, yardRing, 5.5, 2.3),
+        yardArms,
+        icn["GR.IN.M2.SHIP CONSTRUCTION"]
+      ];
     }
     sId["S-G-IT----"] = [icn["GR.IC.TRANSPORTATION"]];
     sId["S-G-IX----"] = [icn["GR.IC.FF.MEDICAL"]];

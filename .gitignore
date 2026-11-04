@@ -6,7 +6,8 @@ dist
 pnpm-lock.yaml
 tmp/pdfs/
 tmp/*.log
-output/app6a-audit/
+output/
+.claude/
 __pycache__/
 *.pyc
 # User-provided reference publication and private deployment state

@@ -97,7 +97,7 @@ export function contextOptions(standard) {
 }
 
 export function identityLabel(entry, context = "0") {
-  return (context === "1" && entry.exerciseLabel) || entry.label;
+  return (["1", "5", "6"].includes(context) && entry.exerciseLabel) || entry.label;
 }
 
 export function identityCode(entry, standard, context = "0") {
@@ -126,9 +126,9 @@ export function decodeIdentity(code, standard, context = "0") {
 // exercise suspect/hostile are the same identity written differently.
 export function convertIdentity({ value, context }, standard) {
   if (standard.id === "app6a") {
-    if (context === "1" && value === "suspect")
+    if (["1", "5", "6"].includes(context) && value === "suspect")
       return { value: "joker", context: "0" };
-    if (context === "1" && value === "hostile")
+    if (["1", "5", "6"].includes(context) && value === "hostile")
       return { value: "faker", context: "0" };
   } else if (value === "joker" || value === "faker") {
     return { value: value === "joker" ? "suspect" : "hostile", context: "1" };

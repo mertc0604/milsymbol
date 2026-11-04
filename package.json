@@ -5,9 +5,9 @@
   "type": "module",
   "exports": {
     ".": {
+      "types": "./index.d.ts",
       "require": "./dist/milsymbol.js",
-      "import": "./index.js",
-      "types": "./index.d.ts"
+      "import": "./index.js"
     },
     "./package.json": "./package.json"
   },
@@ -26,13 +26,14 @@
     "studio:build": "rollup -c && npm run minify && node scripts/build-studio.mjs",
     "studio:build:public": "rollup -c && npm run minify && node scripts/build-studio.mjs --public",
     "studio:serve": "node scripts/serve-studio.mjs",
-    "lint": "eslint src test --fix",
+    "lint": "eslint src test studio",
     "prebuild": "npm run lint && npm test",
     "build": "npm run bundle && npm run minify",
     "postbuild": "node --eval \"const fs = require('node:fs'); fs.writeFileSync('./dist/package.json', JSON.stringify({ type: 'commonjs' }));\"",
     "bundle": "rollup -c",
     "minify": "uglifyjs dist/milsymbol.development.js -o dist/milsymbol.js --comments --compress --mangle --source-map",
-    "test": "tead --coverage"
+    "test": "tead --coverage",
+    "test:node": "node --test test/*.test.mjs"
   },
   "repository": {
     "type": "git",

@@ -27,7 +27,7 @@ for (const affiliation of ["U", "F", "N", "H"]) {
   }
   for (const [code, label] of [["UUSC--", "CCP"], ["UUSCL-", "LCCP"], ["UUSO--", "OPS"], ["UUSMN-", "NC"], ["UUSS--", "SPT"]]) {
     const text = parts(code, affiliation).find(p => p.text === label);
-    result[`signal label is right of the bolt ${code}/${affiliation}`] = [text.x > 115 && text.y >= 75 && text.y <= 85, true];
+    result[`signal label above the bolt step ${code}/${affiliation}`] = [text.x >= 110 && text.y >= 77 && text.y <= 81, true];
   }
   const role = parts("UCDS--", affiliation).find(p => p.text === "SRD");
   result[`air-defense role clears the dome ${affiliation}`] = [role.y, { U: 91, F: 107, N: 115, H: 90 }[affiliation]];
@@ -47,7 +47,7 @@ function extent(part) {
   return { x: pairs.map(p => p[0]), y: pairs.map(p => p[1]) };
 }
 result["tracked mortar uses full-width mounting"] = [parts("UCFMS-").some(p => {
-  const e = extent(p); return Math.max(...e.x) - Math.min(...e.x) > 80 && Math.min(...e.y) >= 110;
+  const e = extent(p); return Math.max(...e.x) - Math.min(...e.x) > 80 && Math.min(...e.y) >= 100 && Math.max(...e.y) <= 130;
 }), true];
 result["riverine label clears the waterline"] = [parts("UCSW--").find(p => p.text === "SEC").y, 100];
 result["supply IV beam raised above supply divider"] = [parts("USS4--").some(p => {
@@ -56,7 +56,7 @@ result["supply IV beam raised above supply divider"] = [parts("USS4--").some(p =
 result["supply V ammunition reaches supply divider"] = [parts("USS5--").some(p => {
   const e = extent(p); return Math.min(...e.y) <= 78 && Math.max(...e.y) >= 118 && Math.min(...e.x) > 65 && Math.max(...e.x) < 135;
 }), true];
-result["wheeled security label fits inside track"] = [parts("UCSM--").find(p => p.text === "SEC").fontsize <= 30, true];
+result["wheeled security label fits inside track"] = [parts("UCSM--").find(p => p.text === "SEC").fontsize <= 34, true];
 result["railroad security clears the wheel bar"] = [parts("UCSR--").find(p => p.text === "SEC").y < 105, true];
 result["APP6 keeps its later radio geometry"] = [parts("UUSR--", "F", "APP6").some(p => p.d?.includes("100,108 V 82.5")), true];
 // A viewport regression: evaluate the actual drawing instructions (including

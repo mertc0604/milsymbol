@@ -169,10 +169,27 @@ export default {
     sId["S-U-NA----"] = [icn["SU.IC.SEA ANOMALY"]];
     if (this.metadata.app6a) {
       bbox["S-U-NM----"] = { x1: 45, y1: 82, x2: 150, y2: 118 };
+      // Annex D, PDF p. 163: a deep oval body and a taller rectangular cabin,
+      // and the conventional submarine's hull; both fill each frame to a
+      // different depth (top of cabin or mast, body extent read per cell).
+      const place = values => values[["Unknown", "Friend", "Neutral", "Hostile"].indexOf(this.metadata.affiliation)];
+      const [top, depth] = place([[59.4, 81.7], [59.9, 71.7], [66.9, 77.1], [61.3, 75.9]]);
+      const y = share => +(top + share * depth / 70).toFixed(1);
+      sId["S-U-SO----"] = [
+        {
+          ...icn["SU.IC.OTHER SUBMERSIBLE"],
+          d: `M82,${y(20)} V${top} H118 V${y(20)} C134,${y(24)} 145,${y(33)} 145,${y(45)} ` +
+            `C145,${y(59)} 125,${y(70)} 100,${y(70)} C75,${y(70)} 55,${y(59)} 55,${y(45)} ` +
+            `C55,${y(33)} 66,${y(24)} 82,${y(20)} Z`,
+          stroke: false
+        }
+      ];
+      const [mast, middle, half] = place([[53.4, 114.5, 23], [51.3, 105, 20.7], [59.4, 117, 22.2], [53.7, 110, 21.9]]);
       sId["S-U-SC----"] = [
         {
           ...icn["SU.IC.SUBMARINE CONVENTIONAL PROPULSION"],
-          d: "M70,85 H130 L145,105 130,125 H70 L55,105 Z M97,50 H103 V85 H97 Z",
+          d: `M70,${middle - half} H130 L146,${middle} 130,${middle + half} H70 L54,${middle} Z ` +
+            `M97,${mast} H103 V${middle - half} H97 Z`,
           stroke: false
         }
       ];

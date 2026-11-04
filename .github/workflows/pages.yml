@@ -2,7 +2,7 @@ name: Deploy Military Symbol Studio
 
 on:
   push:
-    branches: [main, master]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -32,8 +32,14 @@ jobs:
       - name: Test symbol rendering
         run: npx --no-install tead
 
+      - name: Lint library, tests, and Studio
+        run: npm run lint
+
       - name: Build public site with license notices
         run: npm run studio:build:public
+
+      - name: Test package exports and build helpers
+        run: npm run test:node
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5

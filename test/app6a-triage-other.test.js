@@ -73,9 +73,10 @@ for (const affiliation of ["U", "F", "N", "H"]) {
     ),
     true
   ];
+  // Third pass: mast top and hull depth read per frame.
   result[`Annex D conventional submarine long periscope ${affiliation}`] = [
     parts("USC----", affiliation).some((p) =>
-      p.d.includes("M97,50 H103 V85 H97 Z")
+      p.d.includes(`M97,${{ U: 53.4, F: 51.3, N: 59.4, H: 53.7 }[affiliation]} H103 V`)
     ),
     true
   ];

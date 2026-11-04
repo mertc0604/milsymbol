@@ -597,6 +597,13 @@ export default {
         icn["GR.EQ.AIR DEFENCE MISSILE LAUNCHER SURFACE-TO-AIR"],
         "M86,130 V65 C86,45 114,45 114,65 V130 M100,50 V127 M86,130 Q100,125 114,130 L120,140 H80 Z"
       );
+      // Annex D, PDF p. 238: long range is one cross line on a taller launcher.
+      sId["S-G-EWMSL-"] = [
+        line(
+          icn["GR.EQ.MISSILE LAUNCHER"],
+          "M82.5,140 V68 C82.5,46 117.5,46 117.5,68 V140 M100,51.5 V140 M81,95 H119"
+        ),
+      ];
       sId["S-G-EWMA--"] = [launcher];
       for (const [code, heights] of [
         ["EWMAT-", [89]],
@@ -693,6 +700,16 @@ export default {
         line(icn["GR.EQ.UTILITY VEHICLE"], "M65,70 Q100,88 135,70 V118 H65 Z"),
         [72, 128].map((cx) => ({ ...wheels[0], cx, cy: 124 })),
         { ...icn["GR.EQ.ARMORED CARRIER WITH VOLCANO"], y: 100, fontsize: 39 },
+      ];
+      // Annex D, PDF p. 256: the water-craft wheels touch its chassis,
+      // and a continuous wave runs between the two sides of the hull.
+      sId["S-G-EVUR--"] = [
+        line(icn["GR.EQ.UTILITY VEHICLE"], "M65,70 Q100,90 135,70 V118 H65 Z"),
+        line(
+          icn["GR.EQ.UTILITY VEHICLE"],
+          "M65,99 Q70,91 75,99 Q80,107 85,99 Q90,91 95,99 Q100,107 105,99 Q110,91 115,99 Q120,107 125,99 Q130,91 135,99"
+        ),
+        [70, 130].map((cx) => ({ ...wheels[0], cx, cy: 123 })),
       ];
     }
 

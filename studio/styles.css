@@ -548,29 +548,36 @@ textarea::placeholder {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px;
 }
+/* The meaning is what people read; the code beside the label stays quiet. */
 .sidc-segments > div {
   min-width: 0;
   border-radius: 7px;
-  background: #f6f8fa;
+  background: #f7f9fb;
   padding: 6px 8px;
 }
+.sidc-segments p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  column-gap: 6px;
+}
 .sidc-segments span {
-  display: block;
   color: var(--faint);
   font-size: 11px;
   white-space: nowrap;
 }
-.sidc-segments b {
-  display: block;
+.sidc-segments code {
   font-family: var(--mono);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 11.5px;
+  color: var(--muted);
   overflow-wrap: anywhere;
 }
 .sidc-segments small {
   display: block;
-  color: #3d4a57;
-  font-size: 11px;
+  margin-top: 1px;
+  color: var(--text);
+  font-size: 12px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -886,6 +893,127 @@ a.support-note {
   font-size: 12px;
   font-weight: 400;
   line-height: 1.4;
+}
+/* Echelon / mobility picker: each choice drawn on the current frame. */
+.glyph-picker {
+  position: relative;
+}
+.glyph-select {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 4px 10px 4px 6px;
+  border-color: #cfd8e1;
+  border-radius: 7px;
+  font-weight: 400;
+  text-align: left;
+}
+.glyph-select[aria-expanded="true"] {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px #2868b21f;
+}
+.glyph-select.invalid {
+  border-style: dashed;
+  border-color: var(--danger);
+  background: var(--danger-bg);
+}
+.glyph-select .chevron {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.glyph-select[aria-expanded="true"] .chevron {
+  transform: rotate(180deg);
+}
+.glyph-picker .glyph {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  flex: none;
+  width: 54px;
+  height: 38px;
+}
+/* Echelons sit above the frame, mobility below: line the frames up in the list. */
+.glyph-picker .glyph[data-mode="mobility"] {
+  align-items: flex-start;
+}
+.glyph-picker .glyph svg {
+  max-width: 100%;
+  max-height: 100%;
+  height: auto;
+}
+.glyph-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+.glyph-name small {
+  margin-left: 6px;
+  color: var(--danger);
+  font-size: 10px;
+  font-weight: 600;
+}
+.glyph-picker code {
+  flex: none;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--faint);
+}
+.glyph-list {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 380px;
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--panel);
+  box-shadow: 0 10px 28px #20364a24, 0 2px 6px #20364a14;
+}
+.glyph-list.up {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+.glyph-list:focus {
+  outline: none;
+}
+.glyph-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 3px 10px 3px 2px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.glyph-option.active {
+  background: #f1f4f8;
+}
+.glyph-option[aria-selected="true"] {
+  background: var(--soft-blue);
+  color: var(--blue-dark);
+}
+.glyph-option[aria-selected="true"] .glyph-name {
+  font-weight: 600;
+}
+.glyph-option[aria-selected="true"].active {
+  background: var(--tag-blue);
+}
+.glyph-option.invalid .glyph-name {
+  color: var(--danger);
 }
 .country-row {
   display: flex;

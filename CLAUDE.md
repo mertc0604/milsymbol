@@ -12,8 +12,9 @@ Node is at `/opt/homebrew/bin` (Homebrew). It may not be on `PATH` in non-login 
 
 ```bash
 npm run bundle          # rollup: index.js -> dist/milsymbol.development.js (UMD, global `ms`)
-npm run build           # prebuild runs lint (with --fix) + tests, then bundle + minify -> dist/milsymbol.js
-npm run lint            # eslint src test --fix (rewrites files)
+npm run build           # prebuild runs read-only lint + tests, then bundle + minify -> dist/milsymbol.js
+npm run lint            # eslint src test studio (checks without rewriting files)
+npm run test:node       # Node integration tests, including fresh ESM/CJS/UMD package checks after build
 npm run studio:build    # bundle + minify + scripts/build-studio.mjs -> dist/studio/ (catalog.json, vendor/milsymbol.js)
 npm run studio:serve    # static server for dist/studio on http://127.0.0.1:4173 (PORT env overrides)
 ```

@@ -313,6 +313,8 @@ const dom = Object.fromEntries(
     "amplifierMode",
     "amplifierLabel",
     "amplifierValue",
+    "amplifierButton",
+    "amplifierList",
     "symbolModifiers",
     "modifier1",
     "modifier2",
@@ -997,6 +999,96 @@ function populateAmplifier() {
     );
     button.setAttribute("aria-pressed", String(button.dataset.mode === state.amplifierMode));
   });
+}
+
+// The echelon / mobility select stays the source of truth (imports, profile
+// checks and problem lines read it). The picker in front of it draws each
+// choice on the current frame, so the user sees what the amplifier looks like.
+function amplifierPreviewSidc(sidc, value) {
+  const modern = config().family === "modern";
+  const item = (state.amplifierMode === "mobility" ? mobilities : echelons).find((entry) => entry[0] === value);
+  const code = value.startsWith("code:") ? value.slice(5) : value && item ? item[modern ? 2 : 3] : "";
+  if (modern) {
+    const base = sidc.padEnd(20, "0");
+    return `${base.slice(0, 7)}0${code || "00"}${base.slice(10)}`;
+  }
+  const base = sidc.padEnd(15, "-");
+  if (base[10] === "H") return base;
+  const amplifier = !code ? "--" : state.amplifierMode === "mobility" ? code : `-${code}`;
+  return `${base.slice(0, 10)}${amplifier}${base.slice(12)}`;
+}
+
+function amplifierChoices() {
+  const modern = config().family === "modern";
+  const source = state.amplifierMode === "mobility" ? mobilities : echelons;
+  return [...dom.amplifierValue.options].map((item) => {
+    const entry = source.find((candidate) => candidate[0] === item.value);
+    const code = item.value.startsWith("code:") ? item.value.slice(5) : item.value && entry ? entry[modern ? 2 : 3] : "";
+    return { value: item.value, name: entry ? entry[1] : item.textContent, code, reason: item.title };
+  });
+}
+
+const amplifierPicker = { sidc: "", active: 0 };
+
+function amplifierGlyph(value) {
+  return chipSvg(amplifierPreviewSidc(amplifierPicker.sidc, value), { size: 24, icon: false });
+}
+
+function renderAmplifierPicker(sidc) {
+  amplifierPicker.sidc = sidc;
+  const choice = amplifierChoices().find((item) => item.value === dom.amplifierValue.value) || { value: "", name: "Unspecified" };
+  dom.amplifierButton.disabled = dom.amplifierValue.disabled;
+  dom.amplifierButton.classList.toggle("invalid", Boolean(choice.reason));
+  dom.amplifierButton.title = choice.reason || "";
+  dom.amplifierButton.innerHTML = `<span class="glyph" data-mode="${state.amplifierMode}" aria-hidden="true">${amplifierGlyph(choice.value)}</span><span class="glyph-name">${escapeHtml(choice.name)}</span>${choice.code ? `<code>${escapeHtml(choice.code)}</code>` : ""}<svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5" /></svg>`;
+  if (dom.amplifierButton.disabled) closeAmplifierList();
+  else if (!dom.amplifierList.hidden) renderAmplifierList();
+}
+
+function renderAmplifierList() {
+  const choices = amplifierChoices();
+  amplifierPicker.active = Math.min(Math.max(amplifierPicker.active, 0), choices.length - 1);
+  dom.amplifierList.innerHTML = choices
+    .map((item, index) => `<div role="option" id="amplifierOption${index}" class="glyph-option${item.reason ? " invalid" : ""}${index === amplifierPicker.active ? " active" : ""}" data-index="${index}" data-value="${escapeHtml(item.value)}" aria-selected="${item.value === dom.amplifierValue.value}"${item.reason ? ` title="${escapeHtml(item.reason)}"` : ""}><span class="glyph" data-mode="${state.amplifierMode}" aria-hidden="true">${amplifierGlyph(item.value)}</span><span class="glyph-name">${escapeHtml(item.name)}${item.reason ? "<small>not valid here</small>" : ""}</span>${item.code ? `<code>${escapeHtml(item.code)}</code>` : ""}</div>`)
+    .join("");
+  dom.amplifierList.setAttribute("aria-activedescendant", `amplifierOption${amplifierPicker.active}`);
+}
+
+function moveAmplifierActive(index) {
+  const options = dom.amplifierList.querySelectorAll("[role=option]");
+  if (!options.length) return;
+  amplifierPicker.active = (index + options.length) % options.length;
+  options.forEach((item, position) => item.classList.toggle("active", position === amplifierPicker.active));
+  dom.amplifierList.setAttribute("aria-activedescendant", `amplifierOption${amplifierPicker.active}`);
+  options[amplifierPicker.active].scrollIntoView({ block: "nearest" });
+}
+
+function openAmplifierList() {
+  if (dom.amplifierButton.disabled) return;
+  amplifierPicker.active = Math.max(0, [...dom.amplifierValue.options].findIndex((item) => item.value === dom.amplifierValue.value));
+  renderAmplifierList();
+  dom.amplifierList.hidden = false;
+  dom.amplifierButton.setAttribute("aria-expanded", "true");
+  // Open upwards when the list would run past the bottom of the window.
+  const box = dom.amplifierButton.getBoundingClientRect();
+  const below = window.innerHeight - box.bottom;
+  dom.amplifierList.classList.toggle("up", below < Math.min(dom.amplifierList.scrollHeight, 380) + 12 && box.top > below);
+  dom.amplifierList.focus({ preventScroll: true });
+  moveAmplifierActive(amplifierPicker.active);
+}
+
+function closeAmplifierList(refocus = false) {
+  if (dom.amplifierList.hidden) return;
+  dom.amplifierList.hidden = true;
+  dom.amplifierButton.setAttribute("aria-expanded", "false");
+  if (refocus) dom.amplifierButton.focus();
+}
+
+function chooseAmplifier(value) {
+  closeAmplifierList(true);
+  if (value === dom.amplifierValue.value) return;
+  dom.amplifierValue.value = value;
+  dom.amplifierValue.dispatchEvent(new Event("change"));
 }
 
 function populateModifierSelect(select, field, selected) {
@@ -1823,19 +1915,19 @@ function updateSegments(sidc) {
   dom.sidcSegments.innerHTML = sidcParts(sidc, dEdition)
     .map(({ key, label, value }) => {
       const meaning = describePart(key, value, sidc);
-      return `<div title="${escapeHtml(meaning)}"><span>${escapeHtml(label)}</span><b>${escapeHtml(value || "—")}</b>${meaning ? `<small>${escapeHtml(meaning)}</small>` : ""}</div>`;
+      return `<div title="${escapeHtml(meaning)}"><p><span>${escapeHtml(label)}</span><code>${escapeHtml(value || "—")}</code></p>${meaning ? `<small>${escapeHtml(meaning)}</small>` : ""}</div>`;
     })
     .join("");
 }
 
 const chipCache = new Map();
 
-function chipSvg(sidc) {
-  const key = `${state.standardId}|${sidc}|${dom.colorMode.value}|${dom.strokeWidth.value}`;
+function chipSvg(sidc, { size = 18, icon = true } = {}) {
+  const key = `${state.standardId}|${sidc}|${dom.colorMode.value}|${dom.strokeWidth.value}|${size}|${icon}`;
   if (!chipCache.has(key)) {
     let svg = "";
     try {
-      svg = new window.ms.Symbol(sidc, { ...currentOptions(true), size: 18, infoFields: false }).asSVG();
+      svg = new window.ms.Symbol(sidc, { ...currentOptions(true), size, icon, infoFields: false }).asSVG();
     } catch {}
     if (chipCache.size > 400) chipCache.clear();
     chipCache.set(key, svg);
@@ -2349,7 +2441,7 @@ function renderAll() {
     dom.renderState.classList.toggle("invalid", !valid);
     dom.renderState.innerHTML = `<i></i>${valid ? "Rendered" : "Check code / modifiers"}`;
     const detail = currentSymbol.isValid(true);
-    dom.renderState.title = [...(detail.modifierErrors || []), ...(detail.notes || [])].join("; ");
+    dom.renderState.title = [...(detail.sidcErrors || []), ...(detail.identityErrors || []), ...(detail.modifierErrors || []), ...(detail.notes || [])].join("; ");
   } catch (error) {
     currentSymbol = null;
     currentSvg = "";
@@ -2374,6 +2466,7 @@ function renderAll() {
   renderSidcStatus(sidc);
   renderProfileDetails();
   renderChips(sidc);
+  renderAmplifierPicker(sidc);
   renderFlagSwatch();
   syncGraphicsControls();
   renderExportSize();
@@ -2733,6 +2826,52 @@ function bindEvents() {
     delete state.adjustments.amplifier;
     state.amplifierValue = dom.amplifierValue.value;
     updateSidcAndRender("amplifier");
+  });
+  dom.amplifierButton.addEventListener("click", () =>
+    dom.amplifierList.hidden ? openAmplifierList() : closeAmplifierList(true)
+  );
+  dom.amplifierButton.addEventListener("keydown", (event) => {
+    if (!["ArrowDown", "ArrowUp"].includes(event.key)) return;
+    event.preventDefault();
+    openAmplifierList();
+  });
+  dom.amplifierList.addEventListener("click", (event) => {
+    const item = event.target.closest("[role=option]");
+    if (item) chooseAmplifier(item.dataset.value);
+  });
+  dom.amplifierList.addEventListener("pointermove", (event) => {
+    const item = event.target.closest("[role=option]");
+    if (item && Number(item.dataset.index) !== amplifierPicker.active) moveAmplifierActive(Number(item.dataset.index));
+  });
+  dom.amplifierList.addEventListener("keydown", (event) => {
+    const options = [...dom.amplifierList.querySelectorAll("[role=option]")];
+    const moves = { ArrowDown: amplifierPicker.active + 1, ArrowUp: amplifierPicker.active - 1, Home: 0, End: options.length - 1, PageDown: amplifierPicker.active + 5, PageUp: amplifierPicker.active - 5 };
+    if (event.key in moves) {
+      event.preventDefault();
+      const target = moves[event.key];
+      moveAmplifierActive(event.key.startsWith("Page") ? Math.min(Math.max(target, 0), options.length - 1) : target);
+    } else if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      if (options[amplifierPicker.active]) chooseAmplifier(options[amplifierPicker.active].dataset.value);
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      closeAmplifierList(true);
+    } else if (event.key === "Tab") {
+      closeAmplifierList();
+    } else if (event.key.length === 1 && /\S/.test(event.key)) {
+      // Typing a letter jumps to the next choice that starts with it.
+      const letter = event.key.toLowerCase();
+      const next = [...options.slice(amplifierPicker.active + 1), ...options.slice(0, amplifierPicker.active + 1)]
+        .find((item) => item.querySelector(".glyph-name").textContent.toLowerCase().startsWith(letter));
+      if (next) moveAmplifierActive(Number(next.dataset.index));
+    }
+  });
+  dom.amplifierList.addEventListener("focusout", (event) => {
+    if (!event.currentTarget.parentElement.contains(event.relatedTarget)) closeAmplifierList();
+  });
+  document.addEventListener("pointerdown", (event) => {
+    if (!dom.amplifierList.hidden && !dom.amplifierList.parentElement.contains(event.target)) closeAmplifierList();
   });
   dom.modifier1.addEventListener("change", () => {
     state.modifier1 = dom.modifier1.value;
