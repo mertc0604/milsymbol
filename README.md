@@ -13,7 +13,7 @@
 
 ## Acknowledgements
 
-[Open Military Symbol Studio](https://mertc0604.github.io/milsymbol/) ·
+[Open Military Symbol Studio](https://omcoskun.github.io/milsymbol/) ·
 [Studio documentation](STUDIO.md)
 
 Many thanks to **Måns Beckman / Spatial Illusions**, the creator of
