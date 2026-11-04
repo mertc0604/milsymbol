@@ -276,6 +276,8 @@ const dom = Object.fromEntries(
     "fillColor",
     "monoColorOn",
     "monoColor",
+    "modifierColorOn",
+    "modifierColor",
     "infoColorOn",
     "infoColor",
     "infoBackgroundOn",
@@ -436,6 +438,7 @@ function currentOptions(minimal = false) {
     outlineColor: dom.outlineColor.value,
     fillColor: !minimal && dom.fillColorOn.checked ? dom.fillColor.value : "",
     monoColor: !minimal && dom.monoColorOn.checked ? dom.monoColor.value : "",
+    modifierColor: !minimal && dom.modifierColorOn.checked ? dom.modifierColor.value : "",
     fillOpacity: minimal ? 1 : Number(dom.fillOpacity.value) / 100,
     infoColor: !minimal && dom.infoColorOn.checked ? dom.infoColor.value : "",
     infoSize: minimal ? 40 : Number(dom.infoSize.value),
@@ -2485,10 +2488,11 @@ function resetControls() {
     droppedChoices: {}
   });
   for (const select of document.querySelectorAll("[data-rating-part]")) select.value = "";
-  for (const id of ["fillColorOn", "monoColorOn", "infoColorOn", "infoBackgroundOn"]) dom[id].checked = false;
+  for (const id of ["fillColorOn", "monoColorOn", "modifierColorOn", "infoColorOn", "infoBackgroundOn"]) dom[id].checked = false;
   dom.showFlag.checked = true;
   dom.fillColor.value = "#80e0ff";
   dom.monoColor.value = "#000000";
+  dom.modifierColor.value = "#000000";
   dom.infoColor.value = "#000000";
   dom.infoBackground.value = "#ffffff";
   dom.fillOpacity.value = 100;
@@ -2724,11 +2728,11 @@ function bindEvents() {
   dom.uncertaintyMarker.addEventListener("change", renderAll);
   for (const id of ["speedLeader", "hqStaffLength", "stack"])
     dom[id].addEventListener("input", renderAll);
-  for (const id of ["showFlag", "fillColorOn", "monoColorOn", "infoColorOn", "infoBackgroundOn"])
+  for (const id of ["showFlag", "fillColorOn", "monoColorOn", "modifierColorOn", "infoColorOn", "infoBackgroundOn"])
     dom[id].addEventListener("change", renderAll);
-  for (const id of ["fillColor", "monoColor", "infoColor", "infoBackground", "fillOpacity", "infoSize", "outlineWidth", "outlineColor"])
+  for (const id of ["fillColor", "monoColor", "modifierColor", "infoColor", "infoBackground", "fillOpacity", "infoSize", "outlineWidth", "outlineColor"])
     dom[id].addEventListener("input", () => {
-      const toggle = { fillColor: "fillColorOn", monoColor: "monoColorOn", infoColor: "infoColorOn", infoBackground: "infoBackgroundOn" }[id];
+      const toggle = { fillColor: "fillColorOn", monoColor: "monoColorOn", modifierColor: "modifierColorOn", infoColor: "infoColorOn", infoBackground: "infoBackgroundOn" }[id];
       if (toggle) dom[toggle].checked = true;
       if (id.startsWith("outline") && !state.outline) state.outline = dom.outlineToggle.checked = true;
       renderAll();

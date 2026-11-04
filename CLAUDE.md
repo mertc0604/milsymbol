@@ -18,14 +18,12 @@ npm run studio:build    # bundle + scripts/build-studio.mjs -> dist/studio/ (cat
 npm run studio:serve    # static server for dist/studio on http://127.0.0.1:4173 (PORT env overrides)
 ```
 
-**Tests need the `__version__` global.** `src/ms.js` references `__version__`, which rollup's replace plugin injects only at bundle time. So a plain `npm test` / `npx tead` fails with `ReferenceError: __version__ is not defined`. Inject it with `NODE_OPTIONS`:
-
 ```bash
-NODE_OPTIONS='--import=data:text/javascript,globalThis.__version__=%22dev%22' npx tead
-NODE_OPTIONS='--import=data:text/javascript,globalThis.__version__=%22dev%22' npx tead --testPattern='app6a\.test\.js$'
+npx tead
+npx tead --testPattern='app6a\.test\.js$'
 ```
 
-Any Node script that imports from `src/` directly needs the same injection (see the header of `scripts/audit-app6a.mjs`).
+`src/ms.js` falls back to a literal version when rollup has not injected `__version__`, so tests and scripts can import from `src/` directly. Keep that literal equal to `package.json`; `test/ms.test.js` checks it.
 
 The test runner is [tead](https://github.com/teadjs/tead). A test file default-exports nested objects whose leaves are `[actual, expected]` pairs, compared with deep equality. There are no `describe`/`it`/`expect`. Most `test/*-<symbolset>.test.js` files iterate the official symbol tables from the `mil-std-2525`, `stanag-app6` and `milstandard-e` devDependencies, using the helpers `test/letter-sidc.js` and `test/number-sidc.js`. Each file calls `ms.reset()` and adds only the icon sets it needs.
 
@@ -52,6 +50,8 @@ Style: Prettier with `trailingComma: "none"`; ESLint requires semicolons and `pr
 
 **Edition profiles**: `src/modifierprofiles/` holds one profile per edition: `app6a.js`, `app6b.js`, `std2525c.js`, `app6d.js`, `std2525d.js`, `std2525e.js`, `app6e.js`. `fieldtable.js` builds the last three from a table of classes written in field codes. A profile gives `fields`, `validate`, `textLayout` and `unavailableReason` for a SIDC, and `applyProfile` stores the result on `metadata`. `textfields.js` draws `metadata.textLayout` in place of the legacy rows, so a field outside the layout is not drawn. Numeric version 10-12 is edition D and 13-16 is edition E; `STD2525` picks 2525 or APP-6 within an edition. A letter SIDC with standard `APP6` is APP-6(B), scheme S only. `docs/edition-modifiers.md` has the positions and source decisions; `test/edition-modifiers.test.js` compares drawn rows with the figures.
 
+**Upstream**: the `upstream` remote is spatialillusions/milsymbol. Take its releases with `git merge vX.Y.Z`, so the shared history stays usable for the next merge. Fork rules that sit inside upstream code stay there as small guards, for example `!metadata.app6a` in `src/ms/symbol/resolvecolormode.js`.
+
 ### APP-6A profile (fork extension, partial conformance)
 
 - APP-6A explicitly lists the existing `lettersidc/sidc` and `iconparts` domain modules, registered through `ms.addIcons(app6a)`. It must not derive its bundle from `app6b` or load `std2525bextra`. Shared naval station geometry lives in the sea/subsurface icon-part modules. Do not add a second renderer or global provider registry.
@@ -71,4 +71,4 @@ Because the studio loads the bundled library, library changes are invisible in t
 
 ## Releasing (from dev/README.md)
 
-Bump `version` in `package.json`. The version string reaches the bundle via rollup replace. Then run `npm publish` and create a GitHub release tagged `vX.Y.Z`. For prereleases, use `npm pack` + `npm publish <tgz> --tag next`.
+Bump `version` in `package.json` and the fallback in `src/ms.js`. The version string reaches the bundle via rollup replace. Then run `npm publish` and create a GitHub release tagged `vX.Y.Z`. For prereleases, use `npm pack` + `npm publish <tgz> --tag next`.

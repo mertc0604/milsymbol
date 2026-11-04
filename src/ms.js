@@ -1,6 +1,6 @@
 const ms = new (function () {
   this._autoValidation = false;
-  this.version = __version__;
+  this.version = typeof __version__ === "undefined" ? "3.1.0" : __version__;
   if (typeof console === "object" && typeof process !== "object") {
     console.info(
       "milsymbol.js " +
