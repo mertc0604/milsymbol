@@ -17,6 +17,13 @@ publication workflow and GitHub/npm version inventory.
 - Studio: the search in APP-6A, APP-6B and 2525C finds words of ten letters or more, such as reconnaissance and air defense, and SIDCs printed with `*`. They were read as a SIDC and found nothing.
 - Studio: rows that share a code open as themselves, with their own name and a note that they draw alike (APP-6B Engineer Combat Bridging, 2525C Hospital). They opened the first row of the code.
 - Studio: APP-6B Reconnaissance Light writes `UCRL--`, not a 16-character SIDC, and Armour, Wheeled Amphibious writes `UCAWW-`, the code of its symbol page.
+- 2525E: frame shape `A` draws the Sea Surface frame of Change 1 Table A-LX. It drew no frame.
+- Studio: Frame shape lists Sea surface, and the SIDC box takes `A` in position 23 of an edition E code. Code 4 is now named Land equipment, as in the table.
+- Studio: 2525E and APP-6E offer Leader individual (code 71) on dismounted individuals. A code the picker has no row for shows once, where 71 read `SIDC: 7171`.
+- Studio: a SIDC of the other family says so and names the standards that take it, where it asked for more characters. A short numeric code in a letter-based standard is no longer read as a letter SIDC.
+- Studio: the version digits choose the standard, with a note. 16 in the 2525E view moves to APP-6E and 13 in the APP-6E view moves to 2525E.
+- Studio: APP-6E marks its exercise and simulation contexts as US only, and APP-6D and APP-6E mark Joker and Faker, as Table A-2 does.
+- Studio: Copy gives the code as drawn and as file names carry it, with `-` in an empty user field. The box still shows `*` there.
 
 ## 3.0.5-v5 - 2026-11-04
 

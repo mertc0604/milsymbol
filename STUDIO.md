@@ -22,7 +22,7 @@ The build creates `dist/studio/`, including a normalized searchable catalog gene
   - The preview grid and the outline are switches in the Display tab; the grid is an editor aid only, exports have a transparent background.
   - SIDC console: wide enough for a 30-digit code on one line (on narrow screens Apply sits under it), Copy next to the length. Apply, `Enter` to apply, `Esc` to return to the current code. Messages appear inline only when there is something to say: applied, wildcard and standard-switch notes, and errors that name the SIDC position. The code breakdown is always visible and shows each part's meaning.
 - **Right column:** three tabs.
-  - **Symbol:** identity and status chips drawn by the renderer for the current symbol, context, unit designation (with the S staff length under Headquarters while it is on; on APP-6A equipment the flag is Location offset), echelon or mobility (a picker that draws each choice on the current frame, with its SIDC code), country or organization flag, and edition-specific icon modifiers and frame shape. Every disabled control states its reason.
+  - **Symbol:** identity and status chips drawn by the renderer for the current symbol, context, unit designation (with the S staff length under Headquarters while it is on; on APP-6A equipment the flag is Location offset), echelon or mobility (a picker that draws each choice on the current frame, with its SIDC code; 2525E and APP-6E dismounted individuals also take Leader individual, and the control is then named Leadership), country or organization flag, and edition-specific icon modifiers and frame shape. Every disabled control states its reason.
     - Identities: APP-6A offers its nine Annex B identities (including joker and faker). APP-6B and 2525C offer the seven standard identities with a Reality / Exercise context; exercise writes G, W, M, D, L, J or K into position 2. D/E editions offer the seven identities 0–6 with Reality / Exercise / Simulation in position 3, and exercise suspect and hostile are shown as Joker and Faker.
   - **Amplifiers:** two views of the same values. Field positions puts a box for each applicable field around the symbol in the order the standard places it; the boxes are spaced apart for typing, so the preview, not the boxes, shows the exact placement. A country flag keeps its place there too. The List shows only the fields that apply to the symbol in the selected edition, under the edition's own names, in fixed groups; a search (name or code) and "Filled only" hide fields without touching their values and say how many filled fields they hide. A help line at the bottom of the list, always the same height, shows the focused field's rule, format and example (edition-specific: APP-6A W DDHHMMSSZMONYY and Y latitude/longitude, 2525C W DDHHMMSSZMONYYYY and an AO without a code list, APP-6D installation AI component types). "Not available for this symbol", closed under the list, names the edition's fields that do not apply to the symbol class or identity and the graphics the standard defines that this editor cannot set (2525C AH/AI/AK and the S offset, APP-6A installation S offset, APP-6D Land Unit AC and installation Q offset line). Fields of other editions are not listed. Q (direction of movement: slider and degrees) and AJ (speed leader) are graphic amplifiers in the list, after Z (speed), shown only where the edition gives them to the symbol class (not on 2525C or APP-6D installations, where APP-6D Q is the offset location line; APP-6A has no AJ); a value set earlier is kept, unsent, and the closed list says so. Field positions lists them under "Not drawn here". W has "Now (UTC)" in the field's format; J has a reliability/credibility picker that opens on request; APP-6D AO is built from lists, with the bar colour (target, non-target, expired) under it for hostile tracks.
   - **Display:** display switches (fill, frame, icon, text labels, country flag, outline, preview grid), size, stroke, palette and stack (not in APP-6A), and, closed under "More style options", custom fill color, monochrome, modifier color (HQ staff, task force, feint/dummy, installation and echelon), fill opacity, text color, size and background, and outline width and color. None of the style options change the SIDC.
@@ -68,15 +68,19 @@ The SIDC input accepts `*` placeholders in letter-based publication examples,
 including whitespace and line breaks copied from PDFs. Identity and status
 placeholders use the current editor selections; other `*` characters become
 `-` (unspecified). Explicit identity, status and modifier codes are preserved.
-The input and exported SIDC show the resolved code. Numeric SIDCs still require
-20–30 digits.
+The input shows the resolved code, with `*` in a user-defined field that is
+still empty. Copy and file names carry the code as drawn, with `-` there.
+Numeric SIDCs are digits up to 30, except that position 23 of an edition E code
+may hold `A`. A code of the other family is refused with a message that names the
+standards that take it.
 
 Applying a SIDC selects the matching catalog entry and synchronizes identity,
 status, echelon/mobility, HQ/task force/feint, and numeric modifiers. Subsequent
 control edits replace only their own SIDC fields, preserving country, order of
 battle and national extensions. Unknown catalog entries retain their entered
-function code. Recognized numeric D/E versions select the corresponding edition
-within the current NATO or MIL family before decoding extension fields.
+function code. Numeric versions select their standard before decoding extension
+fields (Table A-1): 11, 13 and 15 are MIL-STD-2525, 12, 14 and 16 are APP-6, and
+10, which both D editions use, stays within the current NATO or MIL family.
 
 APP-6B and 2525C print some codes on several rows (APP-6B `UCEC--` for Engineer
 Combat and its bridging, mine and diving rows; 2525C Hospital under two branches).

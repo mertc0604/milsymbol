@@ -187,7 +187,7 @@ export function matchesSearch(icon, search, family) {
   const code = search.toUpperCase().replace(/\s/g, "");
   if (family === "legacy" && /^[A-Z][A-Z*-][A-Z][A-Z*-][A-Z0-9-]{6}[A-Z0-9*-]{0,5}$/.test(code) && entryCode(icon) === `${code[0]}-${code[2]}-${code.slice(4, 10)}`)
     return true;
-  if (family === "modern" && /^\d{20,30}$/.test(code))
+  if (family === "modern" && /^(?:\d{20,30}|\d{22}A\d{0,7})$/.test(code))
     return icon.symbolSet === code.slice(4, 6) && icon.code === code.slice(10, 16);
   return normalize(
     [icon.name, icon.category, icon.code, entryCode(icon), ...(icon.path || [])].join(" ")
@@ -461,4 +461,52 @@ export function paletteProgress(shown, total) {
   if (total === 1) return "1 symbol shown";
   const count = (value) => value.toLocaleString("en-US");
   return shown < total ? `Showing ${count(shown)} of ${count(total)}` : `All ${count(total)} symbols shown`;
+}
+
+// Id, name, code in a numeric SIDC, code in a letter SIDC. Leader individual is
+// numeric only: 2525E Table A-VIII, APP-06(E)(2) Table A-8.
+export const mobilities = [
+  ["", "Unspecified", "00", "--"],
+  ["wheeledLimited", "Wheeled, limited cross-country", "31", "MO"],
+  ["wheeled", "Wheeled, cross-country", "32", "MP"],
+  ["tracked", "Tracked", "33", "MQ"],
+  ["combined", "Wheeled and tracked", "34", "MR"],
+  ["towed", "Towed", "35", "MS"],
+  ["rail", "Rail", "36", "MT"],
+  ["pack", "Pack animals", "37", "MW"],
+  ["snow", "Over snow", "41", "MU"],
+  ["sled", "Sled", "42", "MV"],
+  ["barge", "Barge", "51", "MX"],
+  ["amphibious", "Amphibious", "52", "MY"],
+  ["shortArray", "Short towed array", "61", "NS"],
+  ["longArray", "Long towed array", "62", "NL"],
+  ["leader", "Leader individual", "71", ""]
+];
+
+const towedArrays = ["shortArray", "longArray"];
+
+// The name of the mobility control, from the ids this symbol may carry.
+export function mobilityModeName(offered) {
+  const mobility = offered.some((id) => id !== "leader" && !towedArrays.includes(id));
+  const names = [
+    mobility && "mobility",
+    offered.some((id) => towedArrays.includes(id)) && "towed array",
+    offered.includes("leader") && "leadership"
+  ].filter(Boolean).join(" / ") || "mobility";
+  return names[0].toUpperCase() + names.slice(1);
+}
+
+// Where the values of the control are drawn, from the control's name.
+export function amplifierPlacementNote(mobilityName) {
+  if (mobilityName === "Leadership") return "Leader individual is drawn above the frame.";
+  return `${mobilityName.includes("leadership") ? "Leader individual" : "Echelon"} is drawn above the frame; mobility below it.`;
+}
+
+// A row of the amplifier picker, from an option of its select. The code is drawn
+// beside the name, so a code the list has no row for is not named by itself too.
+export function amplifierChoice({ value, textContent, title }, source, modern) {
+  const entry = source.find((candidate) => candidate[0] === value);
+  const imported = value.startsWith("code:");
+  const code = imported ? value.slice(5) : value && entry ? entry[modern ? 2 : 3] : "";
+  return { value, name: entry ? entry[1] : imported ? "From SIDC" : textContent, code, reason: title };
 }

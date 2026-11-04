@@ -241,9 +241,11 @@ export function metadata(ms, metadata, mapping) {
         metadata.cyberspace = false;
         metadata.unit = true;
         break;
+      case "A": // Sea Surface (2525E Change 1 Table A-LX)
+        metadata.dimension = "Sea";
+        break;
     }
   }
-  if (frameshape == "A") metadata.frame = false;
 
   //Setting up Headquarters/task force/dummy
   if (["1", "3", "5", "7"].indexOf(headquartersTaskForceDummy) > -1)

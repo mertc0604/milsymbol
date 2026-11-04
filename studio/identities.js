@@ -137,3 +137,19 @@ export function convertIdentity({ value, context }, standard) {
   const allowed = contextOptions(standard).some(([code]) => code === context);
   return { value: known ? value : "friend", context: allowed ? context : "0" };
 }
+
+// Table A-2 of APP-6(D) and APP-06(E)(2): note 1 keeps these contexts and note 2
+// keeps Joker and Faker for US use. MIL-STD-2525 has no such limit.
+const usOnlyContexts = { app6d: ["1", "2"], app6e: ["1", "2", "5", "6", "7", "8"] };
+
+export function isUsOnlyContext(standard, context) {
+  return (usOnlyContexts[standard.id] || []).includes(context);
+}
+
+export function contextLabel(standard, [value, label]) {
+  return isUsOnlyContext(standard, value) ? `${label} (US only)` : label;
+}
+
+export function usOnlyIdentityLabel(standard, label) {
+  return usOnlyContexts[standard.id] && /^(Joker|Faker)$/.test(label) ? `${label} (US only)` : label;
+}

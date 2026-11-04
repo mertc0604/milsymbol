@@ -7,13 +7,12 @@ import { std2525dFields, std2525dProfile } from "./vendor/modifierprofiles/std25
 import { std2525eFields, std2525eProfile } from "./vendor/modifierprofiles/std2525e.js";
 import {
   app6dProfile,
-  app6dContexts,
   app6dIdentityName,
   app6dStatuses,
   app6dEngagementError
 } from "./vendor/modifierprofiles/app6d.js";
 import * as app6dSectors from "./vendor/modifierprofiles/app6d-sectors.js";
-import { completeEditorSidc, decodeEditorSidc, displayEditorSidc, editImportedSidc, numericSidcEdition } from "./sidc-editor.js";
+import { completeEditorSidc, copiedSidc, decodeEditorSidc, displayEditorSidc, editImportedSidc, numericSidcEdition, standardForSidc } from "./sidc-editor.js";
 import { modifierGroups, textModifiers, collectTextModifiers } from "./modifier-fields.js";
 import {
   probeOffers,
@@ -37,10 +36,10 @@ import {
   editorGaps
 } from "./profile-controls.js";
 
-import { exportFilename, pngOutputSize, pngScale, fieldStates, profileFieldStates, dtgForField, evaluationRating, sidcParts, pushRecent, placeholderOptions, readTextRows, fieldValueChars, fitRowWidths, layoutFieldBoxes, paletteProgress, baseBranch, entryCrumbs, groupEntries, paletteSections, matchesSearch, normalize } from "./editor-helpers.js";
+import { exportFilename, pngOutputSize, pngScale, fieldStates, profileFieldStates, dtgForField, evaluationRating, sidcParts, pushRecent, placeholderOptions, readTextRows, fieldValueChars, fitRowWidths, layoutFieldBoxes, paletteProgress, baseBranch, entryCrumbs, groupEntries, paletteSections, matchesSearch, normalize, mobilities, mobilityModeName, amplifierChoice, amplifierPlacementNote } from "./editor-helpers.js";
 import { fieldReference } from "./field-reference.js";
 import { fieldGuide } from "./field-guide.js";
-import { app6aIdentities, contextOptions, convertIdentity, decodeIdentity, identityCode, identityLabel, identityList } from "./identities.js";
+import { app6aIdentities, contextLabel, contextOptions, convertIdentity, decodeIdentity, identityCode, identityLabel, identityList, isUsOnlyContext, usOnlyIdentityLabel } from "./identities.js";
 import { createCountryFlagPart } from "./country-flags.js";
 import { countryCodeForFlag, countryFlagFromSidc, countrySidcField, withCountryFlag } from "./country-codes.js";
 
@@ -128,18 +127,12 @@ const movementFor = (sidc) => movementControls(activeProfile(), sidc, profileTit
 // names Joker and Faker only with context 1 and calls status 2-5 "Present/...".
 function identityLabelFor(entry, context = state.context) {
   const named = state.standardId === "app6d" && entry.numeric && app6dIdentityName(context, entry.numeric);
-  return named || identityLabel(entry, context);
+  return usOnlyIdentityLabel(config(), named || identityLabel(entry, context));
 }
 function statusLabelFor(entry) {
   const named = state.standardId === "app6d" && app6dStatuses.find((item) => item.digit === entry.numeric);
   return named ? named.name : entry.label;
 }
-// "Exercise (US only)": the profile's note says where a context may be used.
-function contextLabelFor([value, label]) {
-  const context = state.standardId === "app6d" && app6dContexts.find((item) => item.digit === value);
-  return context ? `${context.name}${/\bUS\b/.test(context.note || "") ? " (US only)" : ""}` : label;
-}
-
 const statuses = [
   { value: "present", label: "Present", numeric: "0", legacy: "P" },
   {
@@ -175,23 +168,6 @@ const echelons = [
   ["armyGroup", "Army group / front", "24", "L"],
   ["region", "Region / theater", "25", "M"],
   ["command", "Command", "26", "N"]
-];
-
-const mobilities = [
-  ["", "Unspecified", "00", "--"],
-  ["wheeledLimited", "Wheeled, limited cross-country", "31", "MO"],
-  ["wheeled", "Wheeled, cross-country", "32", "MP"],
-  ["tracked", "Tracked", "33", "MQ"],
-  ["combined", "Wheeled and tracked", "34", "MR"],
-  ["towed", "Towed", "35", "MS"],
-  ["rail", "Rail", "36", "MT"],
-  ["pack", "Pack animals", "37", "MW"],
-  ["snow", "Over snow", "41", "MU"],
-  ["sled", "Sled", "42", "MV"],
-  ["barge", "Barge", "51", "MX"],
-  ["amphibious", "Amphibious", "52", "MY"],
-  ["shortArray", "Short towed array", "61", "NS"],
-  ["longArray", "Long towed array", "62", "NL"]
 ];
 
 const dom = Object.fromEntries(
@@ -506,7 +482,7 @@ function profileOffers(sidc) {
     const flagsClear = patchSidc(base, at.flags, modern ? "0" : "--", pad);
     const flagProbe = (code) => probeOffers(profile, [code], (value) => patchSidc(flagsClear, at.flags, modern ? String(value) : `${legacyFlagLetters[value]}-`, pad), flagsClear)[0];
     offers.flags = { feintDummy: flagProbe(1), hq: flagProbe(2), taskForce: flagProbe(4) };
-    const amplifiers = [...echelons, ...mobilities].filter((item) => item[0] !== "");
+    const amplifiers = [...echelons, ...mobilities].filter((item) => item[0] !== "" && (modern || item[3]));
     offers.amplifier = map(
       probeOffers(
         profile,
@@ -938,14 +914,12 @@ function showGroup(category, branch) {
 
 function mobilityNameFor(offers) {
   if (!offers || !offers.amplifier) return "Mobility";
-  const offered = mobilities.filter((item) => item[0] !== "" && offers.amplifier.get(item[0])?.offered);
-  const arrays = offered.filter((item) => ["shortArray", "longArray"].includes(item[0]));
-  if (!arrays.length) return "Mobility";
-  return arrays.length === offered.length ? "Towed array" : "Mobility / towed array";
+  return mobilityModeName(mobilities.filter((item) => item[0] !== "" && offers.amplifier.get(item[0])?.offered).map((item) => item[0]));
 }
 
 function populateAmplifier() {
   let source = state.amplifierMode === "mobility" ? mobilities : echelons;
+  if (config().family === "legacy") source = source.filter((item) => item[3] !== "");
   if (state.standardId === "app6a")
     source = source.filter((item) => !["N", "NS", "NL"].includes(item[3]));
   // Edition profiles list only the echelons, mobilities and towed arrays the
@@ -1005,11 +979,7 @@ function amplifierPreviewSidc(sidc, value) {
 function amplifierChoices() {
   const modern = config().family === "modern";
   const source = state.amplifierMode === "mobility" ? mobilities : echelons;
-  return [...dom.amplifierValue.options].map((item) => {
-    const entry = source.find((candidate) => candidate[0] === item.value);
-    const code = item.value.startsWith("code:") ? item.value.slice(5) : item.value && entry ? entry[modern ? 2 : 3] : "";
-    return { value: item.value, name: entry ? entry[1] : item.textContent, code, reason: item.title };
-  });
+  return [...dom.amplifierValue.options].map((item) => amplifierChoice(item, source, modern));
 }
 
 const amplifierPicker = { sidc: "", active: 0 };
@@ -1227,11 +1197,11 @@ function syncRuleNotes({ modern, app6a, kind, installation, tactical, prescribed
     1: `Exercise: an X is drawn beside the frame; suspect and hostile become Joker (J) and Faker (K).${modern ? "" : " Position 2 uses the exercise letters G, W, M, D, L, J and K."}`,
     2: "Simulation: an S is drawn beside the frame."
   }[app6a ? "0" : state.context];
-  // APP-6D marks Exercise and Simulation as US-only; the note comes from its table.
-  const usOnly = state.standardId === "app6d" && app6dContexts.find((item) => item.digit === state.context && item.note);
+  // APP-6D and APP-6E Table A-2 keep Exercise and Simulation for US use.
+  const usOnly = !app6a && isUsOnlyContext(config(), state.context) && contextOptions(config()).find(([digit]) => digit === state.context)[1];
   const identityNote = prescribed
     ? "This symbol prescribes its identity, so the identity is fixed."
-    : [contextNote, usOnly && `${usOnly.name} is ${shortReason(usOnly.note).replace(/^US use only/, "for US use only")}.`].filter(Boolean).join(" ");
+    : [contextNote, usOnly && `${usOnly} is for US use only.`].filter(Boolean).join(" ");
   dom.identityNote.hidden = !identityNote;
   dom.identityNote.textContent = identityNote;
   for (const [key, element] of [["identity", dom.identityAdjust], ["status", dom.statusAdjust], ["amplifier", dom.amplifierAdjust]]) {
@@ -1280,7 +1250,7 @@ function syncRuleNotes({ modern, app6a, kind, installation, tactical, prescribed
       ? "Units take an echelon above the frame. Mobility is for equipment."
       : app6a && kind === "equipment"
         ? "Equipment takes a mobility amplifier below the frame. Echelon is for units."
-        : `Echelon is drawn above the frame; mobility below it.${profile && !app6a ? ` Only the values ${profileTitles[state.standardId]} allows for this symbol are listed.` : ""}`;
+        : `${amplifierPlacementNote(mobilityNameFor(profileOffers(state.customSidc || buildSidc())))}${profile && !app6a ? ` Only the values ${profileTitles[state.standardId]} allows for this symbol are listed.` : ""}`;
   dom.countryMeta.textContent = countrySidcField(state.standardId)?.description || "";
   dom.editionMeta.textContent = modern
     ? (numericSidcEdition(config().version) === "e" ? "Edition E" : "Edition D")
@@ -1791,9 +1761,8 @@ function selectImportedValue(select, value) {
 }
 
 function applyImportedSidc(value) {
-  const edition = config().family === "modern" && numericSidcEdition(value);
-  if (edition && edition !== numericSidcEdition(config().version))
-    setStandard(`${state.standardId.startsWith("app6") ? "app6" : "2525"}${edition}`);
+  const standardId = config().family === "modern" ? standardForSidc(value, state.standardId) : state.standardId;
+  if (standardId !== state.standardId) setStandard(standardId);
   state.adjustments = {};
   const parsed = decodeEditorSidc(value, { ...config(), icons: dataset().icons });
   const modern = config().family === "modern";
@@ -1838,7 +1807,7 @@ function syncStandardControls() {
     .map((item) => option(item.value, statusLabelFor(item)))
     .join("");
   selectImportedValue(dom.status, state.status);
-  dom.context.innerHTML = contexts.map((item) => option(item[0], contextLabelFor(item))).join("");
+  dom.context.innerHTML = contexts.map((item) => option(item[0], contextLabel(config(), item))).join("");
   if (contexts.length) selectImportedValue(dom.context, state.context);
   populateAmplifier();
   syncModifiers();
@@ -3062,7 +3031,7 @@ function bindEvents() {
     }
   });
   dom.copySidc.addEventListener("click", () =>
-    copyText(dom.sidcInput.value, "SIDC copied")
+    copyText(copiedSidc({ shown: dom.sidcInput.value, sidc: state.customSidc || buildSidc(), dirty: state.sidcDirty }), "SIDC copied")
   );
   dom.downloadSvg.addEventListener(
     "click",

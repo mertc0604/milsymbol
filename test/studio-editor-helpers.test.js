@@ -9,8 +9,15 @@ import {
   fieldValueChars,
   fitRowWidths,
   layoutFieldBoxes,
-  paletteProgress
+  paletteProgress,
+  mobilities,
+  mobilityModeName,
+  amplifierPlacementNote,
+  amplifierChoice
 } from "../studio/editor-helpers.js";
+import { patchSidc, probeOffers } from "../studio/profile-controls.js";
+import { std2525eProfile } from "../src/modifierprofiles/std2525e.js";
+import { app6eProfile } from "../src/modifierprofiles/app6e.js";
 import { fieldReference } from "../studio/field-reference.js";
 import { textModifiers } from "../studio/modifier-fields.js";
 import {
@@ -100,6 +107,16 @@ const crowdedFit = fitRowWidths(
   { room: 752, between: 175 }
 );
 const rowSpan = (row, widths) => row.keys.reduce((sum, key) => sum + widths[key], 0) + 8 * (row.keys.length - 1);
+
+const offeredMobilities = (profile, base) =>
+  probeOffers(
+    profile,
+    mobilities.filter((item) => item[0] !== ""),
+    (item) => patchSidc(base, 8, item[2], "0"),
+    base
+  )
+    .filter((row) => row.offered)
+    .map((row) => row.item[0]);
 
 export default {
   "Studio editor helpers": {
@@ -302,6 +319,85 @@ export default {
     "palette status is empty when nothing matches": [
       paletteProgress(0, 0),
       ""
+    ]
+  },
+  "Leader individual": {
+    "2525E offers it on a dismounted individual": [
+      offeredMobilities(std2525eProfile, "13032700001101010000"),
+      ["leader"]
+    ],
+    "APP-6E offers it with the mobilities": [
+      offeredMobilities(app6eProfile, "16032700001101010000").includes("leader"),
+      true
+    ],
+    "a land unit does not take it": [
+      offeredMobilities(std2525eProfile, "13031000001211000000").includes("leader"),
+      false
+    ],
+    "it writes code 71": [
+      mobilities.find((item) => item[0] === "leader")?.[2],
+      "71"
+    ],
+    "letter SIDCs have no code for it": [
+      mobilities.find((item) => item[0] === "leader")?.[3],
+      ""
+    ]
+  },
+  "The name of the mobility control": {
+    "nothing offered": [mobilityModeName([]), "Mobility"],
+    "mobility alone": [mobilityModeName(["tracked"]), "Mobility"],
+    "towed arrays alone": [
+      mobilityModeName(["shortArray", "longArray"]),
+      "Towed array"
+    ],
+    "mobility and towed arrays": [
+      mobilityModeName(["tracked", "shortArray"]),
+      "Mobility / towed array"
+    ],
+    "the leader alone": [mobilityModeName(["leader"]), "Leadership"],
+    "mobility and the leader": [
+      mobilityModeName(["tracked", "leader"]),
+      "Mobility / leadership"
+    ]
+  },
+  "Where the amplifier note says it is drawn": {
+    "echelon and mobility": [
+      amplifierPlacementNote("Mobility"),
+      "Echelon is drawn above the frame; mobility below it."
+    ],
+    "towed arrays read as mobility": [
+      amplifierPlacementNote("Mobility / towed array"),
+      "Echelon is drawn above the frame; mobility below it."
+    ],
+    "the leader alone": [
+      amplifierPlacementNote("Leadership"),
+      "Leader individual is drawn above the frame."
+    ],
+    "mobility and the leader": [
+      amplifierPlacementNote("Mobility / leadership"),
+      "Leader individual is drawn above the frame; mobility below it."
+    ]
+  },
+  "A row of the amplifier picker": {
+    "a listed value has its name and code": [
+      amplifierChoice({ value: "leader", textContent: "Leader individual", title: "" }, mobilities, true),
+      { value: "leader", name: "Leader individual", code: "71", reason: "" }
+    ],
+    "a letter edition reads the letter code": [
+      amplifierChoice({ value: "tracked", textContent: "Tracked", title: "" }, mobilities, false).code,
+      "MQ"
+    ],
+    "an unlisted SIDC value shows its code once": [
+      amplifierChoice({ value: "code:72", textContent: "SIDC: 72", title: "" }, mobilities, true),
+      { value: "code:72", name: "From SIDC", code: "72", reason: "" }
+    ],
+    "unspecified has no code": [
+      amplifierChoice({ value: "", textContent: "Unspecified", title: "" }, mobilities, true).code,
+      ""
+    ],
+    "a rejected value keeps its reason": [
+      amplifierChoice({ value: "tracked", textContent: "Tracked (not valid here)", title: "No mobility here" }, mobilities, true).reason,
+      "No mobility here"
     ]
   }
 };

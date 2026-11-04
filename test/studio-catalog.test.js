@@ -86,6 +86,10 @@ export default {
     "a numeric SIDC of another symbol set": [
       inNumericEdition(numeric, "10031500001211000000"),
       false
+    ],
+    "a SIDC with the sea surface frame finds its symbol": [
+      inNumericEdition(numeric, "1303100000121100000000A0000000"),
+      true
     ]
   },
   "rows that share a code": {

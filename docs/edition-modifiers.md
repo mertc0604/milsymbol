@@ -144,6 +144,10 @@ country rule used by the MIL profiles.
 | UCRLL-- | APP-6(B) code table PDF 117, symbol page PDF 192 | Seven function characters in a six-character field. The Studio catalog reads UCRL--, as APP-6A does |
 | One code on several rows | APP-6(B) code table, 2525C | Both pages of APP-6(B) print the same code for rows such as UCEC-- and UCDS--, and 2525C repeats codes between warfighting and emergency management. Each row keeps its own Studio card and they draw alike |
 | Version digit | 2525D A.5.4.1 PDF 67/51 | "shall be populated with code 10": the Studio keeps 10 for 2525D and 13 for 2525E. Their Change 1 codes are read as well |
+| Version digit of an applied SIDC | 2525E Table A-I, APP-06(E)(2) Table A-1 | The code decides the Studio view: 11, 13 and 15 are 2525, 12, 14 and 16 are APP-6. 10 stays in the current family, since both D editions use it |
+| Frame shape A | 2525E Change 1 Table A-LX PDF 158/141, change 23-043-DS | A is Sea Surface and 4 is Land Equipment. The library drew no frame for A, and it now draws the sea surface frame |
+| Leader individual | 2525E Table A-VIII PDF 80-81/63-64, APP-06(E)(2) Table A-8 PDF 753-754/719-720 | Code 71 sits with mobility in the Studio, because the amplifier takes one code. The control is named Leadership where the symbol takes nothing else |
+| US only | APP-6(D) Table A-2 PDF 718/A-4, APP-06(E)(2) Table A-2 PDF 748/714 | Note 1 covers contexts 1 and 2, and 5 to 8 in APP-6(E). Note 2 covers Joker and Faker. The Studio labels show it |
 
 ## Limits
 
@@ -154,3 +158,4 @@ country rule used by the MIL profiles.
 - SIGINT placement in 2525D is product policy: no figure exists.
 - 2525E set 60 lists AE and AP in Table K-II with no cell, so they are not offered.
 - The studio catalogue for APP-6E is still the compatibility catalogue.
+- APP-06(E)(2) reserves positions 23-27 (A.14 PDF 757/723), so it has no frame shape. The library reads position 23 for all of edition E, and the Studio still offers the override in its APP-6E view.

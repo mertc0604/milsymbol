@@ -7,6 +7,29 @@ export function numericSidcEdition(sidc) {
   return "";
 }
 
+// Table A-1: 10 is 2525D and APP-06(D)(1) alike, 11, 13 and 15 are 2525, and
+// 12, 14 and 16 are APP-06. The code decides the view, as it does for D and E.
+const versionPublication = { 11: "2525", 12: "app6", 13: "2525", 14: "app6", 15: "2525", 16: "app6" };
+export function standardForSidc(sidc, standardId) {
+  const edition = numericSidcEdition(sidc);
+  if (!edition) return standardId;
+  const publication = versionPublication[sidc.slice(0, 2)] || (standardId.startsWith("app6") ? "app6" : "2525");
+  return `${publication}${edition}`;
+}
+
+// A code that is valid only in the other family of standards. The library reads
+// a SIDC as numeric when its first two characters are digits.
+function otherFamilyError(value, family) {
+  if (family === "modern")
+    return /^[A-Z]/.test(value) ? "This is a letter-based SIDC, and this standard takes numeric codes. Choose APP-6A, APP-6B or MIL-2525C to use it." : "";
+  return /^\d{2}/.test(value) ? "This is a numeric SIDC, and this standard takes letter-based codes. Choose APP-6D, APP-6E, MIL-2525D or MIL-2525E to use it." : "";
+}
+
+// Position 23 of an edition E code may hold A, Sea Surface (2525E Change 1
+// Table A-LX). Every other position of a numeric SIDC is a digit.
+const isNumericSidc = (value) =>
+  /^\d{6,30}$/.test(value) || (numericSidcEdition(value) === "e" && /^\d{22}A\d{0,7}$/.test(value));
+
 // Apply accepts the start of a code and fills the rest. Letter SIDCs need at
 // least scheme, identity, dimension and status; the function ID (positions
 // 5-10) is filled with "-" (no information) and positions 11-15 with "*"
@@ -15,8 +38,10 @@ export function numericSidcEdition(sidc) {
 // digits. "_" is "-".
 export function completeEditorSidc(input, family) {
   const value = String(input).trim().toUpperCase().replace(/\s/g, "").replace(/_/g, "-");
+  const otherFamily = otherFamilyError(value, family);
+  if (otherFamily) return { value, added: 0, error: otherFamily };
   if (family === "modern") {
-    if (!/^\d{6,30}$/.test(value))
+    if (!isNumericSidc(value))
       return { value, added: 0, error: `Enter at least the first 6 digits of a numeric SIDC (up to 30); the rest is filled with 0 to 20 digits. This one has ${value.length} characters${/\D/.test(value) ? ", including letters" : ""}.` };
     return { value: value.padEnd(20, "0"), added: Math.max(0, 20 - value.length), error: "" };
   }
@@ -70,7 +95,8 @@ export function decodeEditorSidc(value, { family, version, icons }) {
   const icon = installation ? { ...entry, defaultModifier: sidc.slice(10, 12) } : entry;
   const flags = modern ? Number(sidc[7]) : ["-", "F", "A", "C", "E", "G", "B", "D"].indexOf(sidc[10]);
   const amplifier = modern ? sidc.slice(8, 10) : sidc.slice(10, 12);
-  const mobility = modern ? /^[3456]/.test(amplifier) : /^[MN]/.test(amplifier);
+  // 7 is the leadership amplifier of a dismounted individual (Table A-VIII).
+  const mobility = modern ? /^[34567]/.test(amplifier) : /^[MN]/.test(amplifier);
   const modifier = (start, prefix) => {
     const code = sidc.slice(start, start + 2);
     return extended && sidc[prefix] !== "0"
@@ -113,4 +139,11 @@ export function editImportedSidc(original, generated, field, { family, version }
     result = result.slice(0, start) + generated.slice(start, end) + result.slice(end);
   }
   return result;
+}
+
+// Copy gives the code as it is drawn and as file names carry it: the box's *
+// marks an empty user field for reading (displayEditorSidc). Text still being
+// typed has no drawn code yet, so it is copied as it stands.
+export function copiedSidc({ shown, sidc, dirty }) {
+  return dirty ? shown : sidc;
 }

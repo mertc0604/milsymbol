@@ -4,18 +4,35 @@ import {
   identityCode,
   identityLabel,
   decodeIdentity,
-  convertIdentity
+  convertIdentity,
+  contextLabel,
+  isUsOnlyContext,
+  usOnlyIdentityLabel
 } from "../studio/identities.js";
+import { app6dContexts } from "../src/modifierprofiles/app6d.js";
+import { app6eProfile } from "../src/modifierprofiles/app6e.js";
 
 const app6a = { id: "app6a", family: "legacy" };
 const app6b = { id: "app6b", family: "legacy" };
 const c2525 = { id: "2525c", family: "legacy" };
 const d2525 = { id: "2525d", family: "modern" };
 const e2525 = { id: "2525e", family: "modern" };
+const d6 = { id: "app6d", family: "modern" };
+const e6 = { id: "app6e", family: "modern" };
 const codes = (standard, context) =>
   identityList(standard).map((entry) => identityCode(entry, standard, context));
 const byValue = (standard, value) =>
   identityList(standard).find((entry) => entry.value === value);
+const labelsIn = (standard) =>
+  contextOptions(standard).map((option) => contextLabel(standard, option));
+const digits = (standard) =>
+  contextOptions(standard).map(([digit]) => digit);
+// The contexts the APP-6(E) profile itself notes as US use only.
+const notedByProfile = digits(e6).filter((digit) =>
+  app6eProfile
+    .validate(`16${digit}31000001211000000`, {})
+    .details.notes.some((note) => note.includes("US use only"))
+);
 
 export default {
   "Studio identities": {
@@ -108,6 +125,51 @@ export default {
     "imported identity codes fall back to friend": [
       convertIdentity({ value: "code:X", context: "0" }, d2525),
       { value: "friend", context: "0" }
+    ]
+  },
+  "US only contexts and identities": {
+    "APP-6E labels every context of Table A-2 note 1": [
+      labelsIn(e6),
+      [
+        "Reality",
+        "Exercise (US only)",
+        "Simulation (US only)",
+        "Restricted target",
+        "No-strike entity",
+        "Restricted target, exercise (US only)",
+        "No-strike entity, exercise (US only)",
+        "Restricted target, simulation (US only)",
+        "No-strike entity, simulation (US only)"
+      ]
+    ],
+    "APP-6D keeps its labels": [
+      labelsIn(d6),
+      ["Reality", "Exercise (US only)", "Simulation (US only)"]
+    ],
+    "MIL-STD-2525E has no such note": [
+      labelsIn(e2525).some((label) => label.includes("US only")),
+      false
+    ],
+    "the APP-6E list matches the notes of its profile": [
+      digits(e6).filter((digit) => isUsOnlyContext(e6, digit)),
+      notedByProfile
+    ],
+    "the APP-6D list matches its context table": [
+      digits(d6).filter((digit) => isUsOnlyContext(d6, digit)),
+      app6dContexts.filter((item) => item.note).map((item) => item.digit)
+    ],
+    "Joker is marked in APP-6E": [
+      usOnlyIdentityLabel(e6, "Joker"),
+      "Joker (US only)"
+    ],
+    "Faker is marked in APP-6D": [
+      usOnlyIdentityLabel(d6, "Faker"),
+      "Faker (US only)"
+    ],
+    "other identities are not": [usOnlyIdentityLabel(e6, "Hostile"), "Hostile"],
+    "Joker is not marked in 2525E": [
+      usOnlyIdentityLabel(e2525, "Joker"),
+      "Joker"
     ]
   }
 };
