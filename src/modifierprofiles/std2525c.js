@@ -359,8 +359,12 @@ export function std2525cValidate(sidc, options) {
   options = options || {};
   const errors = [];
   const notes = [];
+  const warnings = [];
   if (sidc.charAt(0) !== "S")
-    return { valid: true, details: { modifierErrors: errors, notes: notes } };
+    return {
+      valid: true,
+      details: { modifierErrors: errors, fieldWarnings: warnings, notes: notes }
+    };
 
   const identity = sidc.charAt(1);
   const dimension = sidc.charAt(2);
@@ -445,18 +449,20 @@ export function std2525cValidate(sidc, options) {
     }
     const limit = maxLengthOf(limitOf(entry, cls));
     if (entry.support === "option") return;
+    // The text is drawn either way: a broken rule is a warning under the field.
+    const warn = (message) => warnings.push({ key: key, message: message });
     if (limit !== null && length(value) > limit)
-      errors.push(
+      warn(
         entry.field + " " + key + ": at most " + limit + " display characters"
       );
     const choices = std2525cChoices[key];
     if (choices && choices.indexOf(String(value)) < 0) {
       if (key === "reinforcedReduced" && std2525cTransmission[String(value)])
-        errors.push(
+        warn(
           "F: R, D and RD are transmission codes; use the display forms (+), (-), (±)"
         );
       else
-        errors.push(
+        warn(
           entry.field +
             " " +
             key +
@@ -477,7 +483,7 @@ export function std2525cValidate(sidc, options) {
   });
   return {
     valid: errors.length === 0,
-    details: { modifierErrors: errors, notes: notes }
+    details: { modifierErrors: errors, fieldWarnings: warnings, notes: notes }
   };
 }
 

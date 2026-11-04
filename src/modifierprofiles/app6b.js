@@ -195,7 +195,12 @@ export function app6bValidate(sidc, options) {
   options = options || {};
   const errors = [];
   const notes = [];
-  const details = { modifierErrors: errors, notes: notes };
+  const warnings = [];
+  const details = {
+    modifierErrors: errors,
+    fieldWarnings: warnings,
+    notes: notes
+  };
   if (sidc.charAt(0) !== "S") return { valid: true, details: details };
   const identity = sidc.charAt(1);
   const dimension = sidc.charAt(2);
@@ -237,14 +242,16 @@ export function app6bValidate(sidc, options) {
       return;
     }
     if (entry.support === "option") return;
+    // The text is drawn either way: a broken rule is a warning under the field.
+    const warn = (message) => warnings.push({ key: key, message: message });
     const limit = limitOf(entry, cls);
     if (Array.from(String(value)).length > limit)
-      errors.push(
+      warn(
         entry.field + " " + key + ": at most " + limit + " characters (Table I)"
       );
     const choices = app6bChoices[key];
     if (choices && choices.indexOf(String(value)) < 0)
-      errors.push(
+      warn(
         entry.field +
           " " +
           key +

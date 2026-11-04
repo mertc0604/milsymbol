@@ -19,6 +19,11 @@
 //                            Symbol.isValid(true). Use details.modifierErrors
 //                            for source-backed violations and details.notes for
 //                            source conflicts or product-policy decisions.
+//                            details.fieldWarnings lists text values that break
+//                            the edition's format, as { key, message }. The text
+//                            is still drawn, so they never make a symbol invalid;
+//                            modifierErrors stays for a code or a field that is
+//                            wrong for the symbol.
 //   textLayout(sidc)         null to keep the legacy layout, or
 //                            { left, right, separator, top, inner, bottom }.
 //                            left/right are rows 0..5 top to bottom (row 0 sits

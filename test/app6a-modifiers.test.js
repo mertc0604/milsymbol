@@ -25,7 +25,12 @@ const texts = (symbol) => parts(symbol).filter((p) => p.type === "text" && !p.ic
 const frame = (symbol) => parts(symbol).filter((p) => (p.type === "path" || p.type === "circle") && !p.icon)[0];
 const geometry = (p) => JSON.stringify([p.d, p.cx, p.cy, p.r]);
 const make = (sidc, options) => new ms.Symbol(sidc, options || {});
-const valid = (sidc, options) => make(sidc, options).isValid();
+// Accepted: valid, and no text rule warns. A broken text rule alone leaves the
+// symbol valid (test/field-warnings.test.js).
+const valid = (sidc, options) => {
+  const symbol = make(sidc, options);
+  return symbol.isValid() && !symbol.isValid(true).fieldWarnings.length;
+};
 
 const result = {};
 const section = (name) => (result[name] = result[name] || {});

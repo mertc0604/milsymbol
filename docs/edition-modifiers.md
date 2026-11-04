@@ -100,6 +100,12 @@ Figure 5 PDF 33/2-11 serves all classes: left W; X/Y; V; T; Z, right E/F; G; H; 
 
 E is the Joker or Faker letter, from SIDC position 2. Unlike 2525C, Z applies to installations and X stops at 6 characters.
 
+## Errors and warnings
+
+`details.modifierErrors` is for a wrong SIDC and for a field the symbol does not take. Those make `isValid()` false, and the Studio shows Check code / modifiers.
+
+`details.fieldWarnings` lists text values that break a length, list or format rule, as `{ key, message }`. The text is still drawn and the symbol stays valid, and the Studio shows the message under the field. All seven editions work this way. A rule that ties text to the code stays an error: APP-6D F above division, 2525C W O/O without status A.
+
 ## Decisions where the sources disagree
 
 | ID | Sources | Decision |

@@ -310,8 +310,14 @@ Object.keys(figures).forEach((name) => {
   placement[name + " top, inner and bottom"] = [result.centre, centre];
 });
 
-const errors = (profile, sidc, options) =>
-  profile.validate(sidc, options).details.modifierErrors;
+// What is wrong with a code or its text: errors and text rule warnings together.
+const errors = (profile, sidc, options) => {
+  const { modifierErrors, fieldWarnings } = profile.validate(
+    sidc,
+    options
+  ).details;
+  return modifierErrors.concat(fieldWarnings.map((item) => item.message));
+};
 const valid = (sidc, options, standard) =>
   new ms.Symbol(sidc, options || {}, { standard: standard }).isValid();
 const yOf = (sidc, standard, options, text) => {

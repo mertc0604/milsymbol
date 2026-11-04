@@ -937,17 +937,19 @@ function sectorRules(p, cls, errors, notes, unresolved, vef) {
   return sectors;
 }
 
-function checkValue(spec, raw, p, errors, notes) {
+// The text is drawn either way, so a broken rule is a warning under the field.
+function checkValue(spec, raw, p, warnings, notes) {
+  const warn = (message) => warnings.push({ key: spec.key, message: message });
   const value = String(raw);
   const tag = spec.field + " " + spec.label;
   if (spec.maxLength != null && value.length > spec.maxLength)
-    errors.push(tag + ": maximum " + spec.maxLength + " characters");
+    warn(tag + ": maximum " + spec.maxLength + " characters");
   if (spec.minLength != null && value.length < spec.minLength)
-    errors.push(tag + ": minimum " + spec.minLength + " characters");
+    warn(tag + ": minimum " + spec.minLength + " characters");
   if (spec.key === "engagementBar") {
     const message = app6dEngagementError(value);
     if (message)
-      errors.push(
+      warn(
         "AO engagement bar: " +
           message +
           " (Tables 1-5, 1-6 PDF 40-41/1-16..1-17)"
@@ -961,7 +963,7 @@ function checkValue(spec, raw, p, errors, notes) {
       ? allowed.map((a) => a.toLowerCase())
       : allowed;
     if (pool.indexOf(probe) < 0)
-      errors.push(
+      warn(
         tag + ": use one of " + spec.choices.map((c) => c[0]).join(", ")
       );
     if (
@@ -973,7 +975,7 @@ function checkValue(spec, raw, p, errors, notes) {
       );
   }
   if (spec.pattern && !spec.pattern.test(value))
-    errors.push(tag + ": " + (spec.patternText || "invalid format"));
+    warn(tag + ": " + (spec.patternText || "invalid format"));
 }
 
 function validate(sidc, options) {
@@ -981,6 +983,7 @@ function validate(sidc, options) {
   const cls = app6dSymbolClass(sidc);
   const errors = [];
   const notes = [];
+  const warnings = [];
   const unresolved = [];
   const vef = [];
   const opt = options || {};
@@ -990,6 +993,7 @@ function validate(sidc, options) {
     context: p.context,
     standardIdentity: p.identity,
     modifierErrors: errors,
+    fieldWarnings: warnings,
     notes: notes,
     unresolved: unresolved,
     versionExtension: vef
@@ -1157,7 +1161,7 @@ function validate(sidc, options) {
             spec.label +
             " applies to hostile equipment only (Table 3-16 PDF 163/3-83)"
         );
-      checkValue(spec, raw, p, errors, notes);
+      checkValue(spec, raw, p, warnings, notes);
       if (spec.requiresEchelonDivisionOrBelow) {
         const a = p.amplifier;
         const divisionOrBelow = /^1[1-8]$/.test(a) || a === "21" || a === "00";

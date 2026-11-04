@@ -1499,6 +1499,11 @@ function syncApp6aTextFields() {
   const states = new Map(currentFieldStates(sidc).map((item) => [item.key, item]));
   const extras = profile ? profileExtraFields(profile, sidc, textModifiers.map((field) => field.key)) : [];
   const values = Object.fromEntries(textModifiers.map(({ key, id }) => [key, document.getElementById(id).value]));
+  // Text that breaks the edition's format warns under its field; the symbol is
+  // still drawn and stays valid.
+  const warned = new Map();
+  for (const { key, message } of (profile && profile.validate(sidc, values).details.fieldWarnings) || [])
+    warned.set(key, [...(warned.get(key) || []), `${humanize(shortReason(message))}.`]);
   for (const key of Object.keys(state.textOrigins)) if (!values[key]) delete state.textOrigins[key];
   const carried = new Map(carryWarnings({ states: [...states.values()], values, origins: state.textOrigins, extras }).map((item) => [item.key, item]));
   const query = normalize(state.fieldQuery).trim();
@@ -1553,7 +1558,10 @@ function syncApp6aTextFields() {
       if (definition.unresolved) help.push(`${definition.nonBlocking ? "Source note" : "Unresolved in the source"}: ${definition.unresolved}.`);
       fieldHelp.set(field.key, help.join(" "));
       wrapper.querySelector("[data-field-about]").textContent = help.join(" ");
-      if (rule.problem) lines.push(`${definition.field} ${rule.problem}.`);
+      // The edition's own wording when it has a rule for the value; a broken
+      // rule warns here and leaves the symbol valid.
+      if (warned.has(field.key)) lines.push(...warned.get(field.key));
+      else if (rule.problem) lines.push(`${definition.field} ${rule.problem}.`);
       if (definition.unresolved && !definition.nonBlocking && input.value) lines.push("Unresolved in the source: the symbol is reported as not valid while this field is filled.");
       if (carried.has(field.key)) lines.push(carried.get(field.key).message);
     }

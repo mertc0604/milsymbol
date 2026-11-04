@@ -44,7 +44,11 @@ function check(o, options) {
   );
   return symbol.metadata.validation;
 }
-const ok = (o, options) => check(o, options).valid;
+// Accepted: valid, and no text rule warns.
+const ok = (o, options) => {
+  const result = check(o, options);
+  return result.valid && !result.details.fieldWarnings.length;
+};
 const ENT = {
   air: "110100",
   rotary: "110200",

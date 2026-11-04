@@ -216,22 +216,38 @@ export function validateApp6aOptions(sidc, options) {
       errors.push(field.identities && classes.indexOf(kind) > -1 && field.limits[classes.indexOf(kind)] > 0
         ? field.field + ": only for identity " + field.identities.join("/") + " (hostile equipment)"
         : field.field + ": not applicable to " + kind);
-    } else if (app6aLength(value) > fields.get(field.key).maxLength) errors.push(`${field.field}: maximum ${fields.get(field.key).maxLength} characters`);
-    const choices = allowedValues(field.key);
-    if (choices && sidc[0] === "S" && choices.indexOf(value) < 0) {
-      errors.push(field.key === "evaluationRating" ? "J: use A1 through F6" : field.key === "reinforcedReduced" ? "F: use (+), (-) or (±)" : field.key === "signatureEquipment" ? "L: use !" : "N: use ENY");
     }
-  }
-  if (sidc[0] === "G") {
-    if (!isBlank(options.evaluationRating) && !/^[A-F][1-6]$/.test(options.evaluationRating)) errors.push("J: use A1 through F6");
-    if (!isBlank(options.signatureEquipment) && options.signatureEquipment !== "!") errors.push("L: use !");
-    if (!isBlank(options.hostile) && options.hostile !== "ENY") errors.push("N: use ENY");
   }
   if (kind === "point" && !isBlank(options.direction)) errors.push("Q: not applicable to ordinary tactical points");
   for (const key of unsupportedKeys) {
     if (!isBlank(options[key])) errors.push(`${key}: not an APP-6A Table III modifier`);
   }
   return errors;
+}
+
+// Text values that break Table III's length or literal values. The text is drawn
+// either way, so these are warnings under the field and the symbol stays valid.
+export function app6aFieldWarnings(sidc, options) {
+  sidc = String(sidc).toUpperCase().replace(/ /g, "");
+  const fields = new Map(getApp6aFields(sidc).map(f => [f.key,f]));
+  const warnings = [];
+  const warn = (key, message) => warnings.push({ key, message });
+  for (const field of app6aTextFields) {
+    const raw = options[field.key];
+    const value = raw === undefined || raw === null ? "" : String(raw);
+    if (isBlank(value)) continue;
+    if (fields.has(field.key) && app6aLength(value) > fields.get(field.key).maxLength) warn(field.key, `${field.field}: maximum ${fields.get(field.key).maxLength} characters`);
+    const choices = allowedValues(field.key);
+    if (choices && sidc[0] === "S" && choices.indexOf(value) < 0) {
+      warn(field.key, field.key === "evaluationRating" ? "J: use A1 through F6" : field.key === "reinforcedReduced" ? "F: use (+), (-) or (±)" : field.key === "signatureEquipment" ? "L: use !" : "N: use ENY");
+    }
+  }
+  if (sidc[0] === "G") {
+    if (!isBlank(options.evaluationRating) && !/^[A-F][1-6]$/.test(options.evaluationRating)) warn("evaluationRating", "J: use A1 through F6");
+    if (!isBlank(options.signatureEquipment) && options.signatureEquipment !== "!") warn("signatureEquipment", "L: use !");
+    if (!isBlank(options.hostile) && options.hostile !== "ENY") warn("hostile", "N: use ENY");
+  }
+  return warnings;
 }
 
 function graphicFields(sidc) {
@@ -292,7 +308,7 @@ export const app6aProfile = {
     }
     return {
       valid: modifierErrors.length === 0 && sidcErrors.length === 0 && identityErrors.length === 0,
-      details: { modifierErrors, sidcErrors, identityErrors, notes }
+      details: { modifierErrors, fieldWarnings: app6aFieldWarnings(sidc, options), sidcErrors, identityErrors, notes }
     };
   },
   // Figure 2a (PDF 28 / printed 22) for S symbols. Rows hold only the fields

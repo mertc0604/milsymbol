@@ -38,7 +38,11 @@ const texts = (symbol) =>
 const sym = (sidc, options) => new ms.Symbol(sidc, options || {});
 const errors = (sidc, options) =>
   std2525cValidate(sidc, options).details.modifierErrors;
-const ok = (sidc, options) => std2525cValidate(sidc, options).valid;
+// Accepted: valid, and no text rule warns.
+const ok = (sidc, options) => {
+  const result = std2525cValidate(sidc, options);
+  return result.valid && !result.details.fieldWarnings.length;
+};
 
 const UNIT = "SFGPUCI-----";
 const EQUIPMENT = "SFGPEWM-----";

@@ -183,13 +183,15 @@ function amplifierKind(amplifier) {
 
 const HOSTILE_GROUP = "56";
 
-// Value rules of one text field; pushes into errors and notes.
-function checkValue(edition, spec, raw, errors, notes) {
+// Value rules of one text field. The text is drawn either way, so a broken rule
+// is a warning under the field and the symbol stays valid.
+function checkValue(edition, spec, raw, warnings) {
+  const warn = (message) => warnings.push({ key: spec.key, message: message });
   const value = String(raw);
   const tag = spec.field + " " + spec.label;
   const size = Array.from(value).length;
   if (spec.maxLength != null && size > spec.maxLength)
-    errors.push(
+    warn(
       tag +
         ": maximum " +
         spec.maxLength +
@@ -198,7 +200,7 @@ function checkValue(edition, spec, raw, errors, notes) {
         ")"
     );
   if (spec.minLength != null && size < spec.minLength)
-    errors.push(
+    warn(
       tag +
         ": minimum " +
         spec.minLength +
@@ -209,7 +211,7 @@ function checkValue(edition, spec, raw, errors, notes) {
   if (spec.key === "engagementBar") {
     const message = edition.engagementError(value);
     if (message)
-      errors.push(
+      warn(
         "AO engagement bar: " + message + " (" + edition.engagementTable + ")"
       );
     return;
@@ -219,14 +221,14 @@ function checkValue(edition, spec, raw, errors, notes) {
       .map((choice) => choice[0])
       .concat(spec.alternates || []);
     if (allowed.indexOf(value) < 0)
-      errors.push(
+      warn(
         tag +
           ": use one of " +
           spec.choices.map((choice) => choice[0]).join(", ")
       );
   }
   if (spec.pattern && !spec.pattern.test(value))
-    errors.push(tag + ": " + (spec.patternText || "invalid format"));
+    warn(tag + ": " + (spec.patternText || "invalid format"));
 }
 
 // profile from {id, table, setClass, outOfScope, classes, definitions,
@@ -249,6 +251,7 @@ export function buildProfile(edition) {
     const definition = classes[cls];
     const errors = [];
     const notes = [];
+    const warnings = [];
     const opt = options || {};
     const details = {
       profile: edition.id,
@@ -256,6 +259,7 @@ export function buildProfile(edition) {
       context: p.context,
       standardIdentity: p.identity,
       modifierErrors: errors,
+      fieldWarnings: warnings,
       notes: notes,
       unresolved: [],
       versionExtension: [],
@@ -377,7 +381,7 @@ export function buildProfile(edition) {
             edition.table +
             ")"
         );
-      checkValue(edition, spec, raw, errors, notes);
+      checkValue(edition, spec, raw, warnings);
     });
     (edition.foreignKeys || []).forEach((key) => {
       if (opt[key] != null && opt[key] !== "")

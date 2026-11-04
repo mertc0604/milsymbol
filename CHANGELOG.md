@@ -10,6 +10,16 @@ Historical wording is retained; duplicate version headings and empty template
 categories are omitted. See [Development resources](dev/README.md) for the
 publication workflow and GitHub/npm version inventory.
 
+## Unreleased
+
+### Changed
+
+- Text that breaks an edition's length, list or format rule no longer makes a symbol invalid. It is reported in `details.fieldWarnings`, and the Studio shows it under the field. A wrong code stays an error. This applies to all seven editions.
+
+### Fixed
+
+- Studio: the AE example is `15`; `15 MIN` broke the rule of the E editions.
+
 ## 3.0.5-v4 - 2026-11-04
 
 ### Changed

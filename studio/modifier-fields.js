@@ -167,7 +167,7 @@ export const modifierGroups = [
         "equipmentTeardownTime",
         "AE",
         "Equipment teardown time",
-        "e.g. 15 MIN",
+        "e.g. 15",
         "Time needed to dismantle the equipment."
       ],
       [

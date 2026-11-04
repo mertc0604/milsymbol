@@ -341,7 +341,7 @@ for (const [sidc, options, valid] of [
   ["GHCPBWE--------", {quantity:"100",type:"BOMB"}, true],
   ["GFCPBWE--------", {}, false],
   ["SFSPXMC--------", {uniqueDesignation:"A".repeat(22)}, false]
-]) result[`Table III ${sidc} ${JSON.stringify(options)}`] = [new ms.Symbol(sidc,options).isValid(), valid];
+]) result[`Table III ${sidc} ${JSON.stringify(options)}`] = [new ms.Symbol(sidc,options).isValid() && !new ms.Symbol(sidc,options).isValid(true).fieldWarnings.length, valid];
 result["nuclear B field"] = [getApp6aFields("GHCPBWE--------").find(f=>f.key === "quantity").field, "B"];
 result["ordinary point only H W Y"] = [getApp6aFields("GFCPPC--------").map(f=>f.field).join(""), "HWY"];
 result["short core accepted"] = [new ms.Symbol("SFGPUCI---").isValid(), true];
