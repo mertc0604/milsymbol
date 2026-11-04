@@ -13,6 +13,7 @@ import {
   std2525cModifierRules,
   std2525cSymbolClass
 } from "../modifierprofiles/std2525c.js";
+import { app6bProfile } from "../modifierprofiles/app6b.js";
 import { applyProfile } from "../modifierprofiles/common.js";
 
 // APP-6A field rules live in the edition profile; re-exported for callers.
@@ -438,6 +439,14 @@ export function metadata(ms, metadata, mapping) {
   if (metadata.std2525c) {
     metadata.edition = "C";
     applyProfile(std2525cProfile, this.options.sidc, this.options, metadata);
+  }
+  // APP-6(B): letter SIDCs rendered with the APP6 standard. Scheme S only; Table
+  // B-I has status A and P, so no condition bar (src/modifierprofiles/app6b.js).
+  metadata.app6b = !metadata.STD2525 && !metadata.app6a && !metadata.std2525c;
+  if (metadata.app6b && codingscheme == "S") {
+    metadata.edition = "B";
+    metadata.condition = "";
+    applyProfile(app6bProfile, this.options.sidc, this.options, metadata);
   }
 
   return metadata;

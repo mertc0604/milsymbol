@@ -1,6 +1,10 @@
 //Text Fields ############################################################################
 import strWidth from "./string-width.js";
-import { joinFields, layoutKeys } from "../modifierprofiles/common.js";
+import {
+  joinFields,
+  layoutHasText,
+  layoutKeys
+} from "../modifierprofiles/common.js";
 export default function textfieldsMod(ms) {
   const drawArray1 = [];
   const drawArray2 = [];
@@ -218,7 +222,7 @@ export default function textfieldsMod(ms) {
     }
   }
 
-  // Edition profile layout (APP-6A, 2525C, APP-6D); replaces the legacy rows.
+  // Edition profile layout (every edition with a profile); replaces the legacy rows.
   const layout = this.metadata.textLayout;
   const allowed = (position, key) =>
     !layout || (layout[position] || []).includes(key);
@@ -256,7 +260,9 @@ export default function textfieldsMod(ms) {
     this.options.headquartersElement ||
     this.options.installationComposition ||
     this.options.guardedUnit ||
-    this.options.specialDesignator;
+    this.options.specialDesignator ||
+    this.options.installationCapacity ||
+    this.options.networkIdentifier;
   if (this.style.infoFields && textFields) {
     if (
       this.options.specialHeadquarters &&
@@ -289,6 +295,22 @@ export default function textfieldsMod(ms) {
         cssClass: cssClass
       });
       gbbox.y1 = quantityTop - 10 - fontSize;
+    }
+    // Below the frame (APP-6(E) Figure 4-3): a dismounted individual's quantity.
+    if (this.options.quantity && layout && allowed("bottom", "quantity")) {
+      drawArray2.push({
+        type: "text",
+        text: this.options.quantity,
+        x: 100,
+        y: bbox.y2 + fontSize,
+        textanchor: "middle",
+        fontsize: fontSize,
+        fontfamily: fontFamily,
+        fill: fontColor,
+        stroke: false,
+        cssClass: cssClass
+      });
+      gbbox.y2 = bbox.y2 + fontSize;
     }
     if (
       this.options.headquartersElement &&
@@ -564,9 +586,10 @@ export default function textfieldsMod(ms) {
 
     if (layout) {
       // A profile may supply derived values (2525C frame descriptor X/J/K).
-      const layoutOptions = layout.derived
-        ? Object.assign({}, values, layout.derived)
-        : values;
+      const layoutOptions =
+        layout.derived && layoutHasText(layout, values)
+          ? Object.assign({}, values, layout.derived)
+          : values;
       for (let row = 0; row <= 5; row++) {
         gStrings["L" + row] = joinFields(
           layoutOptions,

@@ -20,6 +20,43 @@ const guides = {
       example: "ENG"
     }
   },
+  app6b: {
+    // Table I W prints DDHHMMSSZMONYY, 14 characters (PDF 31/2-9).
+    dtg: { format: "DDHHMMSSZMONYY (Table I)", example: "03143000ZNOV26", printed: { seconds: true } },
+    // Table I X: six characters; note d: WGS 84 (PDF 32/2-10).
+    altitudeDepth: { example: "1500FT" },
+    location: { description: "Latitude and longitude, WGS 84 (Table I).", example: "410030N0285812E" }
+  },
+  "2525d": {
+    // Table VII W and 5.3.7.7 (PDF 39/23, PDF 47/31).
+    dtg: { format: "DDHHMMSSZMONYYYY, DDHHMMZMONYY or O/O (5.3.7.7)", example: "03143000ZNOV2026", printed: { seconds: true, fourDigitYear: true } },
+    altitudeDepth: { example: "1500MSL" },
+    location: { description: "Degrees, minutes and decimal minutes, or MGRS or GARS (Table VII).", example: "38SMB2649083145" },
+    speed: { description: "A value with KPH, MPS, KTS or MPH (5.3.7.6).", example: "220KPH" },
+    uniqueDesignation: { example: "TN:13579" },
+    engagementBar: { description: "A:BBB-CC above the symbol: remote or both (A), the engagement stage (BBB) and the weapon or number of engagements (CC)." }
+  },
+  "2525e": {
+    // Table VI W PDF 43/26: four-digit year.
+    dtg: { format: "DDHHMMSSZMONYYYY or O/O (Table VI)", example: "03143000ZNOV2026", printed: { seconds: true, fourDigitYear: true } },
+    altitudeDepth: { example: "FL280" },
+    location: { description: "Degrees, minutes and decimal minutes, or MGRS or GARS (Table VI).", example: "38SMB2649083145" },
+    speed: { description: "A value, a space and KPH, KPS, MPH, NMH or KTS (Table VI).", example: "220 KPH" },
+    quantity: { description: "A number, a space and the unit of measure (Table VI).", example: "350 BEDS" },
+    uniqueDesignation: { example: "TN:13579" },
+    engagementBar: { description: "A:BBB-CC above the symbol: remote or both (A), the engagement stage (BBB) and the weapon or number of engagements (CC)." },
+    headquartersElement: { description: "The element of a headquarters shown, such as TOC or MAIN2 (Table VI).", example: "MAIN2" }
+  },
+  app6e: {
+    // Table 1-5 W PDF 74/40: four-digit year.
+    dtg: { format: "DDHHMMSSZMMMYYYY or O/O (Table 1-5)", example: "03143000ZNOV2026", printed: { seconds: true, fourDigitYear: true } },
+    altitudeDepth: { example: "FL280" },
+    location: { description: "Degrees, minutes and seconds, or MGRS or GARS (Table 1-5).", example: "38SMB2649083145" },
+    speed: { description: "A value, a space and KPH, KPS, MPH, NMH or KTS (Table 1-5).", example: "220 KPH" },
+    quantity: { description: "A number, a space and the unit of measure (Table 1-5).", example: "500 LITRES" },
+    engagementBar: { description: "A:BBB-CCC above the symbol: remote or both (A), the engagement stage (BBB) and the weapon or number of engagements (CCC)." },
+    headquartersElement: { description: "The element of a headquarters shown, such as TOC or MAIN2 (Table 1-5).", example: "MAIN2" }
+  },
   app6d: {
     location: { description: "Latitude and longitude or grid coordinates." },
     engagementBar: { description: "A:BBB-CC above the symbol: who engages (A), the engagement stage (BBB) and the weapon or number of engagements (CC)." },

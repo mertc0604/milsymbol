@@ -357,9 +357,10 @@ result["extended profile failure"] = [
   new ms.Symbol("GFCPOXRD-------").isValid(true).standard,
   false
 ];
+// Status C is outside APP-6A and outside APP-6(B) Table B-I; P is valid in APP-6(B).
 result["explicit APP6 override"] = [
-  new ms.Symbol("SFGCUCI--------", { standard: "APP6" }).isValid(),
-  true
+  new ms.Symbol("SFGPUCI--------", { standard: "APP6" }).metadata.app6a,
+  false
 ];
 result["explicit 2525 override"] = [
   new ms.Symbol("SFGCUCI--------", { standard: "2525" }).metadata.STD2525,
@@ -412,7 +413,7 @@ updated.setOptions({ higherFormation: "" });
 result["clearing a modifier restores validity"] = [updated.isValid(), true];
 updated.setOptions({ standard: "APP6" });
 result["changing edition removes APP6A validation"] = [
-  updated.metadata.validation,
+  updated.metadata.validation.details.standard,
   undefined
 ];
 
@@ -471,8 +472,8 @@ result["numeric APP6A fails without a letter provider"] = [
 ];
 result["numeric provider does not attach letter validation"] = [
   new ms.Symbol("130310000012110000000000000000", { standard: "2525" }).metadata
-    .validation,
-  undefined
+    .validation.details.profile,
+  "2525e"
 ];
 ms.reset();
 

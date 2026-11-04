@@ -45,6 +45,10 @@ export interface SymbolOptions {
   infoOutlineWidth?: number;
   infoSize?: number;
   installationComposition?: string;
+  /** Capacity of installation, field AT of APP-6(E). */
+  installationCapacity?: string;
+  /** Network identifier, field AY of APP-6(E). */
+  networkIdentifier?: string;
   location?: string;
   monoColor?: string;
   outlineColor?: ColorMode | string;

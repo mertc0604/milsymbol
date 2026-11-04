@@ -1,6 +1,9 @@
 //import { ms } from "../ms.js";
 import { app6dProfile } from "../modifierprofiles/app6d.js";
+import { app6eProfile } from "../modifierprofiles/app6e.js";
 import { applyProfile } from "../modifierprofiles/common.js";
+import { std2525dProfile } from "../modifierprofiles/std2525d.js";
+import { std2525eProfile } from "../modifierprofiles/std2525e.js";
 
 export function metadata(ms, metadata, mapping) {
   const version = this.options.sidc.substr(0, 2);
@@ -26,11 +29,13 @@ export function metadata(ms, metadata, mapping) {
   if (version == "10" || version == "11" || version == "12") {
     metadata.edition = "D";
   }
-  if (version == "13" || version == "14") {
+  // Table A-1 (2525E PDF 76/59, APP-6(E) PDF 747/713): 13 2525E, 14 APP-06(E)(1),
+  // 15 2525E(1), 16 APP-06(E)(2).
+  if (["13", "14", "15", "16"].indexOf(version) > -1) {
     metadata.edition = "E";
   }
 
-  if (version == 13 && standardIdentity2 == 5) {
+  if (metadata.edition == "E" && standardIdentity2 == 5) {
     metadata.suspect = true;
   }
 
@@ -68,7 +73,16 @@ export function metadata(ms, metadata, mapping) {
     (metadata.edition === "E" ? this.options.sidc.substr(21, 1) || "0" : "0") +
     (functionid.substr(8, 2) || "00");
 
-  metadata.context = mapping.context[parseInt(this.options.sidc.substr(2, 1))];
+  // Edition E, Table A-2 (APP-6(E) PDF 748/714, 2525E PDF 76/59): digits 3-8 are
+  // the three contexts of a restricted target (3, 5, 7) or no-strike entity (4, 6, 8).
+  const contextDigit = parseInt(this.options.sidc.substr(2, 1));
+  const markedContext = metadata.edition === "E" && contextDigit > 2;
+  metadata.context =
+    mapping.context[
+      markedContext ? [0, 0, 1, 1, 2, 2][contextDigit - 3] : contextDigit
+    ];
+  metadata.restrictedTarget = markedContext && contextDigit % 2 === 1;
+  metadata.noStrike = markedContext && contextDigit % 2 === 0;
   metadata.affiliation = affiliationMapping[standardIdentity2];
   metadata.dimension = dimensionMapping[symbolSet] || "";
 
@@ -255,6 +269,21 @@ export function metadata(ms, metadata, mapping) {
   if (metadata.edition === "D" && !metadata.STD2525) {
     metadata.app6d = true;
     applyProfile(app6dProfile, this.options.sidc, this.options, metadata);
+  }
+  // MIL-STD-2525D, MIL-STD-2525E and APP-6(E): the amplifier profile of the
+  // edition. A class the edition gives no AL draws no condition bar.
+  const editionProfile =
+    metadata.edition === "D" && metadata.STD2525
+      ? std2525dProfile
+      : metadata.edition === "E"
+        ? metadata.STD2525
+          ? std2525eProfile
+          : app6eProfile
+        : null;
+  if (editionProfile && !metadata.app6a) {
+    applyProfile(editionProfile, this.options.sidc, this.options, metadata);
+    if (!editionProfile.showsCondition(this.options.sidc))
+      metadata.condition = "";
   }
 
   return metadata;

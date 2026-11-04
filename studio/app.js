@@ -1,6 +1,10 @@
 import { app6aSymbolClass, app6aTextFields, getApp6aFields } from "./vendor/letter-metadata.js";
 import * as app6aRules from "./vendor/modifierprofiles/app6a.js";
 import { std2525cProfile, std2525cTableIV } from "./vendor/modifierprofiles/std2525c.js";
+import { app6bProfile, app6bTableI } from "./vendor/modifierprofiles/app6b.js";
+import { app6eFields, app6eProfile } from "./vendor/modifierprofiles/app6e.js";
+import { std2525dFields, std2525dProfile } from "./vendor/modifierprofiles/std2525d.js";
+import { std2525eFields, std2525eProfile } from "./vendor/modifierprofiles/std2525e.js";
 import {
   app6dProfile,
   app6dContexts,
@@ -71,7 +75,8 @@ const standards = [
     detail: "NATO / E",
     family: "modern",
     standard: "APP6",
-    version: "13"
+    // Table A-1 PDF 747/713: 13 is MIL-STD-2525E, 16 is APP-06(E)(2).
+    version: "16"
   },
   {
     id: "2525c",
@@ -101,15 +106,19 @@ const standards = [
 
 // Edition modifier profiles shared with the renderer. APP-6A falls back to its
 // Table III helpers until the edition exports a profile object.
-const profiles = { app6a: app6aRules.app6aProfile, "2525c": std2525cProfile, app6d: app6dProfile };
+const profiles = { app6a: app6aRules.app6aProfile, app6b: app6bProfile, "2525c": std2525cProfile, app6d: app6dProfile, "2525d": std2525dProfile, "2525e": std2525eProfile, app6e: app6eProfile };
 const profileNotes = {
   app6a: "APP-6A Table III (pp. 19–21). Only applicable fields are editable; limits follow the publication.",
   "2525c": "MIL-STD-2525C Table IV (pp. 22–24) for warfighting (S) symbols. Only applicable fields are editable; limits follow the publication.",
-  app6d: "APP-6D amplifier tables of this symbol set. Only applicable fields are editable; limits appear only where the publication sets one."
+  app6d: "APP-6D amplifier tables of this symbol set. Only applicable fields are editable; limits appear only where the publication sets one.",
+  app6b: "APP-6(B) Table I (pp. 2-8 to 2-10) for warfighting (S) symbols. Only applicable fields are editable; limits follow the publication.",
+  "2525d": "MIL-STD-2525D Change 1 Table VII and the placement figure of this symbol set. Only applicable fields are editable.",
+  "2525e": "MIL-STD-2525E Change 1 Table VI and the placement figure of this symbol set. Only applicable fields are editable.",
+  app6e: "APP-06 Edition E Version 2 Table 1-5 and the placement figure of this symbol set. Only applicable fields are editable."
 };
-const profileTitles = { app6a: "APP-6A Table III", "2525c": "MIL-STD-2525C Table IV", app6d: "APP-6D" };
+const profileTitles = { app6a: "APP-6A Table III", app6b: "APP-6(B) Table I", "2525c": "MIL-STD-2525C Table IV", app6d: "APP-6D", "2525d": "MIL-STD-2525D", "2525e": "MIL-STD-2525E", app6e: "APP-6(E)" };
 // Field tables that name a form key the way the edition does (see editionField).
-const editionTables = { app6a: app6aRules.app6aTextFields, "2525c": std2525cTableIV };
+const editionTables = { app6a: app6aRules.app6aTextFields, app6b: app6bTableI, "2525c": std2525cTableIV, "2525d": std2525dFields, "2525e": std2525eFields, app6e: app6eFields };
 const activeProfile = () => profiles[state.standardId] || null;
 // Q and AJ for the symbol, as the edition profile allows them.
 const movementFor = (sidc) => movementControls(activeProfile(), sidc, profileTitles[state.standardId]);
@@ -633,7 +642,7 @@ function buildSidc(icon = selectedIcon(), minimal = false) {
   if (!minimal) {
     applyModernModifier(sidc, state.modifier1, 1);
     applyModernModifier(sidc, state.modifier2, 2);
-    if (standard.version === "13") sidc[22] = dom.frameShape.value;
+    if (numericSidcEdition(standard.version) === "e") sidc[22] = dom.frameShape.value;
   }
   return minimal ? sidc.join("") : withCountryFlag(sidc.join(""), dom.countryFlag.value, state.standardId);
 }
@@ -1188,7 +1197,7 @@ function syncRuleNotes({ modern, app6a, kind, installation, tactical, prescribed
         : `Echelon is drawn above the frame; mobility below it.${profile && !app6a ? ` Only the values ${profileTitles[state.standardId]} allows for this symbol are listed.` : ""}`;
   dom.countryMeta.textContent = countrySidcField(state.standardId)?.description || "";
   dom.editionMeta.textContent = modern
-    ? (config().version === "13" ? "Edition E" : "Edition D")
+    ? (numericSidcEdition(config().version) === "e" ? "Edition E" : "Edition D")
     : "APP-6D / E · MIL-STD-2525D / E";
   dom.modifierNote.hidden = !modern;
   dom.symbolClass.hidden = false;
@@ -1689,7 +1698,7 @@ function selectImportedValue(select, value) {
 
 function applyImportedSidc(value) {
   const edition = config().family === "modern" && numericSidcEdition(value);
-  if (edition && edition !== (config().version === "13" ? "e" : "d"))
+  if (edition && edition !== numericSidcEdition(config().version))
     setStandard(`${state.standardId.startsWith("app6") ? "app6" : "2525"}${edition}`);
   state.adjustments = {};
   const parsed = decodeEditorSidc(value, { ...config(), icons: dataset().icons });
@@ -1727,7 +1736,7 @@ function populateIdentityOptions() {
 function syncStandardControls() {
   const contexts = contextOptions(config());
   dom.contextField.hidden = !contexts.length;
-  dom.frameShapeField.hidden = config().version !== "13";
+  dom.frameShapeField.hidden = numericSidcEdition(config().version) !== "e";
   // Validate after removing publication whitespace, not while pasting it.
   dom.sidcInput.removeAttribute("maxlength");
   populateIdentityOptions();
@@ -1757,7 +1766,8 @@ function describePart(key, value, sidc) {
       const identity = decodeIdentity(modern ? value[1] : value, config(), modern ? value[0] : "0");
       const entry = identity && identityList(config()).find((item) => item.value === identity.value);
       const label = entry ? identityLabelFor(entry, identity.context) : "";
-      if (modern) return [contextNames[value[0]] || "Context " + value[0], label].filter(Boolean).join(" · ");
+      const context = contextOptions(config()).find(([code]) => code === value[0]);
+      if (modern) return [(context && context[1]) || contextNames[value[0]] || "Context " + value[0], label].filter(Boolean).join(" · ");
       return identity?.context === "1" ? `Exercise · ${label}` : label;
     }
     case "dimension": return dimensionNames[value] || "";
@@ -1765,7 +1775,7 @@ function describePart(key, value, sidc) {
     case "function":
     case "entity": return icon?.name || "";
     case "set": return icon?.category || "";
-    case "version": return /^1[012]/.test(value) ? "Edition D" : /^1[34]/.test(value) ? "Edition E" : "";
+    case "version": return { d: "Edition D", e: "Edition E" }[numericSidcEdition(value)] || "";
     case "modifiers": {
       if (modern) return value === "0000" ? "None" : "Icon modifiers";
       if (/^\*+$/.test(value)) return "Not set";

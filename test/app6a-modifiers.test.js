@@ -398,6 +398,6 @@ compat["G point rules unchanged"] = [getApp6aFields("GFCPPC--------").map((f) =>
 compat["profile id"] = [app6aProfile.id, "app6a"];
 compat["validation keeps standard and modifierErrors"] = [Object.keys(make("SFGPUCI--------").isValid(true)).filter((k) => ["standard", "modifierErrors"].indexOf(k) > -1), ["modifierErrors", "standard"]];
 compat["APP-6B rendering does not use the APP-6A E/F row"] = [new ms.Symbol("SAGPUCI--------", { standard: "APP6", reinforcedReduced: "(+)" }).asSVG().indexOf("? (+)") < 0, true];
-compat["APP-6B symbol has no APP-6A metadata"] = [new ms.Symbol("SAGPUCI--------", { standard: "APP6" }).metadata.profile, undefined];
+compat["APP-6B symbol has no APP-6A metadata"] = [new ms.Symbol("SAGPUCI--------", { standard: "APP6" }).metadata.profile, "app6b"];
 
 export default { "APP-6A S-scheme modifiers": result };

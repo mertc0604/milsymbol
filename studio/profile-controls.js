@@ -185,6 +185,27 @@ export function editionField(standardId, key, tables) {
   return entry ? { field: entry.field, label: entry.label || entry.title } : null;
 }
 
+// Graphics of the edition that need map data this editor does not hold.
+const dynamicGraphics = {
+  app6b: [["S", "Location offset indicator"]],
+  "2525d": [
+    ["S2", "Offset location indicator"],
+    ["AH", "Area of uncertainty"],
+    ["AI", "Dead reckoning trailer"],
+    ["AK", "Pairing line"]
+  ],
+  "2525e": [
+    ["BA", "Offset location"],
+    ["AH", "Area of uncertainty"],
+    ["AI", "Dead reckoning trailer"],
+    ["AK", "Pairing line"]
+  ],
+  app6e: [
+    ["S2", "Offset location indicator"],
+    ["AH", "Area of uncertainty indicator"]
+  ]
+};
+
 // Graphics the edition defines for this symbol that this editor cannot set.
 // They need data the editor does not hold (map positions, tracks) or have no
 // SIDC position or renderer option. Rows: {field, label, reason}.
@@ -214,6 +235,14 @@ export function editorGaps({ standardId, profile, sidc, tables, movement }) {
       label: "Location offset indicator",
       reason: "Table III S applies to installations (505.1e), but SIDC position 11 holds the installation H and the renderer has no separate option"
     });
+  const dynamic = dynamicGraphics[standardId];
+  if (dynamic && profile && profile.fields(sidc))
+    for (const [field, label] of dynamic)
+      rows.push({
+        field,
+        label,
+        reason: "A map graphic built from position or track data; this editor holds neither"
+      });
   if (standardId === "app6d") {
     for (const extra of profileExtraFields(profile, sidc, [])) rows.push(extra);
     if (symbolClass === "landInstallation" && movement && !movement.direction.applies)

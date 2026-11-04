@@ -79,8 +79,20 @@ export function identityList(standard) {
   return standard.id === "app6a" ? app6aIdentities : identities;
 }
 
+// Edition E, Table A-2: a restricted target or no-strike entity in each context.
+const markedContexts = [
+  ["3", "Restricted target"],
+  ["4", "No-strike entity"],
+  ["5", "Restricted target, exercise"],
+  ["6", "No-strike entity, exercise"],
+  ["7", "Restricted target, simulation"],
+  ["8", "No-strike entity, simulation"]
+];
+
 export function contextOptions(standard) {
   if (standard.id === "app6a") return [];
+  if (["2525e", "app6e"].includes(standard.id))
+    return [...contexts, ...markedContexts];
   return standard.family === "modern" ? contexts : contexts.slice(0, 2);
 }
 

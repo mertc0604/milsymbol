@@ -34,7 +34,7 @@ const app6aSymbol = new ms.Symbol(app6aSidc, {
 export default {
   "Studio modifier controls": {
     "new amplifiers reach numeric SVG exports": [
-      ["12", "(+)", "READY", "A1/85%", "1500FT", "30KM/H", "NATO"].every(
+      ["(+)", "READY", "A1 85%", "1500FT", "30KM/H", "NATO"].every(
         (value) => modernSvg.includes(value)
       ),
       true
@@ -47,7 +47,8 @@ export default {
     ],
     "country alone renders on equipment without another text amplifier": [
       new ms.Symbol(
-        "10031500001101000000",
+        // 2525D gives equipment no AS (Table VII, Figure D-5); 2525E does.
+        "13031500001101000000",
         collectTextModifiers({ country: "TUR" })
       )
         .asSVG()

@@ -12,7 +12,7 @@ npm run studio:serve
 
 Open `http://127.0.0.1:4173`.
 
-The build creates `dist/studio/`, including a normalized searchable catalog generated from the standard data packages already used by milsymbol. The site offers MIL-STD-2525C/D/E and APP-6A/B/D/E views. APP-6E uses a compatibility catalog. FM 1-02.2 is not offered in the editor; the underlying library is unchanged. Symbols can be exported as SVG or PNG.
+The build creates `dist/studio/`, including a normalized searchable catalog generated from the standard data packages already used by milsymbol. The site offers MIL-STD-2525C/D/E and APP-6A/B/D/E views. APP-6E uses a compatibility catalog; its codes carry version 16 (APP-06(E)(2), Table A-1). FM 1-02.2 is not offered in the editor; the underlying library is unchanged. Symbols can be exported as SVG or PNG.
 
 ## Layout
 
@@ -86,14 +86,15 @@ commands in [APP-6A documentation](docs/app6a.md), then open
 `/audit/symbols/index.html` for publication / before / current / difference views.
 G graphics are excluded.
 
-## Edition profile controls (APP-6A, MIL-STD-2525C, APP-6D)
+## Edition profile controls
 
-For these three editions the Studio keeps no copy of the edition's rules. The profiles in `src/modifierprofiles/` are copied to `vendor/modifierprofiles/` and queried at runtime (`studio/profile-controls.js`):
+Every edition has a profile, so the Studio keeps no copy of an edition's rules. The profiles in `src/modifierprofiles/` are copied to `vendor/modifierprofiles/` and queried at runtime (`studio/profile-controls.js`):
 
 - **Offered values.** Each candidate identity, status, HQ/task force/feint flag, echelon, mobility, towed array or sector code is written into the SIDC and passed to `profile.validate(sidc, {})`. A value is offered only if it adds no `*Errors` entry. Errors that every candidate shares (a bad sector elsewhere in the code) are ignored, so one problem does not hide every choice.
   - 2525C: identities D, L, M, J and K disappear for dimension Z; statuses C, D, X and F disappear for units; mobility and towed array appear for equipment only, echelon and task force for units only.
   - APP-6D: context 1 and 2 are labelled "US only"; identity and status names come from `app6dIdentityName` and `app6dStatuses` (status 2-5 is not offered for Land Unit); HQ, task force, dummy and amplifier values follow the symbol class; the sector 1 and sector 2 selectors list only the codes of the Annex A dictionary for the symbol set, show where the sector sits (`sectorPlacement`, left and right for Air Missile) and disable codes the current entity may not use. The engagement bar AO is three dropdowns (A, BBB, CC) that compose `A:BBB-CC`; the counts for MLT come from the profile's own grammar.
   - APP-6A: identity `O` is never offered; an imported `O` stays as a flagged chip. The `uncertaintyMarker` option (publication default, field E, inside the frame) appears for pending, assumed friend and suspect.
+  - APP-6(B), MIL-STD-2525D, MIL-STD-2525E and APP-6(E): fields, flags, statuses and amplifiers follow each symbol class, from Table I, Table VII, Table VI and Table 1-5 with the placement figures. APP-6(B) offers status A and P only. 2525D land units have no operational condition; 2525E and APP-6(E) land units do. 2525E and APP-6(E) add the restricted target and no-strike contexts (3-8); APP-6(E) draws their marks. The positions, the decisions where a table and a figure disagree, and the limits are in [Amplifier profiles](docs/edition-modifiers.md).
 - **Rejected selections.** When a symbol or edition change leaves a value the profile rejects, the Studio falls back (Present, Friend, unspecified echelon) and says so beside the control. An applied SIDC is never rewritten: its rejected values stay, flagged "not valid here".
 - **Field metadata.** `minLength`, `pattern`, `alternates`, `examples`, `unresolved` and `supported:false` from the field definitions drive hints, format warnings, datalist suggestions and a "Defined for this symbol, not editable here" list.
 - **Text that changes meaning.** The Studio remembers under which field definition each text was typed. When the edition or symbol makes the field absent, or gives the same code a different meaning (APP-6D K on units, equipment and installations; P as IFF/SIF or AIS; AC as country text or installation graphic), the text is kept and a non-blocking "Check these entries" list explains it, with a Clear button. A select value the new edition does not define is cleared with a note and returns when a list defines it again.

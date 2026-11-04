@@ -1,5 +1,25 @@
 # Change Log
 
+## Unreleased
+
+### Added
+
+- Modifier profiles for APP-6(B), MIL-STD-2525D Change 1, MIL-STD-2525E Change 1 and APP-06 Edition E Version 2. See `docs/edition-modifiers.md`.
+- Options `installationCapacity` (AT) and `networkIdentifier` (AY) for APP-6(E).
+- SIDC versions 14, 15 and 16 are read as edition E.
+- APP-6(E) restricted target and no-strike marks for contexts 3-8.
+
+### Changed
+
+- Text amplifiers follow each edition's placement figure, and shared fields are joined with one space instead of `/`. A field the edition does not give the symbol class is no longer drawn.
+- Studio APP-6E codes use version 16, the APP-06(E)(2) code of Table A-1.
+
+### Fixed
+
+- 2525D and 2525E equipment had AE and AF swapped, and 2525D equipment dropped AQ and AR.
+- 2525D land units no longer draw an operational condition bar; APP-6(B) symbols no longer draw one.
+- The 2525C and APP-6(B) E descriptor no longer draws twice when other text is set.
+
 ## 3.1.0
 
 ### Added

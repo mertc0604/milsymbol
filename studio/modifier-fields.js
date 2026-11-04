@@ -183,6 +183,20 @@ export const modifierGroups = [
         "Installation composition",
         "e.g. 3 RADARS",
         "Equipment or components of the installation."
+      ],
+      [
+        "installationCapacity",
+        "AT",
+        "Capacity of installation",
+        "e.g. 400 BEDS",
+        "Quantity and unit of measure of the installation's capacity."
+      ],
+      [
+        "networkIdentifier",
+        "AY",
+        "Network identifier",
+        "e.g. 192.168.25.0",
+        "The network the entity has privileges within."
       ]
     ]
   },

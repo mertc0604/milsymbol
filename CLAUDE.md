@@ -50,6 +50,8 @@ Style: Prettier with `trailingComma: "none"`; ESLint requires semicolons and `pr
 
 **Standard selection**: `ms.setStandard("2525" | "APP6" | "APP6A")` sets `ms._STD2525` and `ms._standardEdition`. A per-symbol `style.standard` override takes precedence. 2525 vs APP6 mostly changes frame and icon variants through the `STD2525` flag passed to icon functions.
 
+**Edition profiles**: `src/modifierprofiles/` holds one profile per edition: `app6a.js`, `app6b.js`, `std2525c.js`, `app6d.js`, `std2525d.js`, `std2525e.js`, `app6e.js`. `fieldtable.js` builds the last three from a table of classes written in field codes. A profile gives `fields`, `validate`, `textLayout` and `unavailableReason` for a SIDC, and `applyProfile` stores the result on `metadata`. `textfields.js` draws `metadata.textLayout` in place of the legacy rows, so a field outside the layout is not drawn. Numeric version 10-12 is edition D and 13-16 is edition E; `STD2525` picks 2525 or APP-6 within an edition. A letter SIDC with standard `APP6` is APP-6(B), scheme S only. `docs/edition-modifiers.md` has the positions and source decisions; `test/edition-modifiers.test.js` compares drawn rows with the figures.
+
 ### APP-6A profile (fork extension, partial conformance)
 
 - APP-6A explicitly lists the existing `lettersidc/sidc` and `iconparts` domain modules, registered through `ms.addIcons(app6a)`. It must not derive its bundle from `app6b` or load `std2525bextra`. Shared naval station geometry lives in the sea/subsurface icon-part modules. Do not add a second renderer or global provider registry.

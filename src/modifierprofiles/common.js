@@ -7,7 +7,8 @@
 // (copied to dist/studio/vendor/modifierprofiles/) that the library uses.
 //
 // Profile shape (every function receives the normalized SIDC string):
-//   id                       "app6a" | "2525c" | "app6d"
+//   id                       "app6a" | "app6b" | "2525c" | "app6d" | "2525d" |
+//                            "2525e" | "app6e"
 //   symbolClass(sidc)        class used for applicability, e.g. "unit"
 //   fields(sidc)             [{ key, field, label, maxLength, kind, choices }]
 //                            kind: "text" | "choice" | "graphic"; maxLength is
@@ -69,6 +70,8 @@ export const textOptionKeys = [
   "auxiliaryEquipmentIndicator",
   "headquartersElement",
   "installationComposition",
+  "installationCapacity",
+  "networkIdentifier",
   "engagementBar",
   "engagementType",
   "guardedUnit",
@@ -100,6 +103,17 @@ export function layoutKeys(layout) {
     ...(layout.inner || []),
     ...(layout.bottom || [])
   ];
+}
+
+// A layout's derived descriptor (the E field) is drawn in the text rows only
+// when the rows have something else to show; otherwise it stays by the frame.
+export function layoutHasText(layout, options) {
+  return Boolean(
+    layout &&
+      layoutKeys(layout).some(
+        (key) => key !== "frameDescriptor" && !isBlank(options[key])
+      )
+  );
 }
 
 // Store a profile's validation and layout on symbol metadata.

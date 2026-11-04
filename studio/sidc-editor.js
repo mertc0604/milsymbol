@@ -2,7 +2,8 @@
 // (including national extensions and order of battle) remain authoritative.
 export function numericSidcEdition(sidc) {
   if (/^1[012]/.test(sidc)) return "d";
-  if (/^1[34]/.test(sidc)) return "e";
+  // Table A-1: 13 2525E, 14 APP-06(E)(1), 15 2525E(1), 16 APP-06(E)(2).
+  if (/^1[3-6]/.test(sidc)) return "e";
   return "";
 }
 
@@ -52,7 +53,7 @@ export function displayEditorSidc(sidc) {
 
 export function decodeEditorSidc(value, { family, version, icons }) {
   const modern = family === "modern";
-  const extended = (numericSidcEdition(value) || (version === "13" ? "e" : "d")) === "e";
+  const extended = (numericSidcEdition(value) || numericSidcEdition(version)) === "e";
   const sidc = value.padEnd(modern ? 30 : 15, modern ? "0" : "-");
   const id = modern
     ? `${sidc.slice(4, 6)}-${sidc.slice(10, 16)}`
@@ -94,7 +95,7 @@ export function decodeEditorSidc(value, { family, version, icons }) {
 // imported SIDC from the previous catalog selection or discard trailing data.
 export function editImportedSidc(original, generated, field, { family, version }) {
   const modern = family === "modern";
-  const extended = (numericSidcEdition(original) || (version === "13" ? "e" : "d")) === "e";
+  const extended = (numericSidcEdition(original) || numericSidcEdition(version)) === "e";
   const ranges = modern ? {
     affiliation: [[3, 4]], context: [[2, 3]], status: [[6, 7]],
     flags: [[7, 8]], amplifier: [[8, 10]],

@@ -436,7 +436,7 @@ export default function modifier(ms) {
   }
   // APP-6(D) B/C/D cell (Figure 3-3 PDF 84/3-4, Figure 3-14 PDF 161/3-81): a
   // quantity (C) sits above the task force bracket and the echelon.
-  if (this.metadata.app6d) {
+  if (this.metadata.app6d || (this.metadata.textLayout || {}).quantityAbove) {
     let quantityTop = bbox.y1;
     if (this.metadata.taskForce) quantityTop = bbox.y1 - 40;
     if (echelons.hasOwnProperty(this.metadata.echelon))
