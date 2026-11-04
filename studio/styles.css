@@ -121,7 +121,18 @@ textarea {
   padding: 0 10px;
 }
 select {
-  padding-right: 6px;
+  /* The browser's own arrow sits against the border and ignores padding. */
+  appearance: none;
+  padding-right: 30px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%235f6b78' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px center;
+  background-size: 16px;
+}
+@media (forced-colors: active) {
+  select {
+    appearance: auto;
+  }
 }
 input::placeholder,
 textarea::placeholder {
@@ -236,7 +247,8 @@ textarea::placeholder {
   min-width: 118px;
   height: 36px;
   border-color: #b9d0ea;
-  background: var(--soft-blue);
+  background-color: var(--soft-blue);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%231d4f8a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
   color: var(--blue-dark);
   font-weight: 600;
 }
@@ -1258,6 +1270,8 @@ a.support-note {
   display: none !important;
 }
 .layout-box select {
+  /* The row widths in app.js count on the browser's narrower arrow here. */
+  appearance: auto;
   cursor: pointer;
 }
 .layout-box:not(.filled) select,
