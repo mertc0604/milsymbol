@@ -189,7 +189,7 @@ for (const file of ["index.html", "styles.css", "app.js", "modifier-fields.js", 
   } else fs.copyFileSync(path.join(source, file), path.join(output, file));
 }
 fs.copyFileSync(
-  path.join(root, "dist", "milsymbol.development.js"),
+  path.join(root, "dist", "milsymbol.js"),
   path.join(output, "vendor", "milsymbol.js")
 );
 fs.writeFileSync(path.join(output, "catalog.json"), JSON.stringify(data));

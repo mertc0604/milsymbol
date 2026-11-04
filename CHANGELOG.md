@@ -10,6 +10,16 @@ Historical wording is retained; duplicate version headings and empty template
 categories are omitted. See [Development resources](dev/README.md) for the
 publication workflow and GitHub/npm version inventory.
 
+## Unreleased
+
+### Changed
+
+- Studio: on a phone the preview stays on top, the settings come right after it, and the code breakdown folds into Code details.
+- Studio: the symbol draws before the flag artwork loads, and the page runs the minified bundle.
+- Studio: export names carry the standard and the SIDC, and the PNG button shows the output size.
+- Studio: small help text is darker and larger, to meet the WCAG AA contrast of 4.5:1.
+- Studio: APP-6E shows a Compatibility view badge.
+
 ## 3.0.5-v1 - 2026-11-04
 
 Based on milsymbol 3.0.5. Fork versions are the upstream version plus `-vN`: `-v2`, `-v3` and so on, back to `-v1` on the next upstream release. This replaces the fork's earlier number, 3.1.0.

@@ -14,7 +14,7 @@ Node is at `/opt/homebrew/bin` (Homebrew). It may not be on `PATH` in non-login 
 npm run bundle          # rollup: index.js -> dist/milsymbol.development.js (UMD, global `ms`)
 npm run build           # prebuild runs lint (with --fix) + tests, then bundle + minify -> dist/milsymbol.js
 npm run lint            # eslint src test --fix (rewrites files)
-npm run studio:build    # bundle + scripts/build-studio.mjs -> dist/studio/ (catalog.json, vendor/milsymbol.js)
+npm run studio:build    # bundle + minify + scripts/build-studio.mjs -> dist/studio/ (catalog.json, vendor/milsymbol.js)
 npm run studio:serve    # static server for dist/studio on http://127.0.0.1:4173 (PORT env overrides)
 ```
 
@@ -64,7 +64,7 @@ Style: Prettier with `trailingComma: "none"`; ESLint requires semicolons and `pr
 
 `studio/` (`index.html`, `app.js`, `styles.css`) is plain static HTML/JS. `scripts/build-studio.mjs` copies it to `dist/studio/` and does the following:
 - Normalizes the symbol tables from the three standards devDependencies, plus the APP-6A catalog, into `catalog.json`.
-- Copies the bundled `dist/milsymbol.development.js` to `vendor/milsymbol.js` and `src/lettersidc/metadata.js` to `vendor/letter-metadata.js` for shared modifier rules.
+- Copies the minified `dist/milsymbol.js` to `vendor/milsymbol.js` and `src/lettersidc/metadata.js` to `vendor/letter-metadata.js` for shared modifier rules.
 - Preserves the library and three catalog packages' complete licenses in the generated site. `npm run studio:build:public` uses allow-listed `dist/studio-public/`, excluding local PDF audits and hiding their link. It does not deploy.
 
 Because the studio loads the bundled library, library changes are invisible in the studio until `npm run studio:build` runs again. `.openai/hosting.json` serves `dist/studio` statically.

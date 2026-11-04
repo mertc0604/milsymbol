@@ -74,6 +74,24 @@ export function profileFieldStates(textModifiers, profile, sidc) {
   });
 }
 
+// PNG exports draw the symbol at this multiple of its size.
+export const pngScale = 3;
+
+export function pngOutputSize({ width, height }, scale = pngScale) {
+  return { width: Math.ceil(width * scale), height: Math.ceil(height * scale) };
+}
+
+// app6e_160310000012110000000000000000_infantry.png: the standard and the code
+// tell files apart when one symbol name recurs across a set of exports.
+export function exportFilename({ standardId, sidc, name }, extension) {
+  const slug = String(name || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+  const code = String(sidc || "").replace(/[^A-Za-z0-9-]/g, "-");
+  return `${[standardId, code, slug || "military-symbol"].filter(Boolean).join("_")}.${extension}`;
+}
+
 const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
 const twoDigits = (value) => String(value).padStart(2, "0");
 

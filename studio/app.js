@@ -37,7 +37,7 @@ import {
   editorGaps
 } from "./profile-controls.js";
 
-import { fieldStates, profileFieldStates, dtgForField, evaluationRating, sidcParts, pushRecent, placeholderOptions, readTextRows, fieldValueChars, fitRowWidths, layoutFieldBoxes, paletteProgress, baseBranch, entryCrumbs, groupEntries, paletteSections } from "./editor-helpers.js";
+import { exportFilename, pngOutputSize, pngScale, fieldStates, profileFieldStates, dtgForField, evaluationRating, sidcParts, pushRecent, placeholderOptions, readTextRows, fieldValueChars, fitRowWidths, layoutFieldBoxes, paletteProgress, baseBranch, entryCrumbs, groupEntries, paletteSections } from "./editor-helpers.js";
 import { fieldReference } from "./field-reference.js";
 import { fieldGuide } from "./field-guide.js";
 import { app6aIdentities, contextOptions, convertIdentity, decodeIdentity, identityCode, identityLabel, identityList } from "./identities.js";
@@ -76,7 +76,9 @@ const standards = [
     family: "modern",
     standard: "APP6",
     // Table A-1 PDF 747/713: 13 is MIL-STD-2525E, 16 is APP-06(E)(2).
-    version: "16"
+    version: "16",
+    coverage: "Compatibility view",
+    coverageNote: "APP-6E has no catalog of its own here: the symbols come from the shared 2525E catalog. Field positions and rules follow APP-06 Edition E Version 2."
   },
   {
     id: "2525c",
@@ -195,6 +197,9 @@ const mobilities = [
 const dom = Object.fromEntries(
   [
     "standardSelect",
+    "coverageBadge",
+    "pngSize",
+    "sidcDetails",
     "symbolSearch",
     "clearSearch",
     "searchLauncher",
@@ -2361,6 +2366,10 @@ function renderAll() {
   renderChips(sidc);
   renderFlagSwatch();
   syncGraphicsControls();
+  renderExportSize();
+  dom.coverageBadge.hidden = !config().coverage;
+  dom.coverageBadge.textContent = config().coverage || "";
+  dom.coverageBadge.title = config().coverageNote || "";
   renderFieldLayout();
   document.title = `${icon.name} — Military Symbol Editor`;
 }
@@ -2426,13 +2435,16 @@ async function copyText(text, success) {
 }
 
 function exportName(extension) {
-  const name = selectedIcon()?.name || "military-symbol";
-  return `${
-    name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/(^-|-$)/g, "") || "military-symbol"
-  }.${extension}`;
+  return exportFilename({ standardId: state.standardId, sidc: state.customSidc || buildSidc(), name: selectedIcon()?.name }, extension);
+}
+
+// The size a PNG export will have, on the button that makes it.
+function renderExportSize() {
+  const size = currentSymbol ? pngOutputSize(currentSymbol.getSize()) : null;
+  const label = size ? `${size.width} × ${size.height} px` : "";
+  dom.pngSize.textContent = size ? `${size.width} × ${size.height}` : "";
+  dom.downloadPng.title = `Download PNG${label ? `, ${label}` : ""} (transparent background)`;
+  dom.downloadPng.setAttribute("aria-label", `Download PNG${label ? `, ${label}` : ""}`);
 }
 
 function downloadPng() {
@@ -2443,11 +2455,11 @@ function downloadPng() {
   );
   image.onload = () => {
     const canvas = document.createElement("canvas");
-    const scale = 3;
-    canvas.width = Math.ceil(image.naturalWidth * scale);
-    canvas.height = Math.ceil(image.naturalHeight * scale);
+    const output = pngOutputSize({ width: image.naturalWidth, height: image.naturalHeight });
+    canvas.width = output.width;
+    canvas.height = output.height;
     const context = canvas.getContext("2d");
-    context.scale(scale, scale);
+    context.scale(pngScale, pngScale);
     context.drawImage(image, 0, 0);
     canvas.toBlob((blob) => {
       if (blob) {
@@ -2566,6 +2578,13 @@ function moveCardFocus(card, step) {
 }
 
 function bindEvents() {
+  // A phone starts with the code breakdown folded; a wide screen always shows it.
+  const narrow = window.matchMedia("(max-width: 760px)");
+  const syncCodeDetails = () => {
+    dom.sidcDetails.open = !narrow.matches;
+  };
+  narrow.addEventListener("change", syncCodeDetails);
+  syncCodeDetails();
   const editorTabs = [...document.querySelectorAll("[data-editor-tab]")];
   editorTabs.forEach((tab, index) => {
     tab.addEventListener("click", () => activateTab(tab));
@@ -2947,6 +2966,31 @@ function bindEvents() {
   });
 }
 
+// Flags are the largest download and a symbol does not need them, so the editor
+// draws first. A missing artwork file cannot take the editor offline, and
+// downloads stay vector-only and never need a remote CDN.
+async function loadFlags() {
+  try {
+    const response = await fetch("./flags.json");
+    if (!response.ok) throw new Error(`Flag request failed: ${response.status}`);
+    const flags = await response.json();
+    flagArtwork = new Map(flags.map((flag) => [flag.code, flag.svg]));
+    flagNames = new Map(flags.map((flag) => [flag.code, flag.name]));
+    window.ms.addSymbolPart(createCountryFlagPart(flags));
+    dom.countryFlag.innerHTML = option("", "No flag") + flags.map(flag =>
+      option(flag.code, flag.name)
+    ).join("");
+    dom.countryFlag.disabled = false;
+    // A code applied while the list was loading names its country in the SIDC.
+    if (state.customSidc) dom.countryFlag.value = countryFlagFromSidc(state.customSidc, state.standardId);
+    renderAll();
+  } catch (error) {
+    dom.countryFlag.innerHTML = option("", "Flags unavailable — reload to retry");
+    dom.countryFlag.disabled = true;
+    console.error("Unable to load flag artwork", error);
+  }
+}
+
 async function init() {
   try {
     const response = await fetch("./catalog.json");
@@ -2954,24 +2998,8 @@ async function init() {
       throw new Error(`Catalog request failed: ${response.status}`);
     catalog = await response.json();
     createTextFields();
-    // Flags load separately so a missing artwork file cannot take the symbol
-    // editor offline. Downloads stay vector-only and never need a remote CDN.
-    try {
-      const response = await fetch("./flags.json");
-      if (!response.ok) throw new Error(`Flag request failed: ${response.status}`);
-      const flags = await response.json();
-      flagArtwork = new Map(flags.map((flag) => [flag.code, flag.svg]));
-      flagNames = new Map(flags.map((flag) => [flag.code, flag.name]));
-      window.ms.addSymbolPart(createCountryFlagPart(flags));
-      dom.countryFlag.innerHTML = option("", "No flag") + flags.map(flag =>
-        option(flag.code, flag.name)
-      ).join("");
-      dom.countryFlag.disabled = false;
-    } catch (error) {
-      dom.countryFlag.innerHTML = option("", "Flags unavailable — reload to retry");
-      dom.countryFlag.disabled = true;
-      console.error("Unable to load flag artwork", error);
-    }
+    dom.countryFlag.innerHTML = option("", "Loading flags…");
+    dom.countryFlag.disabled = true;
     bindEvents();
     loadRecent();
     renderStandardSelect();
@@ -2985,6 +3013,7 @@ async function init() {
     syncStandardControls();
     renderCatalog();
     renderAll();
+    loadFlags();
   } catch (error) {
     for (const button of [dom.downloadSvg, dom.downloadPng, dom.copySidc, dom.applySidc]) button.disabled = true;
     dom.symbolGrid.innerHTML = `<div class="empty-state">Unable to load the symbol library.<br>${error.message}<br><br><b>npm run studio:build</b> to rebuild the library.</div>`;
