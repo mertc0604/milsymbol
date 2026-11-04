@@ -609,13 +609,53 @@ export default {
       flags(std2525dProfile, "10031000001211000000", 7, "0"),
       [true, true, true, true]
     ],
-    "2525D equipment: feint only": [
+    "2525D equipment: Annex A defines every code": [
       flags(std2525dProfile, "10031500001101000000", 7, "0"),
-      [true, true, false, false]
+      [true, true, true, true]
     ],
-    "APP-6(E) air has no feint (Table 1-5 AB)": [
+    "APP-6(E) air: Annex A defines every code": [
       flags(app6eProfile, "16030100001101000000", 7, "0"),
-      [true, false, false, false]
+      [true, true, true, true]
+    ],
+    "task force HQ on a merchant ship is valid, with a note": [
+      [
+        ["130330060014010500000000000000", "2525"],
+        ["100330060014010500000000000000", "2525"],
+        ["160330060014010500000000000000", "APP6"],
+        ["100330060014010500000000000000", "APP6"]
+      ].map(([sidc, standard]) => {
+        const symbol = new ms.Symbol(sidc, { standard });
+        return [
+          symbol.isValid(),
+          symbol.metadata.headquarters,
+          symbol.metadata.taskForce,
+          symbol.isValid(true).notes.some((text) => /eight codes/.test(text))
+        ];
+      }),
+      [
+        [true, true, true, true],
+        [true, true, true, true],
+        [true, true, true, true],
+        [true, true, true, true]
+      ]
+    ],
+    "HQ/task force/dummy 8 and 9 stay undefined": [
+      [
+        errors(std2525eProfile, "13033008001401050000").length,
+        errors(std2525dProfile, "10033009001401050000").length
+      ],
+      [1, 1]
+    ],
+    "2525C task force on a ship is valid and drawn, with a note": [
+      (() => {
+        const symbol = new ms.Symbol("SFSPCLCC--E----", { standard: "2525C" });
+        return [
+          symbol.isValid(),
+          symbol.metadata.taskForce,
+          symbol.isValid(true).notes.some((text) => /D Task Force/.test(text))
+        ];
+      })(),
+      [true, true, true]
     ],
     "2525D unit takes an echelon, not mobility": [
       [
@@ -643,12 +683,13 @@ export default {
       ],
       [1, 0, 0]
     ],
-    "APP-6(B) task force is for units": [
+    "APP-6(B) task force is valid on every class, with a note off units": [
       [
         errors(app6bProfile, "SFGPUCI---E----").length,
-        errors(app6bProfile, "SFGPEWM---E----").length
+        errors(app6bProfile, "SFGPEWM---E----").length,
+        app6bProfile.validate("SFGPEWM---E----", {}).details.notes.length
       ],
-      [0, 1]
+      [0, 0, 1]
     ],
     "APP-6(B) mobility is for equipment": [
       [

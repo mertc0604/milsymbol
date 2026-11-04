@@ -422,24 +422,24 @@ result["towed array NS NL on equipment"] = [
   ["NS", "NL", "NX"].map((c) => sm(EQUIPMENT, c)),
   [true, true, false]
 ];
-result["equipment HQ and FD ok, echelon and TF not"] = [
+result["equipment HQ, FD and TF ok, echelon not"] = [
   ["A-", "C-", "F-", "H-", "HB", "-E", "AE", "E-", "B-"].map((c) =>
     sm(EQUIPMENT, c)
   ),
-  [true, true, true, true, true, false, false, false, false]
+  [true, true, true, true, true, false, false, true, true]
 ];
 result["installation HQ ok, echelon not"] = [
   ["A-", "H-", "HB", "-A"].map((c) => sm(INSTALLATION, c)),
   [true, true, true, false]
 ];
-result["renderer agrees: equipment echelon/TF/mobility on unit are not drawn"] =
+result["renderer agrees: equipment echelon and mobility on unit are not drawn; TF is"] =
   [
     [
       sym("SFGPEWM---E-").metadata.taskForce,
       sym("SFGPEWM----E").metadata.echelon,
       sym("SFGPUCI---MQ").metadata.mobility
     ],
-    [false, "", ""]
+    [true, "", ""]
   ];
 result["renderer: HA does not draw an echelon"] = [
   sym("SFGPUCI---HA").metadata.echelon,

@@ -146,11 +146,11 @@ A-I: the renderer draws no frame or question mark and a note records it.
 First character `-` or `A`-`G` with second `-` or `A`-`N` (N is Command);
 `H-` and `HB` only (no HA, HC...); `MO`-`MY` mobility; `NS`/`NL` towed array.
 The validator and renderer share `std2525cModifierRules`: invalid or inapplicable
-echelon, task force, mobility and array are neither drawn nor accepted. For
-equipment and installations only `-`, `A`, `C`, `F`, `H-`, `HB` (HQ and
-feint/dummy, U/E/I per Table IV S and AB) are valid with an empty second
-character; echelon letters and task-force codes (B, D, E, G) are unit-only.
-Mobility is equipment-only and not intrinsic to the icon.
+echelon, mobility and array are neither drawn nor accepted. Echelon letters are
+unit-only and mobility is equipment-only and not intrinsic to the icon. Task-force
+codes (B, D, E, G) are valid and drawn on every class: Table IV gives D to units,
+but positions 11-12 are user-defined (A.5.2.1 PDF 56/50) and Table A-III prints
+them as `**` on sea symbols such as NAVY TASK FORCE, so off a unit they add a note.
 
 **Towed array (AG, `NS` short, `NL` long).** Source: Table IV AG (PDF 30 / 24): "a
 graphic modifier for equipment" with U and I as dashes; 5.3.4.4 (PDF 33 / 27): "only

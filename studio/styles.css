@@ -1010,6 +1010,17 @@ a.support-note {
   width: 100%;
   height: 100%;
 }
+.layout-flag {
+  position: absolute;
+  overflow: hidden;
+  border: 1px solid #667788;
+  pointer-events: none;
+}
+.layout-flag svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
 .layout-box {
   position: absolute;
   display: flex;

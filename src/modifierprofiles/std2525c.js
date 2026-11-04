@@ -253,6 +253,7 @@ export function std2525cModifierRules(sidc) {
   const cls = std2525cSymbolClass(sidc);
   const strict = cls === "equipment" || cls === "installation";
   const errors = [];
+  const notes = [];
   const draw = {
     echelon: false,
     taskForce: false,
@@ -276,14 +277,14 @@ export function std2525cModifierRules(sidc) {
         );
         draw.echelon = false;
       }
-      if (strict && draw.taskForce) {
-        errors.push(
-          "D Task Force is a unit modifier; not applicable to " +
+      // Table IV gives D to units, but Table A-III leaves positions 11-12
+      // user-defined (**) on these symbols, NAVY TASK FORCE among them.
+      if (strict && draw.taskForce)
+        notes.push(
+          "D Task Force on " +
             cls +
-            " (Table IV)"
+            ": valid and drawn, positions 11-12 are user-defined (A.5.2.1 PDF 56/50); Table IV PDF 28/22 gives D to units"
         );
-        draw.taskForce = false;
-      }
     }
   } else if (a === "H") {
     if (b !== "-" && b !== "B")
@@ -325,7 +326,7 @@ export function std2525cModifierRules(sidc) {
         " is not a Table A-II symbol modifier code"
     );
   }
-  return { errors: errors, draw: draw };
+  return { errors: errors, notes: notes, draw: draw };
 }
 
 export function std2525cFields(sidc) {
@@ -407,7 +408,9 @@ export function std2525cValidate(sidc, options) {
   }
 
   // SIDC 11-12.
-  std2525cModifierRules(sidc).errors.forEach((message) => errors.push(message));
+  const modifierRules = std2525cModifierRules(sidc);
+  modifierRules.errors.forEach((message) => errors.push(message));
+  modifierRules.notes.forEach((message) => notes.push(message));
 
   // On order: status A together with W = O/O (5.3.1.4).
   if (

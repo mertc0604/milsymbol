@@ -10,6 +10,13 @@ Historical wording is retained; duplicate version headings and empty template
 categories are omitted. See [Development resources](dev/README.md) for the
 publication workflow and GitHub/npm version inventory.
 
+## Unreleased
+
+### Fixed
+
+- Headquarters, task force and feint/dummy codes are no longer errors off land units in APP-6(B), 2525C, 2525D, 2525E, APP-6(D) and APP-6(E). The annexes define them for every dimension; a class table without the field adds a note.
+- Studio: the country flag is no longer covered by the boxes in Field positions.
+
 ## 3.0.5-v2 - 2026-11-04
 
 ### Changed

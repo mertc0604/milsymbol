@@ -304,16 +304,19 @@ export function buildProfile(edition) {
           ")"
       );
     else if (definition.hqTfDummy.indexOf(p.hqtfd) < 0)
-      errors.push(
+      // Annex A: "Code values exist for each of the eight possible combinations"
+      // and graphics for "each combination of standard identity group, dimension"
+      // and these codes. A class table only says what the figure shows.
+      notes.push(
         "HQ/task force/dummy " +
           p.hqtfd +
-          " is not defined for " +
+          " on " +
           cls +
-          " (" +
-          edition.table +
-          "; " +
+          ": valid and drawn, " +
+          edition.hqAnnex +
+          " defines the eight codes for every dimension; " +
           definition.source +
-          ")"
+          " gives this class no cell for it"
       );
 
     const kind = amplifierKind(p.amplifier);

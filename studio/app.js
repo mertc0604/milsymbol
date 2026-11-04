@@ -37,7 +37,7 @@ import {
   editorGaps
 } from "./profile-controls.js";
 
-import { exportFilename, pngOutputSize, pngScale, fieldStates, profileFieldStates, dtgForField, evaluationRating, sidcParts, pushRecent, placeholderOptions, readTextRows, fieldValueChars, fitRowWidths, layoutFieldBoxes, paletteProgress, baseBranch, entryCrumbs, groupEntries, paletteSections } from "./editor-helpers.js";
+import { exportFilename, layoutFlagBox, pngOutputSize, pngScale, fieldStates, profileFieldStates, dtgForField, evaluationRating, sidcParts, pushRecent, placeholderOptions, readTextRows, fieldValueChars, fitRowWidths, layoutFieldBoxes, paletteProgress, baseBranch, entryCrumbs, groupEntries, paletteSections } from "./editor-helpers.js";
 import { fieldReference } from "./field-reference.js";
 import { fieldGuide } from "./field-guide.js";
 import { app6aIdentities, contextOptions, convertIdentity, decodeIdentity, identityCode, identityLabel, identityList } from "./identities.js";
@@ -1981,6 +1981,8 @@ const svgViewBox = (svg) => {
 function layoutOptions() {
   const options = { ...currentOptions(), size: 100, infoSize: 40, outlineWidth: 0, direction: undefined, speedLeader: 0, infoColor: "", infoBackground: "" };
   for (const { key } of textModifiers) options[key] = "";
+  // Field positions draws the flag itself, clear of the boxes (layoutFlagBox).
+  options.countryFlag = "";
   return options;
 }
 
@@ -1996,11 +1998,12 @@ function renderFieldLayout() {
     // The stage's padding and border take 34 px of the panel width.
     const room = panel.clientWidth - 34;
     const options = layoutOptions();
-    const signature = JSON.stringify([sidc, state.standardId, room, states.map((item) => [item.key, item.field, item.maxLength]), options]);
+    const flag = currentOptions().countryFlag;
+    const signature = JSON.stringify([sidc, state.standardId, room, states.map((item) => [item.key, item.field, item.maxLength]), options, flag]);
     if (signature !== layoutSignature) {
       layoutSignature = signature;
       try {
-        layoutFits = buildFieldLayout(sidc, states, options, room);
+        layoutFits = buildFieldLayout(sidc, states, options, room, flag);
       } catch {
         layoutFits = false;
       }
@@ -2024,7 +2027,7 @@ function renderFieldLayout() {
 }
 
 // Lays out the boxes; false when they do not fit the room.
-function buildFieldLayout(sidc, states, options, room) {
+function buildFieldLayout(sidc, states, options, room, flag) {
   const tags = placeholderOptions(states, {});
   const probe = new window.ms.Symbol(sidc, { ...options, ...tags.options, infoFields: true }).asSVG();
   const plain = new window.ms.Symbol(sidc, { ...options, infoFields: false }).asSVG();
@@ -2059,7 +2062,9 @@ function buildFieldLayout(sidc, states, options, room) {
   const widths = fitRowWidths(rows, natural, { room, between, plain: codeOnly });
   if (!widths) return false;
   const boxes = layoutFieldBoxes(rows, widths, { height: 30, gap: 8, center: 100 * layoutScale });
-  const all = [symbol, ...boxes];
+  const artwork = flagArtwork.get(flag);
+  const flagBox = artwork ? layoutFlagBox(boxes, symbol, { width: 57.6 * layoutScale, height: 43.2 * layoutScale }) : null;
+  const all = [symbol, ...boxes, ...(flagBox ? [flagBox] : [])];
   const left = Math.min(...all.map((item) => item.left));
   const top = Math.min(...all.map((item) => item.top));
   const bounds = {
@@ -2082,6 +2087,17 @@ function buildFieldLayout(sidc, states, options, room) {
     canvas.prepend(art);
   }
   art.innerHTML = plain;
+  let flagArt = canvas.querySelector(".layout-flag");
+  if (flagBox) {
+    if (!flagArt) {
+      flagArt = document.createElement("div");
+      flagArt.className = "layout-flag";
+      flagArt.setAttribute("aria-hidden", "true");
+      canvas.prepend(flagArt);
+    }
+    flagArt.innerHTML = artwork;
+    Object.assign(flagArt.style, { left: px(flagBox.left - bounds.left), top: px(flagBox.top - bounds.top), width: px(flagBox.width), height: px(flagBox.height) });
+  } else if (flagArt) flagArt.remove();
   Object.assign(art.style, { left: px(symbol.left - bounds.left), top: px(symbol.top - bounds.top), width: `${symbol.width}px`, height: `${symbol.height}px` });
 
   // Tab order: the left side, the middle, then the right side, top to bottom.

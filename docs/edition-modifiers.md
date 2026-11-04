@@ -104,6 +104,7 @@ E is the Joker or Faker letter, from SIDC position 2. Unlike 2525C, Z applies to
 
 | ID | Sources | Decision |
 |---|---|---|
+| HQ, task force, dummy | 2525D A.5.4.5.1 PDF 70/54, 2525E A.5.3.5.1 PDF 80/63, APP-6(E) A.9 item 2 PDF 753/719 against Tables VII, VI, 1-5 | The annex defines all eight codes for each dimension, so they are valid and drawn on every class. A class table or figure without that field adds a note, not an error. APP-6(B) reads the same way from the note of Table B-II PDF 105/B-3. An installation in APP-6(B) or 2525C keeps H in position 11, so the Studio does not set HQ or task force on it |
 | Figure over table | 2525D 5.3.7 PDF 37/21 | Amplifier descriptions "vary by dimension and are detailed within the respective appendices", so the figure and table of the class win over Table VII. Table VII gives activities T, K, P and others that Table G-II and Figure G-2 do not, and they are not offered. Table D-III lists V and L for land units, Figure D-4 and Table VII do not, and they are not offered |
 | D-INST | 2525D Table VII, Figure D-6 | Table VII gives installations AJ and no Q. The figure shows neither, and the renderer starts AJ from Q, so neither is offered |
 | Echelon on installations | 2525D 5.3.7.1 PDF 42/26 against Table VII | Accepted with a note, as in APP-6(D) |

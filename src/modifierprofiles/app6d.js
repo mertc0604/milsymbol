@@ -1067,12 +1067,14 @@ function validate(sidc, options) {
       "HQ/task force/dummy " + p.hqtfd + " is not defined (Table A-7)"
     );
   else if (amps && amps.hqTfDummy.indexOf(p.hqtfd) < 0)
-    errors.push(
+    // A.9 item 2: "Code values exist for each of the eight possible combinations",
+    // with graphics for each dimension. The class tables only say what they show.
+    notes.push(
       "HQ/task force/dummy " +
         p.hqtfd +
-        " is not defined for " +
+        " on " +
         cls +
-        " (Tables 3-2, 3-16, 3-22: AB feint/dummy for units, equipment, installations; D task force for units; S headquarters staff for units and installations)"
+        ": valid and drawn, A.9 item 2 PDF 724/A-10 defines the eight codes for every dimension; Tables 3-2, 3-16, 3-22 give AB to units, equipment and installations, D to units and S to units and installations"
     );
   const kind = app6dAmplifierKind(p.amplifier);
   if (kind === "vef") vef.push({ position: "amplifier", code: p.amplifier });

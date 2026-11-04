@@ -511,7 +511,7 @@ export default {
       ],
       [true, false, true, false]
     ],
-    "task force only on units, dummy on units/equipment/installations": [
+    "A.9 item 2: HQ, task force and dummy exist for every class": [
       [
         ok({ set: "10", hq: "7" }),
         ok({ set: "15", hq: "1" }),
@@ -520,7 +520,7 @@ export default {
         ok({ set: "20", hq: "4" }),
         ok({ set: "01", hq: "1" })
       ],
-      [true, true, false, true, false, false]
+      [true, true, true, true, true, true]
     ],
     "HQ/TF/dummy 8 reserved, 9 VEF": [
       [ok({ hq: "8" }), ok({ hq: "9" })],

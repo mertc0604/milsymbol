@@ -151,6 +151,7 @@ export const app6eProfile = buildProfile({
   table: "Table 1-5 PDF 66-88/32-54",
   statusTable: "Table A-6 PDF 752/718",
   hqTable: "Table A-7 PDF 752/718",
+  hqAnnex: "A.9 item 2 PDF 753/719",
   amplifierTable: "Table A-8 PDF 753-754/719-720",
   engagementTable: "Table 1-5 PDF 82-85/48-51",
   engagementError: engagementError,

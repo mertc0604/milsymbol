@@ -140,8 +140,8 @@ function applicable(key, sidc) {
 
 // SIDC positions 11-12 (Table B-II) against the class of Table I. B is listed
 // for equipment and installations with a number and a G, so an echelon stays
-// allowed on them; D (task force) and R (mobility) have one column each.
-export function app6bModifierRules(sidc) {
+// allowed on them; R (mobility) has one column.
+export function app6bModifierRules(sidc, notes = []) {
   sidc = normalize(sidc);
   const a = sidc.charAt(10) || "-";
   const b = sidc.charAt(11) || "-";
@@ -154,8 +154,11 @@ export function app6bModifierRules(sidc) {
     "BDEG".indexOf(a) > -1 &&
     (cls === "equipment" || cls === "installation")
   )
-    errors.push(
-      "D Task force is a unit modifier; not applicable to " + cls + " (Table I)"
+    // Table I gives D to units; the note of Table B-II lets any symbol fill 11-12.
+    notes.push(
+      "D Task force on " +
+        cls +
+        ": valid and drawn, the note of Table B-II PDF 105/B-3 lets positions 11-12 be filled; Table I PDF 30/2-8 gives D to units"
     );
   else if ("MN".indexOf(a) > -1 && cls !== "equipment" && cls !== "unknown")
     errors.push(
@@ -214,7 +217,7 @@ export function app6bValidate(sidc, options) {
     errors.push("SIDC 3 " + dimension + ": not a Table B-I battle dimension");
   if (STATUSES.indexOf(status) < 0 || status === "")
     errors.push("SIDC 4 " + status + ": Table B-I has status A and P only");
-  app6bModifierRules(sidc).forEach((message) => errors.push(message));
+  app6bModifierRules(sidc, notes).forEach((message) => errors.push(message));
 
   TABLE_I.forEach((entry) => {
     const key = entry.key;

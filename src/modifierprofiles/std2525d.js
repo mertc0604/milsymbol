@@ -136,6 +136,7 @@ export const std2525dProfile = buildProfile({
   table: "Table VII PDF 38-41/22-25",
   statusTable: "Table A-VI PDF 70/54",
   hqTable: "Table A-VII PDF 70/54",
+  hqAnnex: "A.5.4.5.1 PDF 70/54",
   amplifierTable: "Table A-VIII PDF 71/55",
   engagementTable: "Tables XII, XIII PDF 56-57/40-41",
   engagementError: app6dEngagementError,

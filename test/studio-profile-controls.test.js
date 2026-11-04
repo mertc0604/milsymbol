@@ -142,7 +142,7 @@ export default {
       ],
       [true, true, []]
     ],
-    "2525C equipment: task force is not allowed, mobility and towed array are":
+    "2525C equipment: task force, mobility and towed array are all allowed":
       [
         [
           flagOffer(std2525cProfile, "SFGPEVAT-------", 10, "E"),
@@ -154,7 +154,7 @@ export default {
             "SFGPEVAT-------"
           )
         ],
-        [false, true, ["MO", "NS"]]
+        [true, true, ["MO", "NS"]]
       ],
     "2525C equipment: echelons are hidden": [
       offered(
@@ -204,23 +204,23 @@ export default {
       ),
       [true, true, true]
     ],
-    "APP-6D land equipment: dummy only": [
+    "APP-6D land equipment: Annex A defines all three": [
       ["1", "2", "4"].map((digit) =>
         flagOffer(app6dProfile, numeric("15", { entity: "110000" }), 7, digit)
       ),
-      [true, false, false]
+      [true, true, true]
     ],
-    "APP-6D installation: dummy and HQ, no task force": [
+    "APP-6D installation: Annex A defines all three": [
       ["1", "2", "4"].map((digit) =>
         flagOffer(app6dProfile, numeric("20", { entity: "110000" }), 7, digit)
       ),
-      [true, true, false]
+      [true, true, true]
     ],
-    "APP-6D air: no HQ, task force or dummy": [
+    "APP-6D air: Annex A defines all three": [
       ["1", "2", "4"].map((digit) =>
         flagOffer(app6dProfile, numeric("01", { entity: "110000" }), 7, digit)
       ),
-      [false, false, false]
+      [true, true, true]
     ],
     "APP-6D equipment: mobility yes, echelon no, towed array no": [
       offered(

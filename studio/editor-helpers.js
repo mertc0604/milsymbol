@@ -320,6 +320,23 @@ export function layoutFieldBoxes(rows, widths, { height = 30, gap = 8, center = 
   return boxes;
 }
 
+// The country flag in Field positions. In the symbol it sits right of the text;
+// here the boxes are wider than the text, so it goes under the right-hand boxes,
+// where it adds height and never covers a box. With no box on the right it keeps
+// its place beside the bottom of the symbol.
+export function layoutFlagBox(boxes, symbol, { width, height, gap = 8 }) {
+  const edge = symbol.left + symbol.width;
+  const right = boxes.filter((box) => box.left >= edge);
+  if (!right.length)
+    return { left: edge + gap, top: symbol.top + symbol.height - height, width, height };
+  return {
+    left: Math.min(...right.map((box) => box.left)),
+    top: Math.max(...right.map((box) => box.top + box.height)) + gap,
+    width,
+    height
+  };
+}
+
 // Catalogue hierarchy. Every entry's path ends with its own name, so a branch
 // (a path prefix) holds the entry of that name and everything under it.
 export const inBranch = (icon, branch) => branch.every((name, index) => (icon.path || [])[index] === name);
