@@ -37,7 +37,7 @@ import {
   editorGaps
 } from "./profile-controls.js";
 
-import { exportFilename, layoutFlagBox, pngOutputSize, pngScale, fieldStates, profileFieldStates, dtgForField, evaluationRating, sidcParts, pushRecent, placeholderOptions, readTextRows, fieldValueChars, fitRowWidths, layoutFieldBoxes, paletteProgress, baseBranch, entryCrumbs, groupEntries, paletteSections } from "./editor-helpers.js";
+import { exportFilename, pngOutputSize, pngScale, fieldStates, profileFieldStates, dtgForField, evaluationRating, sidcParts, pushRecent, placeholderOptions, readTextRows, fieldValueChars, fitRowWidths, layoutFieldBoxes, paletteProgress, baseBranch, entryCrumbs, groupEntries, paletteSections } from "./editor-helpers.js";
 import { fieldReference } from "./field-reference.js";
 import { fieldGuide } from "./field-guide.js";
 import { app6aIdentities, contextOptions, convertIdentity, decodeIdentity, identityCode, identityLabel, identityList } from "./identities.js";
@@ -198,7 +198,6 @@ const dom = Object.fromEntries(
   [
     "standardSelect",
     "coverageBadge",
-    "pngSize",
     "sidcDetails",
     "symbolSearch",
     "clearSearch",
@@ -424,6 +423,7 @@ function currentOptions(minimal = false) {
   const direction = Number(dom.direction.value);
   const app6a = state.standardId === "app6a";
   const sidc = state.customSidc || buildSidc();
+  const countryFlag = minimal || !dom.showFlag.checked ? "" : dom.countryFlag.value;
   const values = minimal ? {} : Object.fromEntries(textModifiers.map(({ key, id }) =>
     [key, document.getElementById(id)?.value || ""]
   ));
@@ -431,7 +431,9 @@ function currentOptions(minimal = false) {
   const movement = minimal ? null : movementFor(sidc);
   const options = {
     standard: config().standard,
-    countryFlag: minimal || !dom.showFlag.checked ? "" : dom.countryFlag.value,
+    countryFlag,
+    // The library moves the two text rows beside the flag 70 units to the right.
+    country_flag: Boolean(countryFlag),
     size: minimal ? 34 : Number(dom.symbolSize.value),
     strokeWidth: Number(dom.strokeWidth.value),
     colorMode: dom.colorMode.value,
@@ -1981,8 +1983,6 @@ const svgViewBox = (svg) => {
 function layoutOptions() {
   const options = { ...currentOptions(), size: 100, infoSize: 40, outlineWidth: 0, direction: undefined, speedLeader: 0, infoColor: "", infoBackground: "" };
   for (const { key } of textModifiers) options[key] = "";
-  // Field positions draws the flag itself, clear of the boxes (layoutFlagBox).
-  options.countryFlag = "";
   return options;
 }
 
@@ -1998,12 +1998,11 @@ function renderFieldLayout() {
     // The stage's padding and border take 34 px of the panel width.
     const room = panel.clientWidth - 34;
     const options = layoutOptions();
-    const flag = currentOptions().countryFlag;
-    const signature = JSON.stringify([sidc, state.standardId, room, states.map((item) => [item.key, item.field, item.maxLength]), options, flag]);
+    const signature = JSON.stringify([sidc, state.standardId, room, states.map((item) => [item.key, item.field, item.maxLength]), options]);
     if (signature !== layoutSignature) {
       layoutSignature = signature;
       try {
-        layoutFits = buildFieldLayout(sidc, states, options, room, flag);
+        layoutFits = buildFieldLayout(sidc, states, options, room);
       } catch {
         layoutFits = false;
       }
@@ -2027,7 +2026,7 @@ function renderFieldLayout() {
 }
 
 // Lays out the boxes; false when they do not fit the room.
-function buildFieldLayout(sidc, states, options, room, flag) {
+function buildFieldLayout(sidc, states, options, room) {
   const tags = placeholderOptions(states, {});
   const probe = new window.ms.Symbol(sidc, { ...options, ...tags.options, infoFields: true }).asSVG();
   const plain = new window.ms.Symbol(sidc, { ...options, infoFields: false }).asSVG();
@@ -2062,9 +2061,7 @@ function buildFieldLayout(sidc, states, options, room, flag) {
   const widths = fitRowWidths(rows, natural, { room, between, plain: codeOnly });
   if (!widths) return false;
   const boxes = layoutFieldBoxes(rows, widths, { height: 30, gap: 8, center: 100 * layoutScale });
-  const artwork = flagArtwork.get(flag);
-  const flagBox = artwork ? layoutFlagBox(boxes, symbol, { width: 57.6 * layoutScale, height: 43.2 * layoutScale }) : null;
-  const all = [symbol, ...boxes, ...(flagBox ? [flagBox] : [])];
+  const all = [symbol, ...boxes];
   const left = Math.min(...all.map((item) => item.left));
   const top = Math.min(...all.map((item) => item.top));
   const bounds = {
@@ -2087,17 +2084,6 @@ function buildFieldLayout(sidc, states, options, room, flag) {
     canvas.prepend(art);
   }
   art.innerHTML = plain;
-  let flagArt = canvas.querySelector(".layout-flag");
-  if (flagBox) {
-    if (!flagArt) {
-      flagArt = document.createElement("div");
-      flagArt.className = "layout-flag";
-      flagArt.setAttribute("aria-hidden", "true");
-      canvas.prepend(flagArt);
-    }
-    flagArt.innerHTML = artwork;
-    Object.assign(flagArt.style, { left: px(flagBox.left - bounds.left), top: px(flagBox.top - bounds.top), width: px(flagBox.width), height: px(flagBox.height) });
-  } else if (flagArt) flagArt.remove();
   Object.assign(art.style, { left: px(symbol.left - bounds.left), top: px(symbol.top - bounds.top), width: `${symbol.width}px`, height: `${symbol.height}px` });
 
   // Tab order: the left side, the middle, then the right side, top to bottom.
@@ -2454,11 +2440,10 @@ function exportName(extension) {
   return exportFilename({ standardId: state.standardId, sidc: state.customSidc || buildSidc(), name: selectedIcon()?.name }, extension);
 }
 
-// The size a PNG export will have, on the button that makes it.
+// The size a PNG export will have, in the tooltip of the button that makes it.
 function renderExportSize() {
   const size = currentSymbol ? pngOutputSize(currentSymbol.getSize()) : null;
   const label = size ? `${size.width} × ${size.height} px` : "";
-  dom.pngSize.textContent = size ? `${size.width} × ${size.height}` : "";
   dom.downloadPng.title = `Download PNG${label ? `, ${label}` : ""} (transparent background)`;
   dom.downloadPng.setAttribute("aria-label", `Download PNG${label ? `, ${label}` : ""}`);
 }

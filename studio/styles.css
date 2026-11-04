@@ -428,11 +428,6 @@ textarea::placeholder {
   display: flex;
   gap: 2px;
 }
-.download-size {
-  color: var(--faint);
-  font-size: 11px;
-  font-weight: 400;
-}
 .download-link {
   display: inline-flex;
   align-items: center;
@@ -1006,17 +1001,6 @@ a.support-note {
   pointer-events: none;
 }
 .layout-symbol svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-.layout-flag {
-  position: absolute;
-  overflow: hidden;
-  border: 1px solid #667788;
-  pointer-events: none;
-}
-.layout-flag svg {
   display: block;
   width: 100%;
   height: 100%;

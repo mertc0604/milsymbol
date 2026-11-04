@@ -18,10 +18,12 @@ export function createCountryFlagPart(flags) {
     // Match the reference generator's 640 × 480 artwork at 0.09 scale.
     const width = 57.6;
     const height = 43.2;
-    // Run after the renderer's other parts so all amplifiers, stacks and arrows
-    // are accounted for. Place outside their bounds instead of covering labels.
-    const x = this.bbox.x2 + 16;
+    // The reference generator keeps the flag by the frame whatever the text says:
+    // 20 units right of it, as the text rows start, and 10 up from its bottom.
+    // The two rows beside it move right through the library's country_flag option.
     const frame = this.metadata.baseGeometry.bbox;
+    const stack = this.options.stack ? this.options.stack * 15 : 0;
+    const x = frame.x2 + 20 + stack;
     const y = frame.y2 - 10;
     const svg = vector.replace(
       /<svg\b/,

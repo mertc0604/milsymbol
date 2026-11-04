@@ -10,6 +10,13 @@ Historical wording is retained; duplicate version headings and empty template
 categories are omitted. See [Development resources](dev/README.md) for the
 publication workflow and GitHub/npm version inventory.
 
+## Unreleased
+
+### Changed
+
+- Studio: the country flag sits where the Unit Generator puts it, beside the frame, and the two text rows next to it move right. Field positions shows it there too.
+- Studio: the PNG size moved from the button to its tooltip.
+
 ## 3.0.5-v3 - 2026-11-04
 
 ### Fixed

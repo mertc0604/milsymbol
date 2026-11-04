@@ -232,11 +232,18 @@ export function fieldValueChars(state) {
 export function fitRowWidths(rows, widths, { room, between, plain = widths, gap = 8, min = 48 }) {
   const fitted = { ...widths };
   const spaces = (row) => gap * (row.keys.length - 1);
-  const span = (row) => row.keys.reduce((sum, key) => sum + fitted[key], 0) + spaces(row);
   const side = (anchor) => rows.filter((row) => row.anchor === anchor);
+  // How far a row starts outside the side's first column: the two rows beside a
+  // country flag start further right, and that distance uses room too.
+  const offset = (row) => {
+    if (!Number.isFinite(row.x)) return 0;
+    const starts = side(row.anchor).map((item) => item.x).filter(Number.isFinite);
+    return Math.abs(row.x - (row.anchor === "start" ? Math.min(...starts) : Math.max(...starts)));
+  };
+  const span = (row) => offset(row) + row.keys.reduce((sum, key) => sum + fitted[key], 0) + spaces(row);
   const widest = (anchor) => side(anchor).reduce((best, row) => (best && span(best) >= span(row) ? best : row), null);
   const need = (anchor) => (widest(anchor) ? span(widest(anchor)) : 0);
-  const floor = (anchor) => Math.max(0, ...side(anchor).map((row) => row.keys.length * min + spaces(row)));
+  const floor = (anchor) => Math.max(0, ...side(anchor).map((row) => offset(row) + row.keys.length * min + spaces(row)));
   const free = room - between;
   const named = (row) => row.keys.filter((key) => fitted[key] > plain[key]).sort((a, b) => fitted[b] - plain[b] - (fitted[a] - plain[a]));
   while (need("end") + need("start") > free) {
@@ -318,23 +325,6 @@ export function layoutFieldBoxes(rows, widths, { height = 30, gap = 8, center = 
     boxes.push(...own);
   }
   return boxes;
-}
-
-// The country flag in Field positions. In the symbol it sits right of the text;
-// here the boxes are wider than the text, so it goes under the right-hand boxes,
-// where it adds height and never covers a box. With no box on the right it keeps
-// its place beside the bottom of the symbol.
-export function layoutFlagBox(boxes, symbol, { width, height, gap = 8 }) {
-  const edge = symbol.left + symbol.width;
-  const right = boxes.filter((box) => box.left >= edge);
-  if (!right.length)
-    return { left: edge + gap, top: symbol.top + symbol.height - height, width, height };
-  return {
-    left: Math.min(...right.map((box) => box.left)),
-    top: Math.max(...right.map((box) => box.top + box.height)) + gap,
-    width,
-    height
-  };
 }
 
 // Catalogue hierarchy. Every entry's path ends with its own name, so a branch

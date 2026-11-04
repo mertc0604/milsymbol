@@ -11,7 +11,10 @@ const flags = ["tr", "eu", "np"].map((code) => ({
   code,
   svg: fs.readFileSync(`node_modules/flag-icons/flags/4x3/${code}.svg`, "utf8")
 }));
-flags.push({code: "nato", svg: fs.readFileSync("studio/flags/nato.svg", "utf8")});
+flags.push({
+  code: "nato",
+  svg: fs.readFileSync("studio/flags/nato.svg", "utf8")
+});
 const sidc = "SFGPUCI--------";
 const plain = new ms.Symbol(sidc, {
   standard: "APP6A",
@@ -40,6 +43,24 @@ const part = flagged.drawInstructions
       item && item.type === "svg" && item.svg.includes('data-country-flag="tr"')
   );
 
+const flagX = (code, options) =>
+  new ms.Symbol(code, options)
+    .asSVG()
+    .match(/data-country-flag="[^"]+" x="([^"]+)"/)[1];
+// x of the right-hand rows G, H, M and J, top to bottom.
+const textX = (options) => {
+  const svg = new ms.Symbol(sidc, {
+    staffComments: "GGG",
+    additionalInformation: "HHH",
+    higherFormation: "MMM",
+    evaluationRating: "A1",
+    ...options
+  }).asSVG();
+  return ["GGG", "HHH", "MMM", "A1"].map((text) =>
+    Number(svg.match(new RegExp(`<text[^>]*?x="([^"]+)"[^>]*>${text}<`))[1])
+  );
+};
+
 export default {
   "Studio SVG country flags": {
     "flag dimensions match the reference generator at base scale": [
@@ -50,10 +71,14 @@ export default {
       [57.6, 43.2]
     ],
     "NATO artwork is embedded as self-contained vectors": [
-      new ms.Symbol(sidc, {countryFlag: "nato"}).asSVG().includes('data-country-flag="nato"'), true
+      new ms.Symbol(sidc, { countryFlag: "nato" })
+        .asSVG()
+        .includes('data-country-flag="nato"'),
+      true
     ],
     "flag is aligned to the lower right of the frame": [
-      Number(part.svg.match(/\by="([^"]+)"/)[1]), flagged.metadata.baseGeometry.bbox.y2 - 10
+      Number(part.svg.match(/\by="([^"]+)"/)[1]),
+      flagged.metadata.baseGeometry.bbox.y2 - 10
     ],
     "flag artwork is embedded as vectors in exported SVG": [
       svg.includes('data-country-flag="tr"') &&
@@ -69,13 +94,35 @@ export default {
       }).asSVG(),
       plain.asSVG()
     ],
-    "flag never overlaps labels or the direction arrow": [
-      Boolean(part) &&
-        Number(part.svg.match(/\bx="([^"]+)"/)[1]) > plain.bbox.x2,
+    "flag stays by the frame whatever the text says, as in the Unit Generator":
+      [
+        [
+          Number(part.svg.match(/\bx="([^"]+)"/)[1]),
+          Number(flagX("SFGPUCI--------", { countryFlag: "tr" }))
+        ],
+        [
+          flagged.metadata.baseGeometry.bbox.x2 + 20,
+          flagged.metadata.baseGeometry.bbox.x2 + 20
+        ]
+      ],
+    "a stack moves the flag with the text": [
+      Number(flagX(sidc, { countryFlag: "tr", stack: 2 })),
+      flagged.metadata.baseGeometry.bbox.x2 + 20 + 30
+    ],
+    "the two rows beside the flag move 70 units right, the others stay": [
+      textX({ countryFlag: "tr", country_flag: true }).map(
+        (x, index) => x - textX({})[index]
+      ),
+      [0, 0, 70, 70]
+    ],
+    "those rows clear the flag": [
+      textX({ countryFlag: "tr", country_flag: true })[2] >
+        flagged.metadata.baseGeometry.bbox.x2 + 20 + 57.6,
       true
     ],
     "export bounds include flag artwork": [
-      flagged.getSize().width > plain.getSize().width,
+      new ms.Symbol(sidc, { countryFlag: "tr" }).getSize().width >
+        new ms.Symbol(sidc).getSize().width,
       true
     ],
     "flag scales with the symbol": [
