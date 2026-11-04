@@ -16,7 +16,7 @@ The build creates `dist/studio/`, including a normalized searchable catalog gene
 
 ## Layout
 
-- **Top bar:** standard selector, Help and the search launcher. Click it or press `/` to open the symbol search panel. The panel holds the symbol set list with counts, Recently used (the last 8 symbols per standard, stored in `localStorage`), and result tiles with mini previews. Browsing a set, the tiles sit under a closable heading for each group of the set and a subheading for each group inside it (APP-6A Ground units: COMBAT, then AIR DEFENSE, ARMOR, ...), taken from the catalogue hierarchy; All symbol sets has a heading per set. A search lists its matches as one grid. The preview heading names the symbol's set and groups in full; each opens the palette at that group. In the panel, `↑`/`↓` move between results, `Enter` selects, and `Esc` clears the search and then closes the panel. A full SIDC typed into the search finds its symbol.
+- **Top bar:** standard selector, Help and the search launcher. Click it or press `/` to open the symbol search panel. The panel holds the symbol set list with counts, Recently used (the last 8 symbols per standard, stored in `localStorage`), and result tiles with mini previews. Browsing a set, the tiles sit under a closable heading for each group of the set and a subheading for each group inside it (APP-6A Ground units: COMBAT, then AIR DEFENSE, ARMOR, ...), taken from the catalogue hierarchy; All symbol sets has a heading per set. A search lists its matches as one grid. The preview heading names the symbol's set and groups in full; each opens the palette at that group. In the panel, `↑`/`↓` move between results, `Enter` selects, and `Esc` clears the search and then closes the panel. A full SIDC typed into the search finds its symbol, also in the form the publications print (`S*G*UCI---*****`); a long word such as reconnaissance stays a word search.
 - **Left column (sticky):**
   - Preview card: name, path, class badge (Unit, Equipment, Installation, Tactical point on APP-6A), the render state (Rendered, or a red "Check code / modifiers" when the symbol does not render cleanly), and the preview stage. Under it, Edit text (opens Amplifiers in Field positions) and two small download links, PNG and SVG. Exports always use the normal render.
   - The preview grid and the outline are switches in the Display tab; the grid is an editor aid only, exports have a transparent background.
@@ -77,6 +77,14 @@ control edits replace only their own SIDC fields, preserving country, order of
 battle and national extensions. Unknown catalog entries retain their entered
 function code. Recognized numeric D/E versions select the corresponding edition
 within the current NATO or MIL family before decoding extension fields.
+
+APP-6B and 2525C print some codes on several rows (APP-6B `UCEC--` for Engineer
+Combat and its bridging, mine and diving rows; 2525C Hospital under two branches).
+Each row keeps its own card, name and place in the palette, writes the same code
+and so draws the same symbol; a note under the preview says so. A SIDC cannot tell
+these rows apart: the search lists all of them and Apply opens the first. Two
+APP-6B codes are corrected when the catalog is built, see
+[Amplifier profiles](docs/edition-modifiers.md).
 
 APP-6A (1998) displays 713 publication-derived S-scheme tactical symbols.
 Seven of those entries are taxonomy headings without separate Annex D artwork.

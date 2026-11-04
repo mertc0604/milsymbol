@@ -168,6 +168,75 @@ export function legacyDefaultModifier(item, { installationModifier = false } = {
   return installationModifier && item.codingscheme === "S" && item.battledimension === "G" && String(item.functionid || "").startsWith("I") ? "H-" : undefined;
 }
 
+export const normalize = (value) =>
+  String(value || "")
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase();
+
+// The code of a catalogue row. Rows that share a code carry a "#2" mark on their
+// id (distinctEntries); the mark is not part of the code.
+const entryCode = (icon) => icon.id.split("#")[0];
+
+// A search shaped like a letter SIDC finds that symbol. Words of the same
+// length have that shape too ("reconnaissance", "air defense" without its
+// space), so a code that matches nothing falls through to the text search.
+export function matchesSearch(icon, search, family) {
+  const term = normalize(search).trim();
+  if (!term) return true;
+  const code = search.toUpperCase().replace(/\s/g, "");
+  if (family === "legacy" && /^[A-Z][A-Z*-][A-Z][A-Z*-][A-Z0-9-]{6}[A-Z0-9*-]{0,5}$/.test(code) && entryCode(icon) === `${code[0]}-${code[2]}-${code.slice(4, 10)}`)
+    return true;
+  if (family === "modern" && /^\d{20,30}$/.test(code))
+    return icon.symbolSet === code.slice(4, 6) && icon.code === code.slice(10, 16);
+  return normalize(
+    [icon.name, icon.category, icon.code, entryCode(icon), ...(icon.path || [])].join(" ")
+  ).includes(term);
+}
+
+// A publication can print one code on several rows: APP-6(B) gives UCEC-- to
+// Engineer Combat and its bridging, mine and diving rows, 2525C lists Hospital
+// under two branches. The palette selects by id, so each row needs its own:
+// later rows take a "#2" mark. The code they write into the SIDC stays, so they
+// draw alike, and the note says so.
+export function distinctEntries(icons, edition) {
+  const rows = new Map();
+  for (const icon of icons) rows.set(icon.id, [...(rows.get(icon.id) || []), icon]);
+  const seen = new Map();
+  return icons.map((icon) => {
+    const same = rows.get(icon.id);
+    if (same.length === 1) return icon;
+    const position = (seen.get(icon.id) || 0) + 1;
+    seen.set(icon.id, position);
+    const others = [...new Set(same.map((row) => row.name))].filter((name) => name !== icon.name);
+    return {
+      ...icon,
+      id: position > 1 ? `${icon.id}#${position}` : icon.id,
+      note: `${edition} gives ${same.length} rows this code${others.length ? ` (also ${others.join(", ")})` : ""}, so they draw the same symbol.`
+    };
+  });
+}
+
+// APP-6(B) rows whose printed code cannot be used as it stands (keyed by the
+// data package's id and name). See docs/edition-modifiers.md.
+const app6bCorrections = {
+  "S-G-UCRLL--|RECONNAISSANCE LIGHT": {
+    code: "UCRL--",
+    note: "APP-6(B) prints seven function characters (UCRLL--); the code is read as UCRL--, as in APP-6A."
+  },
+  "S-G-UCAWA-|ARMOUR, WHEELED AMPHIBIOUS": {
+    code: "UCAWW-",
+    note: "The APP-6(B) code table prints UCAWA-, the code of wheeled airborne armour. Its symbol page prints UCAWW-, used here."
+  }
+};
+
+export function correctApp6bEntries(icons) {
+  return icons.map((icon) => {
+    const correction = app6bCorrections[`${icon.id}|${icon.name}`];
+    return correction ? { ...icon, ...correction, id: `${icon.id.slice(0, 4)}${correction.code}` } : icon;
+  });
+}
+
 export function pushRecent(list, id, max = 8) {
   return [id, ...list.filter((item) => item !== id)].slice(0, max);
 }

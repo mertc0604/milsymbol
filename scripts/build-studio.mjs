@@ -6,7 +6,7 @@ import legacyStandards from "mil-std-2525";
 import modernStandards from "milstandard-e";
 import natoStandards from "stanag-app6";
 import { app6aCatalog } from "../studio/app6a-catalog.js";
-import { legacyDefaultModifier } from "../studio/editor-helpers.js";
+import { correctApp6bEntries, distinctEntries, legacyDefaultModifier } from "../studio/editor-helpers.js";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = path.join(root, "studio");
@@ -129,6 +129,11 @@ function normalizeLegacy(dataset, options = {}) {
   return { icons, modifiers: {}, common: { modifier1: [], modifier2: [] } };
 }
 
+const withDistinctEntries = (catalog, edition, correct = (icons) => icons) => ({
+  ...catalog,
+  icons: distinctEntries(correct(catalog.icons), edition)
+});
+
 const data = {
   generatedAt: new Date().toISOString(),
   aliases: { app6e: "2525e" },
@@ -173,10 +178,10 @@ const data = {
       modifiers: {},
       common: { modifier1: [], modifier2: [] }
     },
-    "2525c": normalizeLegacy(legacyStandards.ms2525c, { installationModifier: true }),
+    "2525c": withDistinctEntries(normalizeLegacy(legacyStandards.ms2525c, { installationModifier: true }), "MIL-STD-2525C"),
     "2525d": normalizeModern(legacyStandards.ms2525d),
     "2525e": normalizeModern(modernStandards.ms2525e),
-    app6b: normalizeLegacy(natoStandards.app6b),
+    app6b: withDistinctEntries(normalizeLegacy(natoStandards.app6b), "APP-6(B)", correctApp6bEntries),
     app6d: normalizeModern(natoStandards.app6d)
   }
 };

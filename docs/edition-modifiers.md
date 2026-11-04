@@ -140,6 +140,9 @@ country rule used by the MIL profiles.
 | Mobility | 2525E Table VI lists set 10, APP-6(E) sets 10, 15, 20, 27, 64 | The class figures decide. Sets with no R cell are accepted with a note |
 | Exercise letters | APP-6(B) Table B-I against the Studio | G, W, D, L and M are not in Table B-I. The Studio has offered them since the identity work, so they stay as a note, not an error |
 | B on equipment | APP-6(B) Table I PDF 30/2-8 | The row prints 10, 2 and G for units, equipment and installations. An echelon is not rejected on any of them |
+| UCAWA- on two rows | APP-6(B) code table PDF 113/B-11, symbol page PDF 178 | The table prints UCAWA- for wheeled airborne and wheeled amphibious armour. The symbol page gives amphibious UCAWW-, as 2525C does, and the Studio catalog uses it |
+| UCRLL-- | APP-6(B) code table PDF 117, symbol page PDF 192 | Seven function characters in a six-character field. The Studio catalog reads UCRL--, as APP-6A does |
+| One code on several rows | APP-6(B) code table, 2525C | Both pages of APP-6(B) print the same code for rows such as UCEC-- and UCDS--, and 2525C repeats codes between warfighting and emergency management. Each row keeps its own Studio card and they draw alike |
 | Version digit | 2525D A.5.4.1 PDF 67/51 | "shall be populated with code 10": the Studio keeps 10 for 2525D and 13 for 2525E. Their Change 1 codes are read as well |
 
 ## Limits

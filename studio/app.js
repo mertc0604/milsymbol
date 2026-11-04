@@ -37,7 +37,7 @@ import {
   editorGaps
 } from "./profile-controls.js";
 
-import { exportFilename, pngOutputSize, pngScale, fieldStates, profileFieldStates, dtgForField, evaluationRating, sidcParts, pushRecent, placeholderOptions, readTextRows, fieldValueChars, fitRowWidths, layoutFieldBoxes, paletteProgress, baseBranch, entryCrumbs, groupEntries, paletteSections } from "./editor-helpers.js";
+import { exportFilename, pngOutputSize, pngScale, fieldStates, profileFieldStates, dtgForField, evaluationRating, sidcParts, pushRecent, placeholderOptions, readTextRows, fieldValueChars, fitRowWidths, layoutFieldBoxes, paletteProgress, baseBranch, entryCrumbs, groupEntries, paletteSections, matchesSearch, normalize } from "./editor-helpers.js";
 import { fieldReference } from "./field-reference.js";
 import { fieldGuide } from "./field-guide.js";
 import { app6aIdentities, contextOptions, convertIdentity, decodeIdentity, identityCode, identityLabel, identityList } from "./identities.js";
@@ -394,11 +394,6 @@ const selectedIcon = () =>
   (state.customSidc && state.importedIcon) ||
   dataset().icons.find((icon) => icon.id === state.selectedId) ||
   dataset().icons[0];
-const normalize = (value) =>
-  String(value || "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
 const escapeHtml = (value) =>
   String(value).replace(
     /[&<>"']/g,
@@ -766,20 +761,9 @@ function closeSearch() {
 }
 
 function filteredIcons() {
-  const term = normalize(state.search).trim();
-  const code = state.search.toUpperCase().replace(/\s/g, "");
-  return dataset().icons.filter((icon) => {
-    if (state.category !== "all" && icon.category !== state.category)
-      return false;
-    if (!term) return true;
-    if (/^[A-Z][A-Z-][A-Z][A-Z*-][A-Z0-9-]{6}[A-Z0-9*-]{0,5}$/.test(code) && config().family === "legacy")
-      return icon.id === `${code[0]}-${code[2]}-${code.slice(4,10)}`;
-    if (/^\d{20,30}$/.test(code) && config().family === "modern")
-      return icon.symbolSet === code.slice(4,6) && icon.code === code.slice(10,16);
-    return normalize(
-      [icon.name, icon.category, icon.code, icon.id, ...(icon.path || [])].join(" ")
-    ).includes(term);
-  });
+  return dataset().icons.filter((icon) =>
+    (state.category === "all" || icon.category === state.category) && matchesSearch(icon, state.search, config().family)
+  );
 }
 
 function safeMiniSvg(icon) {
@@ -2456,7 +2440,7 @@ function renderAll() {
     ? "Compatibility view using the shared 2525E catalog. This is not a separate edition-specific catalog."
     : state.standardId === "app6a"
       ? `${icon.source || "APP-6A (1998)"}. ${dataset().icons.length} S-scheme catalog entries.${icon.categoryOnly ? " Category — no separate illustration in APP-6A Annex D; preview is the renderer’s representation." : ""}${icon.remarks ? " " + icon.remarks : ""}`
-      : "Rendered with milsymbol. Symbol appearance may differ from older standard publications.";
+      : `Rendered with milsymbol. Symbol appearance may differ from older standard publications.${icon.note ? ` ${icon.note}` : ""}`;
   if (!state.sidcDirty) dom.sidcInput.value = displayEditorSidc(sidc);
   for (const button of [dom.downloadSvg, dom.downloadPng, dom.copySidc]) button.disabled = !currentSvg;
   const auditLink = document.getElementById("publicationAudit");
