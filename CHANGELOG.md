@@ -10,7 +10,9 @@ Historical wording is retained; duplicate version headings and empty template
 categories are omitted. See [Development resources](dev/README.md) for the
 publication workflow and GitHub/npm version inventory.
 
-## Unreleased
+## 3.0.5-v1 - 2026-11-04
+
+Based on milsymbol 3.0.5. Fork versions are the upstream version plus `-vN`: `-v2`, `-v3` and so on, back to `-v1` on the next upstream release. This replaces the fork's earlier number, 3.1.0.
 
 ### Added
 
@@ -31,7 +33,7 @@ publication workflow and GitHub/npm version inventory.
 - 2525D land units no longer draw an operational condition bar; APP-6(B) symbols no longer draw one.
 - The 2525C and APP-6(B) E descriptor no longer draws twice when other text is set.
 
-## 3.1.0
+## 3.1.0 (fork number before 3.0.5-v1)
 
 ### Added
 

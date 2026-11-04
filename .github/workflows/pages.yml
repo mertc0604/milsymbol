@@ -31,8 +31,6 @@ jobs:
 
       - name: Test symbol rendering
         run: npx --no-install tead
-        env:
-          NODE_OPTIONS: '--import=data:text/javascript,globalThis.__version__=%22dev%22'
 
       - name: Build public site with license notices
         run: npm run studio:build:public

@@ -71,4 +71,4 @@ Because the studio loads the bundled library, library changes are invisible in t
 
 ## Releasing (from dev/README.md)
 
-Bump `version` in `package.json` and the fallback in `src/ms.js`. The version string reaches the bundle via rollup replace. Then run `npm publish` and create a GitHub release tagged `vX.Y.Z`. For prereleases, use `npm pack` + `npm publish <tgz> --tag next`.
+Fork versions are the upstream version plus `-vN`, such as `3.0.5-v1`: raise N for each fork release, and go back to `-v1` after merging a new upstream release. Set `version` in `package.json` and `package-lock.json` and the fallback in `src/ms.js`. The version string reaches the bundle via rollup replace. npm reads `-vN` as a prerelease, so an npm publish needs `--tag`. Then run `npm publish` and create a GitHub release tagged `vX.Y.Z`. For prereleases, use `npm pack` + `npm publish <tgz> --tag next`.
