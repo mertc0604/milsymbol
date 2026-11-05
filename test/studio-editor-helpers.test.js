@@ -13,7 +13,11 @@ import {
   mobilities,
   mobilityModeName,
   amplifierPlacementNote,
-  amplifierChoice
+  amplifierChoice,
+  sharedViewBox,
+  withViewBox,
+  typeaheadIndex,
+  modifierColorUnused
 } from "../studio/editor-helpers.js";
 import { patchSidc, probeOffers } from "../studio/profile-controls.js";
 import { std2525eProfile } from "../src/modifierprofiles/std2525e.js";
@@ -25,6 +29,11 @@ import {
   app6aSymbolClass,
   getApp6aFields
 } from "../src/lettersidc/metadata.js";
+
+const glyph = (viewBox, size = 'width="40" height="30"') =>
+  `<svg xmlns="http://www.w3.org/2000/svg" version="1.2" baseProfile="tiny" ${size} viewBox="${viewBox}"><path d="M0,0" stroke-width="4"></path></svg>`;
+const glyphs = [glyph("21 46 158 108"), glyph("21 6 158 148"), glyph("1 6 198 148"), ""];
+const countries = ["Tunisia", "Turkmenistan", "Türkiye", "Tuvalu"];
 
 const app6aContext = (sidc) => ({
   available: getApp6aFields(sidc),
@@ -398,6 +407,65 @@ export default {
     "a rejected value keeps its reason": [
       amplifierChoice({ value: "tracked", textContent: "Tracked (not valid here)", title: "No mobility here" }, mobilities, true).reason,
       "No mobility here"
+    ]
+  },
+  "list glyphs": {
+    "one box takes in every glyph of the list": [
+      sharedViewBox(glyphs),
+      { x: 1, y: 6, width: 198, height: 148 }
+    ],
+    "a list with nothing drawn has no box": [sharedViewBox(["", ""]), null],
+    "a glyph takes the box of the list": [
+      /viewBox="1 6 198 148"/.test(withViewBox(glyphs[0], sharedViewBox(glyphs))),
+      true
+    ],
+    "every glyph of the list ends up the same": [
+      new Set(glyphs.slice(0, 3).map((svg) => withViewBox(svg, sharedViewBox(glyphs)))).size,
+      1
+    ],
+    "the size attributes go, so the page sets one size": [
+      /\s(?:width|height)=/.test(withViewBox(glyphs[0], sharedViewBox(glyphs)).split(">")[0]),
+      false
+    ],
+    "the drawing keeps its stroke width": [
+      withViewBox(glyphs[0], sharedViewBox(glyphs)).includes('stroke-width="4"'),
+      true
+    ],
+    "a glyph that failed to draw stays empty": [withViewBox("", sharedViewBox(glyphs)), ""],
+    "no box leaves the glyph alone": [withViewBox(glyphs[0], null), glyphs[0]]
+  },
+  "typing in a list": {
+    "a letter goes to the next name that starts with it": [
+      typeaheadIndex(countries, "t", 0),
+      1
+    ],
+    "the same letter again moves on": [typeaheadIndex(countries, "t", 1), 2],
+    "the search wraps round": [typeaheadIndex(countries, "t", 3), 0],
+    "more letters keep the row while it still fits": [
+      typeaheadIndex(countries, "turk", 1),
+      1
+    ],
+    "an accent is not needed": [typeaheadIndex(countries, "turki", 0), 2],
+    "an accent may be typed": [typeaheadIndex(countries, "türki", 0), 2],
+    "upper case is the same": [typeaheadIndex(countries, "TUV", 0), 3],
+    "nothing that fits stays put": [typeaheadIndex(countries, "x", 2), -1]
+  },
+  "modifier color": {
+    "the color is on and nothing draws it": [
+      modifierColorUnused({ on: true, color: "#d32f2f", svg: "<svg></svg>" }),
+      true
+    ],
+    "a modifier draws it": [
+      modifierColorUnused({ on: true, color: "#d32f2f", svg: '<svg><path stroke="#d32f2f"/></svg>' }),
+      false
+    ],
+    "the color is off": [
+      modifierColorUnused({ on: false, color: "#d32f2f", svg: "<svg></svg>" }),
+      false
+    ],
+    "nothing is drawn at all": [
+      modifierColorUnused({ on: true, color: "#d32f2f", svg: "" }),
+      false
     ]
   }
 };

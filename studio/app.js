@@ -36,7 +36,8 @@ import {
   editorGaps
 } from "./profile-controls.js";
 
-import { exportFilename, pngOutputSize, pngScale, fieldStates, profileFieldStates, dtgForField, evaluationRating, sidcParts, pushRecent, placeholderOptions, readTextRows, fieldValueChars, fitRowWidths, layoutFieldBoxes, paletteProgress, baseBranch, entryCrumbs, groupEntries, paletteSections, matchesSearch, normalize, mobilities, mobilityModeName, amplifierChoice, amplifierPlacementNote } from "./editor-helpers.js";
+import { exportFilename, pngOutputSize, pngScale, fieldStates, profileFieldStates, dtgForField, evaluationRating, sidcParts, pushRecent, placeholderOptions, readTextRows, fieldValueChars, fitRowWidths, layoutFieldBoxes, paletteProgress, baseBranch, entryCrumbs, groupEntries, paletteSections, matchesSearch, normalize, mobilities, mobilityModeName, amplifierChoice, amplifierPlacementNote, sharedViewBox, withViewBox, modifierColorUnused } from "./editor-helpers.js";
+import { createGlyphPicker } from "./glyph-picker.js";
 import { fieldReference } from "./field-reference.js";
 import { fieldGuide } from "./field-guide.js";
 import { app6aIdentities, contextLabel, contextOptions, convertIdentity, decodeIdentity, identityCode, identityLabel, identityList, isUsOnlyContext, usOnlyIdentityLabel } from "./identities.js";
@@ -222,7 +223,9 @@ const dom = Object.fromEntries(
     "amplifierNote",
     "amplifierAdjust",
     "countryMeta",
-    "flagSwatch",
+    "countryButton",
+    "countryList",
+    "modifierColorNote",
     "editionMeta",
     "textSummary",
     "carryNotes",
@@ -959,9 +962,8 @@ function populateAmplifier() {
   });
 }
 
-// The echelon / mobility select stays the source of truth (imports, profile
-// checks and problem lines read it). The picker in front of it draws each
-// choice on the current frame, so the user sees what the amplifier looks like.
+// The picker draws each choice on the current frame, so the user sees what the
+// amplifier looks like.
 function amplifierPreviewSidc(sidc, value) {
   const modern = config().family === "modern";
   const item = (state.amplifierMode === "mobility" ? mobilities : echelons).find((entry) => entry[0] === value);
@@ -982,68 +984,61 @@ function amplifierChoices() {
   return [...dom.amplifierValue.options].map((item) => amplifierChoice(item, source, modern));
 }
 
-const amplifierPicker = { sidc: "", active: 0 };
+let amplifierSidc = "";
 
-function amplifierGlyph(value) {
-  return chipSvg(amplifierPreviewSidc(amplifierPicker.sidc, value), { size: 24, icon: false });
+function amplifierSvg(value) {
+  return chipSvg(amplifierPreviewSidc(amplifierSidc, value), {
+    size: 24,
+    icon: false,
+    modifierColor: dom.modifierColorOn.checked ? dom.modifierColor.value : ""
+  });
 }
 
-function renderAmplifierPicker(sidc) {
-  amplifierPicker.sidc = sidc;
-  const choice = amplifierChoices().find((item) => item.value === dom.amplifierValue.value) || { value: "", name: "Unspecified" };
-  dom.amplifierButton.disabled = dom.amplifierValue.disabled;
-  dom.amplifierButton.classList.toggle("invalid", Boolean(choice.reason));
-  dom.amplifierButton.title = choice.reason || "";
-  dom.amplifierButton.innerHTML = `<span class="glyph" data-mode="${state.amplifierMode}" aria-hidden="true">${amplifierGlyph(choice.value)}</span><span class="glyph-name">${escapeHtml(choice.name)}</span>${choice.code ? `<code>${escapeHtml(choice.code)}</code>` : ""}<svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5" /></svg>`;
-  if (dom.amplifierButton.disabled) closeAmplifierList();
-  else if (!dom.amplifierList.hidden) renderAmplifierList();
+function amplifierGlyphs(choices) {
+  const drawn = new Map(["", ...choices.map((item) => item.value)].map((value) => [value, amplifierSvg(value)]));
+  const box = sharedViewBox([...drawn.values()]);
+  return (value) => withViewBox(drawn.get(value) || "", box);
 }
 
-function renderAmplifierList() {
-  const choices = amplifierChoices();
-  amplifierPicker.active = Math.min(Math.max(amplifierPicker.active, 0), choices.length - 1);
-  dom.amplifierList.innerHTML = choices
-    .map((item, index) => `<div role="option" id="amplifierOption${index}" class="glyph-option${item.reason ? " invalid" : ""}${index === amplifierPicker.active ? " active" : ""}" data-index="${index}" data-value="${escapeHtml(item.value)}" aria-selected="${item.value === dom.amplifierValue.value}"${item.reason ? ` title="${escapeHtml(item.reason)}"` : ""}><span class="glyph" data-mode="${state.amplifierMode}" aria-hidden="true">${amplifierGlyph(item.value)}</span><span class="glyph-name">${escapeHtml(item.name)}${item.reason ? "<small>not valid here</small>" : ""}</span>${item.code ? `<code>${escapeHtml(item.code)}</code>` : ""}</div>`)
-    .join("");
-  dom.amplifierList.setAttribute("aria-activedescendant", `amplifierOption${amplifierPicker.active}`);
+const amplifierPicker = createGlyphPicker({
+  button: dom.amplifierButton,
+  list: dom.amplifierList,
+  select: dom.amplifierValue,
+  idPrefix: "amplifierOption",
+  fallback: { value: "", name: "Unspecified" },
+  choices: amplifierChoices,
+  glyphs: amplifierGlyphs,
+  escapeHtml
+});
+
+function countryChoices() {
+  return [...dom.countryFlag.options].map((item) => ({
+    value: item.value,
+    name: item.textContent,
+    code: countryCodeForFlag(item.value, state.standardId),
+    reason: ""
+  }));
 }
 
-function moveAmplifierActive(index) {
-  const options = dom.amplifierList.querySelectorAll("[role=option]");
-  if (!options.length) return;
-  amplifierPicker.active = (index + options.length) % options.length;
-  options.forEach((item, position) => item.classList.toggle("active", position === amplifierPicker.active));
-  dom.amplifierList.setAttribute("aria-activedescendant", `amplifierOption${amplifierPicker.active}`);
-  options[amplifierPicker.active].scrollIntoView({ block: "nearest" });
+// Each flag is its own image: flag drawings reuse ids, which would clash inline.
+const flagUrls = new Map();
+
+function flagGlyph(value) {
+  const artwork = flagArtwork.get(value);
+  if (!artwork) return '<span class="flag-empty"></span>';
+  if (!flagUrls.has(value)) flagUrls.set(value, URL.createObjectURL(new Blob([artwork], { type: "image/svg+xml" })));
+  return `<img class="flag-image" src="${flagUrls.get(value)}" alt="" loading="lazy" />`;
 }
 
-function openAmplifierList() {
-  if (dom.amplifierButton.disabled) return;
-  amplifierPicker.active = Math.max(0, [...dom.amplifierValue.options].findIndex((item) => item.value === dom.amplifierValue.value));
-  renderAmplifierList();
-  dom.amplifierList.hidden = false;
-  dom.amplifierButton.setAttribute("aria-expanded", "true");
-  // Open upwards when the list would run past the bottom of the window.
-  const box = dom.amplifierButton.getBoundingClientRect();
-  const below = window.innerHeight - box.bottom;
-  dom.amplifierList.classList.toggle("up", below < Math.min(dom.amplifierList.scrollHeight, 380) + 12 && box.top > below);
-  dom.amplifierList.focus({ preventScroll: true });
-  moveAmplifierActive(amplifierPicker.active);
-}
-
-function closeAmplifierList(refocus = false) {
-  if (dom.amplifierList.hidden) return;
-  dom.amplifierList.hidden = true;
-  dom.amplifierButton.setAttribute("aria-expanded", "false");
-  if (refocus) dom.amplifierButton.focus();
-}
-
-function chooseAmplifier(value) {
-  closeAmplifierList(true);
-  if (value === dom.amplifierValue.value) return;
-  dom.amplifierValue.value = value;
-  dom.amplifierValue.dispatchEvent(new Event("change"));
-}
+const countryPicker = createGlyphPicker({
+  button: dom.countryButton,
+  list: dom.countryList,
+  select: dom.countryFlag,
+  idPrefix: "countryOption",
+  choices: countryChoices,
+  glyphs: () => flagGlyph,
+  escapeHtml
+});
 
 function populateModifierSelect(select, field, selected) {
   const icon = selectedIcon();
@@ -1875,12 +1870,12 @@ function updateSegments(sidc) {
 
 const chipCache = new Map();
 
-function chipSvg(sidc, { size = 18, icon = true } = {}) {
-  const key = `${state.standardId}|${sidc}|${dom.colorMode.value}|${dom.strokeWidth.value}|${size}|${icon}`;
+function chipSvg(sidc, { size = 18, icon = true, modifierColor = "" } = {}) {
+  const key = `${state.standardId}|${sidc}|${dom.colorMode.value}|${dom.strokeWidth.value}|${size}|${icon}|${modifierColor}`;
   if (!chipCache.has(key)) {
     let svg = "";
     try {
-      svg = new window.ms.Symbol(sidc, { ...currentOptions(true), size, icon, infoFields: false }).asSVG();
+      svg = new window.ms.Symbol(sidc, { ...currentOptions(true), size, icon, infoFields: false, modifierColor }).asSVG();
     } catch {}
     if (chipCache.size > 400) chipCache.clear();
     chipCache.set(key, svg);
@@ -2364,12 +2359,6 @@ function graphicHelp(key) {
     : "With a headquarters, the arrow starts at the end of the HQ staff."}`;
 }
 
-function renderFlagSwatch() {
-  const artwork = flagArtwork.get(dom.countryFlag.value);
-  dom.flagSwatch.innerHTML = artwork || "";
-  dom.flagSwatch.classList.toggle("has-flag", Boolean(artwork));
-}
-
 function renderAll() {
   const icon = selectedIcon();
   if (!icon) return;
@@ -2419,8 +2408,10 @@ function renderAll() {
   renderSidcStatus(sidc);
   renderProfileDetails();
   renderChips(sidc);
-  renderAmplifierPicker(sidc);
-  renderFlagSwatch();
+  amplifierSidc = sidc;
+  amplifierPicker.render();
+  countryPicker.render();
+  dom.modifierColorNote.hidden = !modifierColorUnused({ on: dom.modifierColorOn.checked, color: dom.modifierColor.value, svg: currentSvg });
   syncGraphicsControls();
   renderExportSize();
   dom.coverageBadge.hidden = !config().coverage;
@@ -2559,7 +2550,7 @@ function resetControls() {
   dom.showFlag.checked = true;
   dom.fillColor.value = "#80e0ff";
   dom.monoColor.value = "#000000";
-  dom.modifierColor.value = "#000000";
+  dom.modifierColor.value = "#d32f2f";
   dom.infoColor.value = "#000000";
   dom.infoBackground.value = "#ffffff";
   dom.fillOpacity.value = 100;
@@ -2780,52 +2771,8 @@ function bindEvents() {
     state.amplifierValue = dom.amplifierValue.value;
     updateSidcAndRender("amplifier");
   });
-  dom.amplifierButton.addEventListener("click", () =>
-    dom.amplifierList.hidden ? openAmplifierList() : closeAmplifierList(true)
-  );
-  dom.amplifierButton.addEventListener("keydown", (event) => {
-    if (!["ArrowDown", "ArrowUp"].includes(event.key)) return;
-    event.preventDefault();
-    openAmplifierList();
-  });
-  dom.amplifierList.addEventListener("click", (event) => {
-    const item = event.target.closest("[role=option]");
-    if (item) chooseAmplifier(item.dataset.value);
-  });
-  dom.amplifierList.addEventListener("pointermove", (event) => {
-    const item = event.target.closest("[role=option]");
-    if (item && Number(item.dataset.index) !== amplifierPicker.active) moveAmplifierActive(Number(item.dataset.index));
-  });
-  dom.amplifierList.addEventListener("keydown", (event) => {
-    const options = [...dom.amplifierList.querySelectorAll("[role=option]")];
-    const moves = { ArrowDown: amplifierPicker.active + 1, ArrowUp: amplifierPicker.active - 1, Home: 0, End: options.length - 1, PageDown: amplifierPicker.active + 5, PageUp: amplifierPicker.active - 5 };
-    if (event.key in moves) {
-      event.preventDefault();
-      const target = moves[event.key];
-      moveAmplifierActive(event.key.startsWith("Page") ? Math.min(Math.max(target, 0), options.length - 1) : target);
-    } else if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      if (options[amplifierPicker.active]) chooseAmplifier(options[amplifierPicker.active].dataset.value);
-    } else if (event.key === "Escape") {
-      event.preventDefault();
-      event.stopPropagation();
-      closeAmplifierList(true);
-    } else if (event.key === "Tab") {
-      closeAmplifierList();
-    } else if (event.key.length === 1 && /\S/.test(event.key)) {
-      // Typing a letter jumps to the next choice that starts with it.
-      const letter = event.key.toLowerCase();
-      const next = [...options.slice(amplifierPicker.active + 1), ...options.slice(0, amplifierPicker.active + 1)]
-        .find((item) => item.querySelector(".glyph-name").textContent.toLowerCase().startsWith(letter));
-      if (next) moveAmplifierActive(Number(next.dataset.index));
-    }
-  });
-  dom.amplifierList.addEventListener("focusout", (event) => {
-    if (!event.currentTarget.parentElement.contains(event.relatedTarget)) closeAmplifierList();
-  });
-  document.addEventListener("pointerdown", (event) => {
-    if (!dom.amplifierList.hidden && !dom.amplifierList.parentElement.contains(event.target)) closeAmplifierList();
-  });
+  amplifierPicker.bind();
+  countryPicker.bind();
   dom.modifier1.addEventListener("change", () => {
     state.modifier1 = dom.modifier1.value;
     updateSidcAndRender("modifier1");
@@ -3088,6 +3035,7 @@ async function loadFlags() {
   } catch (error) {
     dom.countryFlag.innerHTML = option("", "Flags unavailable — reload to retry");
     dom.countryFlag.disabled = true;
+    countryPicker.render();
     console.error("Unable to load flag artwork", error);
   }
 }

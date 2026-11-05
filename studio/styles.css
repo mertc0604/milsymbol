@@ -906,7 +906,7 @@ a.support-note {
   font-weight: 400;
   line-height: 1.4;
 }
-/* Echelon / mobility picker: each choice drawn on the current frame. */
+/* Echelon / mobility and country pickers: a picture beside each choice. */
 .glyph-picker {
   position: relative;
 }
@@ -947,19 +947,29 @@ a.support-note {
 .glyph-picker .glyph {
   display: flex;
   justify-content: center;
-  align-items: flex-end;
+  align-items: center;
   flex: none;
   width: 54px;
   height: 38px;
 }
-/* Echelons sit above the frame, mobility below: line the frames up in the list. */
-.glyph-picker .glyph[data-mode="mobility"] {
-  align-items: flex-start;
-}
+/* The glyphs of a list share a viewBox, so one size here is one scale for all. */
 .glyph-picker .glyph svg {
-  max-width: 100%;
-  max-height: 100%;
-  height: auto;
+  width: 100%;
+  height: 100%;
+}
+.flag-image,
+.flag-empty {
+  box-sizing: border-box;
+  width: 44px;
+  height: 33px;
+  border-radius: 3px;
+}
+.flag-image {
+  border: 1px solid #24313d;
+}
+.flag-empty {
+  border: 1px dashed #b9c4cf;
+  background: #f6f8fa;
 }
 .glyph-name {
   flex: 1;
@@ -1026,30 +1036,6 @@ a.support-note {
 }
 .glyph-option.invalid .glyph-name {
   color: var(--danger);
-}
-.country-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.flag-swatch {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex: none;
-  width: 48px;
-  height: 36px;
-  border: 1px dashed #b9c4cf;
-  border-radius: 4px;
-  overflow: hidden;
-  background: #f6f8fa;
-}
-.flag-swatch.has-flag {
-  border: 1px solid #24313d;
-}
-.flag-swatch svg {
-  width: 100%;
-  height: 100%;
 }
 
 /* Text amplifiers */
@@ -1729,6 +1715,10 @@ a.support-note {
   min-width: 0;
   font-size: 12px;
   font-weight: 500;
+}
+.modifier-color-note {
+  grid-column: 1 / -1;
+  margin: 0;
 }
 .more-style summary {
   width: fit-content;

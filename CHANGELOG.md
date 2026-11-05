@@ -12,8 +12,14 @@ publication workflow and GitHub/npm version inventory.
 
 ## Unreleased
 
+### Added
+
+- Studio: the country list shows each flag beside its name, with the code it writes in the current standard. Letters typed in the open list spell a name, with or without accents.
+
 ### Fixed
 
+- Studio: the pictures in an echelon or mobility list draw to one scale. A tall amplifier shrank its own frame, so on a Hostile frame the size changed from row to row.
+- Studio: Modifier color starts on red, not the black the modifiers already have, so ticking it shows a change. The echelon and mobility pictures follow it, and a note says when the symbol has no modifier to color.
 - Studio: the search in APP-6A, APP-6B and 2525C finds words of ten letters or more, such as reconnaissance and air defense, and SIDCs printed with `*`. They were read as a SIDC and found nothing.
 - Studio: rows that share a code open as themselves, with their own name and a note that they draw alike (APP-6B Engineer Combat Bridging, 2525C Hospital). They opened the first row of the code.
 - Studio: APP-6B Reconnaissance Light writes `UCRL--`, not a 16-character SIDC, and Armour, Wheeled Amphibious writes `UCAWW-`, the code of its symbol page.

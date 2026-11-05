@@ -187,7 +187,7 @@ const data = {
 };
 
 fs.mkdirSync(path.join(output, "vendor"), { recursive: true });
-for (const file of ["index.html", "styles.css", "app.js", "modifier-fields.js", "sidc-editor.js", "country-flags.js", "country-codes.js", "country-code-data.js", "editor-helpers.js", "field-reference.js", "field-guide.js", "identities.js", "profile-controls.js", "favicon.svg"]) {
+for (const file of ["index.html", "styles.css", "app.js", "modifier-fields.js", "sidc-editor.js", "country-flags.js", "glyph-picker.js", "country-codes.js", "country-code-data.js", "editor-helpers.js", "field-reference.js", "field-guide.js", "identities.js", "profile-controls.js", "favicon.svg"]) {
   if (file === "index.html") {
     const html = fs.readFileSync(path.join(source, file), "utf8");
     fs.writeFileSync(path.join(output, file), html.replace('<html lang="en">', `<html lang="en" data-local-audit="${!publicBuild}">`));
@@ -231,7 +231,7 @@ const notices = [
 ];
 fs.writeFileSync(path.join(output, "THIRD_PARTY_LICENSES.txt"), notices.join("\n\n----------------------------------------\n\n"));
 if (publicBuild) {
-  const allowed = new Set(["index.html", "styles.css", "app.js", "modifier-fields.js", "sidc-editor.js", "country-flags.js", "country-codes.js", "country-code-data.js", "editor-helpers.js", "field-reference.js", "field-guide.js", "identities.js", "profile-controls.js", "favicon.svg", "catalog.json", "flags.json", "vendor/milsymbol.js", "vendor/letter-metadata.js", "LICENSE.txt", "THIRD_PARTY_LICENSES.txt"]);
+  const allowed = new Set(["index.html", "styles.css", "app.js", "modifier-fields.js", "sidc-editor.js", "country-flags.js", "glyph-picker.js", "country-codes.js", "country-code-data.js", "editor-helpers.js", "field-reference.js", "field-guide.js", "identities.js", "profile-controls.js", "favicon.svg", "catalog.json", "flags.json", "vendor/milsymbol.js", "vendor/letter-metadata.js", "LICENSE.txt", "THIRD_PARTY_LICENSES.txt"]);
   const vendorModule = /^vendor\/(?:lettersidc\/metadata|modifierprofiles\/[a-z0-9-]+)\.js$/;
   const inspect = (directory, prefix = "") => {
     for (const entry of fs.readdirSync(directory, {withFileTypes:true})) {

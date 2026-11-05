@@ -510,3 +510,51 @@ export function amplifierChoice({ value, textContent, title }, source, modern) {
   const code = imported ? value.slice(5) : value && entry ? entry[modern ? 2 : 3] : "";
   return { value, name: entry ? entry[1] : imported ? "From SIDC" : textContent, code, reason: title };
 }
+
+// The glyphs of one list share a box, so a frame has one size and one place in every
+// row. Left to itself each glyph is fitted alone, and a tall amplifier shrinks its frame.
+const viewBoxOf = (svg) => {
+  const match = /viewBox="([^"]+)"/.exec(svg);
+  if (!match) return null;
+  const [x, y, width, height] = match[1].split(/[\s,]+/).map(Number);
+  return { x, y, width, height };
+};
+
+export function sharedViewBox(svgs) {
+  const boxes = svgs.map(viewBoxOf).filter(Boolean);
+  if (!boxes.length) return null;
+  const x = Math.min(...boxes.map((box) => box.x));
+  const y = Math.min(...boxes.map((box) => box.y));
+  return {
+    x,
+    y,
+    width: Math.max(...boxes.map((box) => box.x + box.width)) - x,
+    height: Math.max(...boxes.map((box) => box.y + box.height)) - y
+  };
+}
+
+export function withViewBox(svg, box) {
+  if (!svg || !box) return svg;
+  return svg.replace(/<svg\b[^>]*>/, (tag) =>
+    tag
+      .replace(/\s(?:width|height)="[^"]*"/g, "")
+      .replace(/viewBox="[^"]*"/, `viewBox="${box.x} ${box.y} ${box.width} ${box.height}"`)
+  );
+}
+
+// The row typed letters go to, or -1. One letter moves on from the active row, so
+// pressing it again walks the names; more letters stay on a row while it still fits.
+export function typeaheadIndex(names, query, from) {
+  const wanted = normalize(query);
+  const start = wanted.length > 1 ? from : from + 1;
+  for (let step = 0; step < names.length; step++) {
+    const index = (start + step) % names.length;
+    if (normalize(names[index]).startsWith(wanted)) return index;
+  }
+  return -1;
+}
+
+// Modifier color is on and the drawn symbol has nothing that takes it.
+export function modifierColorUnused({ on, color, svg }) {
+  return Boolean(on && svg && !svg.includes(color));
+}

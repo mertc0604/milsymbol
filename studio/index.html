@@ -166,13 +166,14 @@
                 </section>
 
                 <section class="card-section">
-                  <div class="section-head"><h3>Country / organization</h3><span class="section-meta" id="countryMeta"></span></div>
-                  <div class="country-row">
-                    <span id="flagSwatch" class="flag-swatch" aria-hidden="true"></span>
-                    <select id="countryFlag" aria-label="Country or organization flag" aria-describedby="countryFlagNote" disabled>
-                      <option value="">Loading flags…</option>
-                    </select>
+                  <div class="section-head"><h3 id="countryHeading">Country / organization</h3><span class="section-meta" id="countryMeta"></span></div>
+                  <div class="glyph-picker">
+                    <button id="countryButton" class="glyph-select" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="countryList" aria-labelledby="countryHeading countryButton" aria-describedby="countryFlagNote" disabled></button>
+                    <div id="countryList" class="glyph-list" role="listbox" tabindex="-1" aria-labelledby="countryHeading" hidden></div>
                   </div>
+                  <select id="countryFlag" class="visually-hidden" tabindex="-1" aria-hidden="true" disabled>
+                    <option value="">Loading flags…</option>
+                  </select>
                   <p class="field-note" id="countryFlagNote">Select a country or apply a SIDC to select its flag. Included in SVG and PNG exports.</p>
                 </section>
               </div>
@@ -283,7 +284,8 @@
                 <div class="advanced-grid">
                   <div class="color-field"><label><input id="fillColorOn" type="checkbox" /><span>Custom fill color</span></label><input id="fillColor" type="color" value="#80e0ff" aria-label="Fill color" /></div>
                   <div class="color-field"><label><input id="monoColorOn" type="checkbox" /><span>Monochrome</span></label><input id="monoColor" type="color" value="#000000" aria-label="Monochrome color" /></div>
-                  <div class="color-field" title="HQ staff, task force, feint/dummy, installation and echelon. A display choice: the publications draw these in the frame colour."><label><input id="modifierColorOn" type="checkbox" /><span>Modifier color</span></label><input id="modifierColor" type="color" value="#000000" aria-label="Modifier color" /></div>
+                  <div class="color-field" title="HQ staff, task force, feint/dummy, installation, echelon and mobility. A display choice: the publications draw these in the frame colour."><label><input id="modifierColorOn" type="checkbox" /><span>Modifier color</span></label><input id="modifierColor" type="color" value="#d32f2f" aria-label="Modifier color" /></div>
+                  <p class="field-note warn modifier-color-note" id="modifierColorNote" role="status" hidden>This symbol has no modifier to color. Add an echelon, mobility, headquarters, task force or feint / dummy on the Symbol tab.</p>
                   <div class="color-field"><label><input id="infoColorOn" type="checkbox" /><span>Text color</span></label><input id="infoColor" type="color" value="#000000" aria-label="Text color" /></div>
                   <div class="color-field"><label><input id="infoBackgroundOn" type="checkbox" /><span>Text background</span></label><input id="infoBackground" type="color" value="#ffffff" aria-label="Text background color" /></div>
                   <label class="range-field"><span>Fill opacity <output id="fillOpacityOutput">100%</output></span><input id="fillOpacity" type="range" min="10" max="100" step="5" value="100" /></label>
