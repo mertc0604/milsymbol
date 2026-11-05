@@ -20,7 +20,9 @@ import {
   modifierColorUnused,
   modifierChoice,
   centeredGlyphs,
-  frameShapeChoice
+  frameShapeChoice,
+  problemReasons,
+  themeChoice
 } from "../studio/editor-helpers.js";
 import { patchSidc, probeOffers } from "../studio/profile-controls.js";
 import { std2525eProfile } from "../src/modifierprofiles/std2525e.js";
@@ -495,6 +497,50 @@ export default {
       modifierChoice({ value: "set:99", textContent: "SIDC: 99 — reserved for future use", title: "", disabled: false }).name,
       "SIDC: 99 — reserved for future use"
     ]
+  },
+  "a code the edition does not take": {
+    "a code is named once": [
+      problemReasons({
+        named: [{ text: 'Position 11–12: "XX" is not an echelon or mobility code in this edition.', value: "XX" }],
+        errors: ["B-II: XX is not an APP-6A size/mobility code"],
+        generic: ["Unknown echelon or mobility code."]
+      }),
+      ['Position 11–12: "XX" is not an echelon or mobility code in this edition.']
+    ],
+    "a different error stays": [
+      problemReasons({
+        named: [{ text: "Position 4 is wrong.", value: "Q" }],
+        errors: ["Task force does not apply to this symbol."],
+        generic: []
+      }),
+      ["Position 4 is wrong.", "Task force does not apply to this symbol."]
+    ],
+    "a code inside a longer word is another code": [
+      problemReasons({
+        named: [{ text: "Position 11 is wrong.", value: "X" }],
+        errors: ["B-II: XX is not a code"],
+        generic: []
+      }),
+      ["Position 11 is wrong.", "B-II: XX is not a code"]
+    ],
+    "the same error from two places shows once": [
+      problemReasons({ named: [], errors: ["Bad code.", "Bad code."], generic: [] }),
+      ["Bad code."]
+    ],
+    "a general reason speaks only when nothing else does": [
+      problemReasons({ named: [], errors: [], generic: ["Unknown identity."] }),
+      ["Unknown identity."]
+    ],
+    "a general reason stays out when an error says more": [
+      problemReasons({ named: [], errors: ["Bad code."], generic: ["Unknown identity."] }),
+      ["Bad code."]
+    ]
+  },
+  "interface theme": {
+    "a saved choice is used": [themeChoice("dark"), "dark"],
+    "light can be saved too": [themeChoice("light"), "light"],
+    "nothing saved follows the system": [themeChoice(null), "system"],
+    "anything else follows the system": [themeChoice("blue"), "system"]
   },
   "typing in a list": {
     "a letter goes to the next name that starts with it": [

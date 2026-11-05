@@ -16,9 +16,21 @@ publication workflow and GitHub/npm version inventory.
 
 - Studio: the country list shows each flag beside its name, with the code it writes in the current standard. Letters typed in the open list spell a name, with or without accents.
 - Studio: the icon modifier and sector lists of the numeric standards draw each modifier alone on the current frame, beside its name and code. Frame shape override draws each shape for the current identity.
+- Studio: a dark theme. It follows the system until Display > Editor sets one.
+- Studio: Preview background draws the symbol on a light, dark or map ground. Exports stay transparent.
+
+### Changed
+
+- Studio: More style options has three groups, Colors, Text and Outline. An Editor card holds what only the editor shows.
+- Studio: text is at least 12 pixels, and the interface uses the system font. Symbols keep Arial, the library's own setting.
+- Studio: two columns reach down to 900 pixels wide, so a 1024 screen shows the controls without scrolling.
+- Studio: on a narrow screen the SIDC and Copy stay in the preview card, and the preview shrinks while a text field is in use. Touch targets are 44 pixels high.
 
 ### Fixed
 
+- Studio: a fault in a SIDC is named once, in one sentence, where it read three times after "Applied".
+- Studio: Edition-specific modifiers stays out of the letter-based editions unless the symbol class has a note for it.
+- Studio: at 768 pixels the `/` of the palette no longer lies over Standard, and the attribution no longer sits between the code and the tabs.
 - Studio: the pictures in an echelon or mobility list draw to one scale, with the frame on the line of the text. A tall amplifier shrank its own frame, so on a Hostile frame the size changed from row to row, and the frame sat below the text.
 - Studio: Modifier color starts on red, not the black the modifiers already have, so ticking it shows a change. The echelon and mobility pictures follow it, and a note says when the symbol has no modifier to color.
 - Studio: the search in APP-6A, APP-6B and 2525C finds words of ten letters or more, such as reconnaissance and air defense, and SIDCs printed with `*`. They were read as a SIDC and found nothing.

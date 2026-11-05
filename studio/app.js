@@ -36,7 +36,7 @@ import {
   editorGaps
 } from "./profile-controls.js";
 
-import { exportFilename, pngOutputSize, pngScale, fieldStates, profileFieldStates, dtgForField, evaluationRating, sidcParts, pushRecent, placeholderOptions, readTextRows, fieldValueChars, fitRowWidths, layoutFieldBoxes, paletteProgress, baseBranch, entryCrumbs, groupEntries, paletteSections, matchesSearch, normalize, mobilities, mobilityModeName, amplifierChoice, amplifierPlacementNote, sharedViewBox, withViewBox, modifierColorUnused, modifierChoice, centeredGlyphs, frameShapeChoice } from "./editor-helpers.js";
+import { exportFilename, pngOutputSize, pngScale, fieldStates, profileFieldStates, dtgForField, evaluationRating, sidcParts, pushRecent, placeholderOptions, readTextRows, fieldValueChars, fitRowWidths, layoutFieldBoxes, paletteProgress, baseBranch, entryCrumbs, groupEntries, paletteSections, matchesSearch, normalize, mobilities, mobilityModeName, amplifierChoice, amplifierPlacementNote, sharedViewBox, withViewBox, modifierColorUnused, modifierChoice, centeredGlyphs, frameShapeChoice, problemReasons, themeChoice } from "./editor-helpers.js";
 import { createGlyphPicker } from "./glyph-picker.js";
 import { fieldReference } from "./field-reference.js";
 import { fieldGuide } from "./field-guide.js";
@@ -226,6 +226,11 @@ const dom = Object.fromEntries(
     "countryButton",
     "countryList",
     "modifierColorNote",
+    "compactSidc",
+    "compactCopy",
+    "editionSection",
+    "previewBackground",
+    "themeSelect",
     "editionMeta",
     "textSummary",
     "carryNotes",
@@ -1169,6 +1174,8 @@ function syncModifiers() {
     : tactical
       ? "Tactical point: unit echelon, mobility and headquarters flags do not apply. Choose the graphic variant from the library."
       : "In this edition, icon variants are selected directly from the symbol library.";
+  // A letter-based edition has nothing for this card unless a symbol class needs its note.
+  dom.editionSection.hidden = !modern && !installation && !tactical;
   dom.symbolModifiers.hidden = !modern;
   document.getElementById("legacyNote").hidden = modern;
   if (!modern) {
@@ -1988,20 +1995,26 @@ function renderProblem() {
   // selectImportedValue() adds "SIDC: …" options for values this edition does not offer.
   const imported = (select, start, end, what) =>
     select.selectedOptions[0]?.textContent.startsWith("SIDC: ")
-      ? `Position ${end - start > 1 ? `${start + 1}–${end}` : start + 1}: "${sidc.slice(start, end)}" is not ${what} in this edition.`
-      : "";
-  const reasons = [
-    imported(dom.affiliation, modern ? 3 : 1, modern ? 4 : 2, "an identity"),
-    imported(dom.status, modern ? 6 : 3, modern ? 7 : 4, "a status"),
-    imported(dom.amplifierValue, modern ? 8 : 10, modern ? 10 : 12, "an echelon or mobility code"),
-    ...(detail.sidcErrors || []),
-    ...(detail.identityErrors || []),
-    ...(detail.modifierErrors || []),
-    detail.icon === false ? "Unknown function code for this standard." : "",
-    detail.affiliation === "undefined" ? "Unknown identity." : "",
-    detail.mobility === false ? "Unknown echelon or mobility code." : ""
-  ].filter(Boolean);
-  return `Check code / modifiers. ${reasons.join(" ") || "The renderer could not validate this code."}`;
+      ? [{ text: `Position ${end - start > 1 ? `${start + 1}–${end}` : start + 1}: "${sidc.slice(start, end)}" is not ${what} in this edition.`, value: sidc.slice(start, end) }]
+      : [];
+  const reasons = problemReasons({
+    named: [
+      ...imported(dom.affiliation, modern ? 3 : 1, modern ? 4 : 2, "an identity"),
+      ...imported(dom.status, modern ? 6 : 3, modern ? 7 : 4, "a status"),
+      ...imported(dom.amplifierValue, modern ? 8 : 10, modern ? 10 : 12, "an echelon or mobility code")
+    ],
+    errors: [
+      ...(detail.sidcErrors || []),
+      ...(detail.identityErrors || []),
+      ...(detail.modifierErrors || []),
+      ...(detail.icon === false ? ["Unknown function code for this standard."] : [])
+    ],
+    generic: [
+      ...(detail.affiliation === "undefined" ? ["Unknown identity."] : []),
+      ...(detail.mobility === false ? ["Unknown echelon or mobility code."] : [])
+    ]
+  });
+  return reasons.join(" ") || "The renderer could not validate this code.";
 }
 
 function renderSidcStatus(sidc) {
@@ -2016,7 +2029,8 @@ function renderSidcStatus(sidc) {
     if (message && message.sidc === sidc) ({ kind, text } = message);
     if (problem) {
       kind = "error";
-      text = message && message.sidc === sidc ? `${text} ${problem}` : problem;
+      // The badge already says to check the code, and "Applied" reads wrong on a fault.
+      text = [message?.sidc === sidc ? message.notes : "", problem].filter(Boolean).join(" ");
     }
   }
   dom.sidcStatus.dataset.kind = kind;
@@ -2449,7 +2463,8 @@ function renderAll() {
       ? `${icon.source || "APP-6A (1998)"}. ${dataset().icons.length} S-scheme catalog entries.${icon.categoryOnly ? " Category — no separate illustration in APP-6A Annex D; preview is the renderer’s representation." : ""}${icon.remarks ? " " + icon.remarks : ""}`
       : `Rendered with milsymbol. Symbol appearance may differ from older standard publications.${icon.note ? ` ${icon.note}` : ""}`;
   if (!state.sidcDirty) dom.sidcInput.value = displayEditorSidc(sidc);
-  for (const button of [dom.downloadSvg, dom.downloadPng, dom.copySidc]) button.disabled = !currentSvg;
+  dom.compactSidc.textContent = dom.sidcInput.value;
+  for (const button of [dom.downloadSvg, dom.downloadPng, dom.copySidc, dom.compactCopy]) button.disabled = !currentSvg;
   const auditLink = document.getElementById("publicationAudit");
   auditLink.hidden = document.documentElement.dataset.localAudit !== "true" || state.standardId !== "app6a" || !icon.id.startsWith("S");
   auditLink.href = `audit/symbols/index.html?symbol=${encodeURIComponent(icon.id)}`;
@@ -3013,6 +3028,7 @@ function bindEvents() {
     state.sidcMessage = {
       kind: notes.length ? "info" : "ok",
       text: `Applied · ${selectedIcon().name}. ${notes.join(" ")}`.trim(),
+      notes: notes.join(" "),
       sidc: state.customSidc || buildSidc()
     };
     renderSidcStatus(state.sidcMessage.sidc);
@@ -3031,6 +3047,7 @@ function bindEvents() {
   dom.copySidc.addEventListener("click", () =>
     copyText(copiedSidc({ shown: dom.sidcInput.value, sidc: state.customSidc || buildSidc(), dirty: state.sidcDirty }), "SIDC copied")
   );
+  dom.compactCopy.addEventListener("click", () => dom.copySidc.click());
   dom.downloadSvg.addEventListener(
     "click",
     () => currentSvg && download(currentSvg, exportName("svg"), "image/svg+xml")
@@ -3038,6 +3055,8 @@ function bindEvents() {
   dom.downloadPng.addEventListener("click", downloadPng);
   // The grid is a preview aid only; exports stay transparent.
   dom.gridToggle.addEventListener("change", () => dom.stage.classList.toggle("no-grid", !dom.gridToggle.checked));
+  dom.previewBackground.addEventListener("change", () => setEditorChoice("preview", dom.previewBackground.value, "light"));
+  dom.themeSelect.addEventListener("change", () => setEditorChoice("theme", dom.themeSelect.value, "system"));
   dom.outlineToggle.addEventListener("change", () => {
     state.outline = dom.outlineToggle.checked;
     renderAll();
@@ -3091,6 +3110,30 @@ async function loadFlags() {
   }
 }
 
+// Editor choices stay on this browser: they change the page, not the symbol. The
+// default is no attribute, so the stylesheet alone decides it.
+function setEditorChoice(name, value, fallback) {
+  if (value === fallback) delete document.documentElement.dataset[name];
+  else document.documentElement.dataset[name] = value;
+  try {
+    if (value === fallback) localStorage.removeItem(`symbol-studio:${name}`);
+    else localStorage.setItem(`symbol-studio:${name}`, value);
+  } catch {}
+}
+
+function loadEditorChoices() {
+  let theme = null;
+  let preview = null;
+  try {
+    theme = localStorage.getItem("symbol-studio:theme");
+    preview = localStorage.getItem("symbol-studio:preview");
+  } catch {}
+  dom.themeSelect.value = themeChoice(theme);
+  dom.previewBackground.value = ["dark", "map"].includes(preview) ? preview : "light";
+  setEditorChoice("theme", dom.themeSelect.value, "system");
+  setEditorChoice("preview", dom.previewBackground.value, "light");
+}
+
 async function init() {
   try {
     const response = await fetch("./catalog.json");
@@ -3101,6 +3144,7 @@ async function init() {
     dom.countryFlag.innerHTML = option("", "Loading flags…");
     dom.countryFlag.disabled = true;
     bindEvents();
+    loadEditorChoices();
     loadRecent();
     renderStandardSelect();
     populateCategories();

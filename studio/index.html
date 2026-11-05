@@ -7,7 +7,15 @@
       name="description"
       content="Browse military symbols, select a standard, and configure modifiers. Export as SVG or PNG."
     />
-    <meta name="theme-color" content="#ffffff" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#11171e" />
+    <script>
+      // Before the first paint, so a saved theme does not flash.
+      try {
+        const theme = localStorage.getItem("symbol-studio:theme");
+        if (theme === "dark" || theme === "light") document.documentElement.dataset.theme = theme;
+      } catch {}
+    </script>
     <link rel="icon" href="./favicon.svg" />
     <link rel="stylesheet" href="./styles.css" />
     <title>Military Symbol Editor</title>
@@ -52,8 +60,10 @@
             <div class="stage" id="stage">
               <div id="symbolPreview" class="symbol-preview" aria-label="Military symbol preview"></div>
             </div>
+            <p id="compactSidc" class="compact-code"></p>
             <div class="preview-toolbar">
               <button class="tool-toggle edit-text" id="positionsToggle" type="button" aria-label="Edit text amplifiers at their positions" title="Open Amplifiers with a box for each text field around the symbol"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4Z" /><path d="m13.5 6.5 4 4" /></svg>Edit text</button>
+              <button id="compactCopy" class="download-link compact-copy" type="button" aria-label="Copy SIDC" title="Copy the SIDC (text and style are not part of it)">Copy</button>
               <div class="downloads" role="group" aria-label="Download">
                 <button class="download-link" id="downloadPng" type="button" aria-label="Download PNG" title="Download PNG (transparent background)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6.5A1.5 1.5 0 0 0 5 4.5v15A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V8Z" /><path d="M14 3v5h5M12 11v6m-3-3 3 3 3-3" /></svg>PNG</button
                 ><button class="download-link" id="downloadSvg" type="button" aria-label="Download SVG" title="Download SVG (vector, transparent background)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6.5A1.5 1.5 0 0 0 5 4.5v15A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V8Z" /><path d="M14 3v5h5M12 11v6m-3-3 3 3 3-3" /></svg>SVG</button>
@@ -105,7 +115,7 @@
             </button>
             <span class="tab-spacer"></span>
             <span class="editor-hint">Changes update the preview automatically.</span>
-            <button id="resetButton" class="quiet-button" type="button">Reset modifiers</button>
+            <button id="resetButton" class="quiet-button" type="button" aria-label="Reset modifiers">Reset<span class="reset-word"> modifiers</span></button>
             <a href="#previewPanel" id="compactPreview" class="compact-preview" aria-label="Go to full preview and downloads" title="Go to full preview and downloads"></a>
           </div>
 
@@ -281,10 +291,9 @@
                     ><label><input id="icon" type="checkbox" checked />Icon</label
                     ><label><input id="infoFields" type="checkbox" checked />Text labels</label
                     ><label><input id="showFlag" type="checkbox" checked />Country flag</label
-                    ><label title="Draw a halo around the symbol"><input id="outlineToggle" type="checkbox" />Outline</label
-                    ><label><input id="gridToggle" type="checkbox" checked />Preview grid</label>
+                    ><label title="Draw a halo around the symbol"><input id="outlineToggle" type="checkbox" />Outline</label>
                   </div>
-                  <p class="field-note">Exports follow these switches; Preview grid is for the editor only. Turning a switch off keeps its values.</p>
+                  <p class="field-note">Exports follow these switches. Turning a switch off keeps its values.</p>
                 </section>
 
                 <section class="card-section">
@@ -300,19 +309,38 @@
                 </section>
               </div>
 
+              <section class="card-section">
+                <div class="section-head"><h3>Editor</h3></div>
+                <div class="editor-grid">
+                  <label class="select-field"><span>Preview background</span><select id="previewBackground"><option value="light">Light</option><option value="dark">Dark</option><option value="map">Map</option></select></label>
+                  <label class="select-field"><span>Theme</span><select id="themeSelect"><option value="system">Same as system</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
+                  <div class="check-row"><label><input id="gridToggle" type="checkbox" checked />Preview grid</label></div>
+                </div>
+                <p class="field-note">These change the editor only, not the symbol or its exports.</p>
+              </section>
+
               <details class="card-section more-style" id="moreStyle">
                 <summary>More style options</summary>
-                <div class="advanced-grid">
-                  <div class="color-field"><label><input id="fillColorOn" type="checkbox" /><span>Custom fill color</span></label><input id="fillColor" type="color" value="#80e0ff" aria-label="Fill color" /></div>
-                  <div class="color-field"><label><input id="monoColorOn" type="checkbox" /><span>Monochrome</span></label><input id="monoColor" type="color" value="#000000" aria-label="Monochrome color" /></div>
-                  <div class="color-field" title="HQ staff, task force, feint/dummy, installation, echelon and mobility. A display choice: the publications draw these in the frame colour."><label><input id="modifierColorOn" type="checkbox" /><span>Modifier color</span></label><input id="modifierColor" type="color" value="#d32f2f" aria-label="Modifier color" /></div>
-                  <p class="field-note warn modifier-color-note" id="modifierColorNote" role="status" hidden>This symbol has no modifier to color. Add an echelon, mobility, headquarters, task force or feint / dummy on the Symbol tab.</p>
-                  <div class="color-field"><label><input id="infoColorOn" type="checkbox" /><span>Text color</span></label><input id="infoColor" type="color" value="#000000" aria-label="Text color" /></div>
-                  <div class="color-field"><label><input id="infoBackgroundOn" type="checkbox" /><span>Text background</span></label><input id="infoBackground" type="color" value="#ffffff" aria-label="Text background color" /></div>
-                  <label class="range-field"><span>Fill opacity <output id="fillOpacityOutput">100%</output></span><input id="fillOpacity" type="range" min="10" max="100" step="5" value="100" /></label>
-                  <label class="range-field"><span>Text size <output id="infoSizeOutput">40</output></span><input id="infoSize" type="range" min="20" max="80" step="2" value="40" /></label>
-                  <label class="range-field"><span>Outline width <output id="outlineWidthOutput">7</output></span><input id="outlineWidth" type="range" min="1" max="20" step="1" value="7" /></label>
-                  <div class="color-field"><span>Outline color</span><input id="outlineColor" type="color" value="#ffffff" aria-label="Outline color" /></div>
+                <div class="style-groups">
+                  <section class="style-group">
+                    <h4>Colors</h4>
+                    <div class="color-field"><label><input id="fillColorOn" type="checkbox" /><span>Custom fill color</span></label><input id="fillColor" type="color" value="#80e0ff" aria-label="Fill color" /></div>
+                    <div class="color-field"><label><input id="monoColorOn" type="checkbox" /><span>Monochrome</span></label><input id="monoColor" type="color" value="#000000" aria-label="Monochrome color" /></div>
+                    <div class="color-field" title="HQ staff, task force, feint/dummy, installation, echelon and mobility. A display choice: the publications draw these in the frame colour."><label><input id="modifierColorOn" type="checkbox" /><span>Modifier color</span></label><input id="modifierColor" type="color" value="#d32f2f" aria-label="Modifier color" /></div>
+                    <p class="field-note warn modifier-color-note" id="modifierColorNote" role="status" hidden>This symbol has no modifier to color. Add an echelon, mobility, headquarters, task force or feint / dummy on the Symbol tab.</p>
+                    <label class="range-field"><span>Fill opacity <output id="fillOpacityOutput">100%</output></span><input id="fillOpacity" type="range" min="10" max="100" step="5" value="100" /></label>
+                  </section>
+                  <section class="style-group">
+                    <h4>Text</h4>
+                    <div class="color-field"><label><input id="infoColorOn" type="checkbox" /><span>Text color</span></label><input id="infoColor" type="color" value="#000000" aria-label="Text color" /></div>
+                    <div class="color-field"><label><input id="infoBackgroundOn" type="checkbox" /><span>Text background</span></label><input id="infoBackground" type="color" value="#ffffff" aria-label="Text background color" /></div>
+                    <label class="range-field"><span>Text size <output id="infoSizeOutput">40</output></span><input id="infoSize" type="range" min="20" max="80" step="2" value="40" /></label>
+                  </section>
+                  <section class="style-group">
+                    <h4>Outline</h4>
+                    <label class="range-field"><span>Outline width <output id="outlineWidthOutput">7</output></span><input id="outlineWidth" type="range" min="1" max="20" step="1" value="7" /></label>
+                    <div class="color-field"><span>Outline color</span><input id="outlineColor" type="color" value="#ffffff" aria-label="Outline color" /></div>
+                  </section>
                 </div>
                 <p class="field-note">Outline width and color apply when Outline is on. All of these go into SVG and PNG exports; none changes the SIDC.</p>
               </details>

@@ -601,3 +601,19 @@ export function typeaheadIndex(names, query, from) {
 export function modifierColorUnused({ on, color, svg }) {
   return Boolean(on && svg && !svg.includes(color));
 }
+
+// What to say about a code the edition does not take. A value a named reason covers
+// is not repeated in the library's words, and a general reason speaks only when
+// nothing says more.
+export function problemReasons({ named, errors, generic }) {
+  const covers = (value, error) =>
+    new RegExp(`(^|[^A-Z0-9*-])${value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}($|[^A-Z0-9*-])`).test(error);
+  const specific = [
+    ...named.map(({ text }) => text),
+    ...new Set(errors.filter((error) => !named.some(({ value }) => covers(value, error))))
+  ];
+  return specific.length ? specific : [...new Set(generic)];
+}
+
+// The saved interface theme; anything else follows the system.
+export const themeChoice = (saved) => (saved === "dark" || saved === "light" ? saved : "system");
