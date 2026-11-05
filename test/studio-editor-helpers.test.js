@@ -17,7 +17,8 @@ import {
   sharedViewBox,
   withViewBox,
   typeaheadIndex,
-  modifierColorUnused
+  modifierColorUnused,
+  modifierChoice
 } from "../studio/editor-helpers.js";
 import { patchSidc, probeOffers } from "../studio/profile-controls.js";
 import { std2525eProfile } from "../src/modifierprofiles/std2525e.js";
@@ -415,6 +416,18 @@ export default {
       { x: 1, y: 6, width: 198, height: 148 }
     ],
     "a list with nothing drawn has no box": [sharedViewBox(["", ""]), null],
+    "the bare frame stays in the middle, on the line of the text": [
+      sharedViewBox(glyphs, glyphs[0]),
+      { x: 1, y: 6, width: 198, height: 188 }
+    ],
+    "an amplifier below the frame centers it too": [
+      sharedViewBox([glyph("21 46 158 108"), glyph("21 46 158 148")], glyph("21 46 158 108")),
+      { x: 21, y: 6, width: 158, height: 188 }
+    ],
+    "a frame that failed to draw centers nothing": [
+      sharedViewBox(glyphs, ""),
+      { x: 1, y: 6, width: 198, height: 148 }
+    ],
     "a glyph takes the box of the list": [
       /viewBox="1 6 198 148"/.test(withViewBox(glyphs[0], sharedViewBox(glyphs))),
       true
@@ -433,6 +446,36 @@ export default {
     ],
     "a glyph that failed to draw stays empty": [withViewBox("", sharedViewBox(glyphs)), ""],
     "no box leaves the glyph alone": [withViewBox(glyphs[0], null), glyphs[0]]
+  },
+  "icon modifier rows": {
+    "the code goes beside the name": [
+      modifierChoice({ value: "set:06", textContent: "06 — Airborne", title: "", disabled: false }),
+      { value: "set:06", name: "Airborne", code: "06", reason: "", disabled: false, note: "", group: "" }
+    ],
+    "a common code keeps its three digits": [
+      modifierChoice({ value: "common:106", textContent: "106 — Bridging", title: "", disabled: false }).code,
+      "106"
+    ],
+    "unspecified has no code": [
+      modifierChoice({ value: "", textContent: "Unspecified", title: "", disabled: false }).code,
+      ""
+    ],
+    "a row keeps its group": [
+      modifierChoice({ value: "set:06", textContent: "06 — Airborne", title: "", disabled: false, parentElement: { label: "Common / Mobility" } }).group,
+      "Common / Mobility"
+    ],
+    "the select around a row is no group": [
+      modifierChoice({ value: "", textContent: "Unspecified", title: "", disabled: false, parentElement: {} }).group,
+      ""
+    ],
+    "a row the entity may not use says so once": [
+      modifierChoice({ value: "set:06", textContent: "06 — Airborne (not for this entity)", title: "Not for tanks", disabled: true }),
+      { value: "set:06", name: "Airborne", code: "06", reason: "Not for tanks", disabled: true, note: "not for this entity", group: "" }
+    ],
+    "a code from the SIDC stays as it was written": [
+      modifierChoice({ value: "set:99", textContent: "SIDC: 99 — reserved for future use", title: "", disabled: false }).name,
+      "SIDC: 99 — reserved for future use"
+    ]
   },
   "typing in a list": {
     "a letter goes to the next name that starts with it": [

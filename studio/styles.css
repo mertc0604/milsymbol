@@ -915,7 +915,7 @@ a.support-note {
   align-items: center;
   gap: 10px;
   width: 100%;
-  min-height: 48px;
+  min-height: 56px;
   padding: 4px 10px 4px 6px;
   border-color: #cfd8e1;
   border-radius: 7px;
@@ -951,6 +951,10 @@ a.support-note {
   flex: none;
   width: 54px;
   height: 38px;
+}
+/* An echelon or mobility needs room on both sides of a frame centered on the text. */
+.glyph-picker.tall-glyphs .glyph {
+  height: 46px;
 }
 /* The glyphs of a list share a viewBox, so one size here is one scale for all. */
 .glyph-picker .glyph svg {
@@ -1036,6 +1040,24 @@ a.support-note {
 }
 .glyph-option.invalid .glyph-name {
   color: var(--danger);
+}
+.glyph-option.blocked {
+  cursor: not-allowed;
+}
+.glyph-option.blocked .glyph-name,
+.glyph-option.blocked small {
+  color: var(--faint);
+}
+.glyph-group {
+  padding: 8px 10px 3px;
+  color: var(--faint);
+  font-size: 11px;
+  font-weight: 600;
+}
+/* Icon modifier names run long and these lists are narrow. */
+.edition-grid .glyph-option .glyph-name {
+  line-height: 1.25;
+  white-space: normal;
 }
 
 /* Text amplifiers */

@@ -36,7 +36,7 @@ import {
   editorGaps
 } from "./profile-controls.js";
 
-import { exportFilename, pngOutputSize, pngScale, fieldStates, profileFieldStates, dtgForField, evaluationRating, sidcParts, pushRecent, placeholderOptions, readTextRows, fieldValueChars, fitRowWidths, layoutFieldBoxes, paletteProgress, baseBranch, entryCrumbs, groupEntries, paletteSections, matchesSearch, normalize, mobilities, mobilityModeName, amplifierChoice, amplifierPlacementNote, sharedViewBox, withViewBox, modifierColorUnused } from "./editor-helpers.js";
+import { exportFilename, pngOutputSize, pngScale, fieldStates, profileFieldStates, dtgForField, evaluationRating, sidcParts, pushRecent, placeholderOptions, readTextRows, fieldValueChars, fitRowWidths, layoutFieldBoxes, paletteProgress, baseBranch, entryCrumbs, groupEntries, paletteSections, matchesSearch, normalize, mobilities, mobilityModeName, amplifierChoice, amplifierPlacementNote, sharedViewBox, withViewBox, modifierColorUnused, modifierChoice } from "./editor-helpers.js";
 import { createGlyphPicker } from "./glyph-picker.js";
 import { fieldReference } from "./field-reference.js";
 import { fieldGuide } from "./field-guide.js";
@@ -297,6 +297,12 @@ const dom = Object.fromEntries(
     "symbolModifiers",
     "modifier1",
     "modifier2",
+    "modifier1Label",
+    "modifier2Label",
+    "modifier1Button",
+    "modifier2Button",
+    "modifier1List",
+    "modifier2List",
     "modifierNote",
     "direction",
     "speedLeader",
@@ -994,9 +1000,10 @@ function amplifierSvg(value) {
   });
 }
 
-function amplifierGlyphs(choices) {
-  const drawn = new Map(["", ...choices.map((item) => item.value)].map((value) => [value, amplifierSvg(value)]));
-  const box = sharedViewBox([...drawn.values()]);
+// A list's pictures to one scale, with the bare frame ("") on the line of the text.
+function sharedGlyphs(rows, draw) {
+  const drawn = new Map(["", ...rows.map((item) => item.value)].map((value) => [value, draw(value)]));
+  const box = sharedViewBox([...drawn.values()], drawn.get(""));
   return (value) => withViewBox(drawn.get(value) || "", box);
 }
 
@@ -1007,9 +1014,30 @@ const amplifierPicker = createGlyphPicker({
   idPrefix: "amplifierOption",
   fallback: { value: "", name: "Unspecified" },
   choices: amplifierChoices,
-  glyphs: amplifierGlyphs,
+  glyphs: (rows) => sharedGlyphs(rows, amplifierSvg),
   escapeHtml
 });
+
+// Only this modifier on the current frame, as the amplifier picker draws its own. The
+// common modifiers need all of the SIDC around them, so the code stays 30 digits long.
+function iconModifierSvg(type, value) {
+  const base = (state.customSidc || buildSidc()).padEnd(30, "0");
+  const sidc = `${base.slice(0, 7)}${"0".repeat(15)}${base.slice(22)}`.split("");
+  applyModernModifier(sidc, value, type);
+  return chipSvg(sidc.join(""), { size: 24 });
+}
+
+const iconModifierPickers = [1, 2].map((type) =>
+  createGlyphPicker({
+    button: dom[`modifier${type}Button`],
+    list: dom[`modifier${type}List`],
+    select: dom[`modifier${type}`],
+    idPrefix: `modifier${type}Option`,
+    choices: () => [...dom[`modifier${type}`].options].map(modifierChoice),
+    glyphs: (rows) => sharedGlyphs(rows, (value) => iconModifierSvg(type, value)),
+    escapeHtml
+  })
+);
 
 function countryChoices() {
   return [...dom.countryFlag.options].map((item) => ({
@@ -1142,8 +1170,8 @@ function syncModifiers() {
     ].filter(Boolean).join(" ");
     return;
   }
-  dom.modifier1.previousElementSibling.textContent = "Icon modifier 1";
-  dom.modifier2.previousElementSibling.textContent = "Icon modifier 2";
+  dom.modifier1Label.textContent = "Icon modifier 1";
+  dom.modifier2Label.textContent = "Icon modifier 2";
   dom.modifier1.disabled = dom.modifier2.disabled = false;
   state.modifier1 = populateModifierSelect(
     dom.modifier1,
@@ -1168,7 +1196,7 @@ function populateSectorSelect(select, sector, selected) {
   const sidc = state.customSidc || buildSidc();
   const current = selected.startsWith("set:") ? selected.slice(4) : "";
   const choices = sectorChoices({ profile: app6dProfile, sectors: app6dSectors, sidc, set: sidc.slice(4, 6), sector, start: sector === 1 ? 16 : 18, current });
-  select.previousElementSibling.textContent = `Sector ${sector} modifier (${sectorPlaces[choices.placement]})`;
+  dom[`modifier${sector}Label`].textContent = `Sector ${sector} modifier (${sectorPlaces[choices.placement]})`;
   select.innerHTML =
     option("", choices.dictionary ? "Unspecified" : "None defined for this symbol set") +
     choices.entries
@@ -2411,6 +2439,7 @@ function renderAll() {
   amplifierSidc = sidc;
   amplifierPicker.render();
   countryPicker.render();
+  if (config().family === "modern") for (const picker of iconModifierPickers) picker.render();
   dom.modifierColorNote.hidden = !modifierColorUnused({ on: dom.modifierColorOn.checked, color: dom.modifierColor.value, svg: currentSvg });
   syncGraphicsControls();
   renderExportSize();
@@ -2773,6 +2802,7 @@ function bindEvents() {
   });
   amplifierPicker.bind();
   countryPicker.bind();
+  for (const picker of iconModifierPickers) picker.bind();
   dom.modifier1.addEventListener("change", () => {
     state.modifier1 = dom.modifier1.value;
     updateSidcAndRender("modifier1");

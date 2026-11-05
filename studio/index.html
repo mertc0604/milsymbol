@@ -155,7 +155,7 @@
                   </div>
                   <div class="full-field">
                     <span id="amplifierLabel">Echelon</span>
-                    <div class="glyph-picker">
+                    <div class="glyph-picker tall-glyphs">
                       <button id="amplifierButton" class="glyph-select" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="amplifierList" aria-labelledby="amplifierLabel amplifierButton"></button>
                       <div id="amplifierList" class="glyph-list" role="listbox" tabindex="-1" aria-labelledby="amplifierLabel" hidden></div>
                     </div>
@@ -181,8 +181,22 @@
               <section class="card-section edition-section" id="editionSection">
                 <div class="section-head"><h3>Edition-specific modifiers</h3><span class="section-meta" id="editionMeta"></span></div>
                 <div id="symbolModifiers" class="control-group edition-grid">
-                  <label><span>Icon modifier 1</span><select id="modifier1"></select></label>
-                  <label><span>Icon modifier 2</span><select id="modifier2"></select></label>
+                  <div class="full-field">
+                    <span id="modifier1Label">Icon modifier 1</span>
+                    <div class="glyph-picker">
+                      <button id="modifier1Button" class="glyph-select" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="modifier1List" aria-labelledby="modifier1Label modifier1Button"></button>
+                      <div id="modifier1List" class="glyph-list" role="listbox" tabindex="-1" aria-labelledby="modifier1Label" hidden></div>
+                    </div>
+                    <select id="modifier1" class="visually-hidden" tabindex="-1" aria-hidden="true"></select>
+                  </div>
+                  <div class="full-field">
+                    <span id="modifier2Label">Icon modifier 2</span>
+                    <div class="glyph-picker">
+                      <button id="modifier2Button" class="glyph-select" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="modifier2List" aria-labelledby="modifier2Label modifier2Button"></button>
+                      <div id="modifier2List" class="glyph-list" role="listbox" tabindex="-1" aria-labelledby="modifier2Label" hidden></div>
+                    </div>
+                    <select id="modifier2" class="visually-hidden" tabindex="-1" aria-hidden="true"></select>
+                  </div>
                   <label id="frameShapeField" hidden><span>Frame shape override</span><select id="frameShape">
                     <option value="0">Default for symbol set</option><option value="1">Space</option><option value="2">Air</option><option value="3">Land unit</option><option value="4">Land equipment</option><option value="5">Land installation</option><option value="6">Dismounted individual</option><option value="7">Sea subsurface</option><option value="8">Activity / event</option><option value="9">Cyberspace</option><option value="A">Sea surface</option>
                   </select></label>

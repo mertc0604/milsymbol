@@ -6,8 +6,9 @@ const chevron = '<svg class="chevron" viewBox="0 0 24 24" aria-hidden="true"><pa
 // Letters typed within this many milliseconds spell one name.
 const typingPause = 700;
 
-// choices() gives { value, name, code, reason } rows. glyphs(rows) gives a function
-// from a value to its picture, so a list can draw all its rows to one scale.
+// choices() gives { value, name, code, reason } rows, which may add a group heading,
+// disabled and a note. glyphs(rows) gives a function from a value to its picture, so
+// a list can draw all its rows to one scale.
 export function createGlyphPicker({ button, list, select, idPrefix, fallback, choices, glyphs, escapeHtml }) {
   let active = 0;
   let typed = "";
@@ -20,8 +21,14 @@ export function createGlyphPicker({ button, list, select, idPrefix, fallback, ch
     const rows = choices();
     const glyph = glyphs(rows);
     active = Math.min(Math.max(active, 0), rows.length - 1);
+    let group = "";
     list.innerHTML = rows
-      .map((item, index) => `<div role="option" id="${idPrefix}${index}" class="glyph-option${item.reason ? " invalid" : ""}${index === active ? " active" : ""}" data-index="${index}" data-value="${escapeHtml(item.value)}" aria-selected="${item.value === select.value}"${item.reason ? ` title="${escapeHtml(item.reason)}"` : ""}>${row(item, glyph, item.reason ? "<small>not valid here</small>" : "")}</div>`)
+      .map((item, index) => {
+        const heading = item.group && item.group !== group ? `<div class="glyph-group" role="presentation">${escapeHtml(item.group)}</div>` : "";
+        group = item.group || "";
+        const note = item.note || (item.reason ? "not valid here" : "");
+        return `${heading}<div role="option" id="${idPrefix}${index}" class="glyph-option${item.disabled ? " blocked" : item.reason ? " invalid" : ""}${index === active ? " active" : ""}" data-index="${index}" data-value="${escapeHtml(item.value)}" aria-selected="${item.value === select.value}"${item.disabled ? ' aria-disabled="true"' : ""}${item.reason ? ` title="${escapeHtml(item.reason)}"` : ""}>${row(item, glyph, note ? `<small>${escapeHtml(note)}</small>` : "")}</div>`;
+      })
       .join("");
     list.setAttribute("aria-activedescendant", `${idPrefix}${active}`);
   }
@@ -56,10 +63,11 @@ export function createGlyphPicker({ button, list, select, idPrefix, fallback, ch
     if (refocus) button.focus();
   }
 
-  function choose(value) {
+  function choose(item) {
+    if (item.getAttribute("aria-disabled") === "true") return;
     close(true);
-    if (value === select.value) return;
-    select.value = value;
+    if (item.dataset.value === select.value) return;
+    select.value = item.dataset.value;
     select.dispatchEvent(new Event("change"));
   }
 
@@ -93,7 +101,7 @@ export function createGlyphPicker({ button, list, select, idPrefix, fallback, ch
     });
     list.addEventListener("click", (event) => {
       const item = event.target.closest("[role=option]");
-      if (item) choose(item.dataset.value);
+      if (item) choose(item);
     });
     list.addEventListener("pointermove", (event) => {
       const item = event.target.closest("[role=option]");
@@ -110,7 +118,7 @@ export function createGlyphPicker({ button, list, select, idPrefix, fallback, ch
         move(event.key.startsWith("Page") ? Math.min(Math.max(target, 0), options.length - 1) : target);
       } else if (event.key === "Enter" || (event.key === " " && !spelling)) {
         event.preventDefault();
-        if (options[active]) choose(options[active].dataset.value);
+        if (options[active]) choose(options[active]);
       } else if (event.key === "Escape") {
         event.preventDefault();
         event.stopPropagation();

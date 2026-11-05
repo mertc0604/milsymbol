@@ -511,6 +511,20 @@ export function amplifierChoice({ value, textContent, title }, source, modern) {
   return { value, name: entry ? entry[1] : imported ? "From SIDC" : textContent, code, reason: title };
 }
 
+// A row of an icon modifier picker, from an option of its select.
+export function modifierChoice({ value, textContent, title, disabled, parentElement }) {
+  const [, code = "", name = textContent] = /^(\S+) — (.*)$/.exec(textContent) || [];
+  return {
+    value,
+    name: name.replace(/ \(not for this entity\)$/, ""),
+    code,
+    reason: title,
+    disabled,
+    note: disabled ? "not for this entity" : "",
+    group: parentElement?.label || ""
+  };
+}
+
 // The glyphs of one list share a box, so a frame has one size and one place in every
 // row. Left to itself each glyph is fitted alone, and a tall amplifier shrinks its frame.
 const viewBoxOf = (svg) => {
@@ -520,17 +534,22 @@ const viewBoxOf = (svg) => {
   return { x, y, width, height };
 };
 
-export function sharedViewBox(svgs) {
+export function sharedViewBox(svgs, center = "") {
   const boxes = svgs.map(viewBoxOf).filter(Boolean);
   if (!boxes.length) return null;
-  const x = Math.min(...boxes.map((box) => box.x));
-  const y = Math.min(...boxes.map((box) => box.y));
-  return {
-    x,
-    y,
-    width: Math.max(...boxes.map((box) => box.x + box.width)) - x,
-    height: Math.max(...boxes.map((box) => box.y + box.height)) - y
-  };
+  const left = Math.min(...boxes.map((box) => box.x));
+  const top = Math.min(...boxes.map((box) => box.y));
+  const right = Math.max(...boxes.map((box) => box.x + box.width));
+  const bottom = Math.max(...boxes.map((box) => box.y + box.height));
+  const frame = viewBoxOf(center);
+  if (!frame) return { x: left, y: top, width: right - left, height: bottom - top };
+  // The bare frame goes in the middle, so it sits on the line of the text beside it
+  // whatever an amplifier adds on one side.
+  const middleX = frame.x + frame.width / 2;
+  const middleY = frame.y + frame.height / 2;
+  const halfWidth = Math.max(middleX - left, right - middleX);
+  const halfHeight = Math.max(middleY - top, bottom - middleY);
+  return { x: middleX - halfWidth, y: middleY - halfHeight, width: halfWidth * 2, height: halfHeight * 2 };
 }
 
 export function withViewBox(svg, box) {
