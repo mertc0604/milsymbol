@@ -18,6 +18,7 @@ publication workflow and GitHub/npm version inventory.
 - Studio: the icon modifier and sector lists of the numeric standards draw each modifier alone on the current frame, beside its name and code. Frame shape override draws each shape for the current identity.
 - Studio: a dark theme. It follows the system until Display > Editor sets one.
 - Studio: Preview background draws the symbol on a light, dark or map ground. Exports stay transparent.
+- Studio: the editor keeps its draft on this device and restores it on reload. Reset can be undone until the next edit.
 
 ### Changed
 
@@ -25,6 +26,10 @@ publication workflow and GitHub/npm version inventory.
 - Studio: text is at least 12 pixels, and the interface uses the system font. Symbols keep Arial, the library's own setting.
 - Studio: two columns reach down to 900 pixels wide, so a 1024 screen shows the controls without scrolling.
 - Studio: on a narrow screen the SIDC and Copy stay in the preview card, and the preview shrinks while a text field is in use. Touch targets are 44 pixels high.
+- Studio: Friend, Hostile, Neutral and Unknown come first, and More identities holds the other choices.
+- Studio: position numbers and publication notes sit behind an information button beside each heading. The reason a control is off stays on the page, next to the control.
+- Studio: Code details starts closed.
+- Studio: the theme colors are written once with `light-dark()`, which needs Chrome 123, Firefox 120 or Safari 17.5. The information buttons already need Firefox 125.
 
 ### Fixed
 
@@ -43,6 +48,10 @@ publication workflow and GitHub/npm version inventory.
 - Studio: the version digits choose the standard, with a note. 16 in the 2525E view moves to APP-6E and 13 in the APP-6E view moves to 2525E.
 - Studio: APP-6E marks its exercise and simulation contexts as US only, and APP-6D and APP-6E mark Joker and Faker, as Table A-2 does.
 - Studio: Copy gives the code as drawn and as file names carry it, with `-` in an empty user field. The box still shows `*` there.
+- Studio: the Preview grid choice is kept in this browser, as the Editor card says.
+- Studio: a visit that changes nothing saves no draft, and a reload says a draft was restored only when there was one to restore.
+- Studio: the country note names the code's encoding once.
+- Studio: the tab bar has no stray scrollbar on a phone, and More identities and the status chips reach the 44 pixel touch height.
 
 ## 3.0.5-v5 - 2026-11-04
 

@@ -22,7 +22,11 @@ import {
   centeredGlyphs,
   frameShapeChoice,
   problemReasons,
-  themeChoice
+  themeChoice,
+  gridChoice,
+  designationNotes,
+  amplifierNotes,
+  countryFlagNote
 } from "../studio/editor-helpers.js";
 import { patchSidc, probeOffers } from "../studio/profile-controls.js";
 import { std2525eProfile } from "../src/modifierprofiles/std2525e.js";
@@ -574,6 +578,105 @@ export default {
     "nothing is drawn at all": [
       modifierColorUnused({ on: true, color: "#d32f2f", svg: "" }),
       false
+    ]
+  },
+  "the preview grid choice": {
+    "off is kept": [gridChoice("off"), "off"],
+    "nothing saved draws the grid": [gridChoice(null), "on"],
+    "anything else draws the grid": [gridChoice("maybe"), "on"]
+  },
+  "why unit designation controls are off": {
+    "a unit with every flag on has nothing to explain": [
+      designationNotes({ app6a: true, kind: "unit" }).reason,
+      ""
+    ],
+    "what the flags write stays out of the reason": [
+      designationNotes({ app6a: true, kind: "unit" }).about,
+      "Writes one combined code to position 11, for example A for headquarters or E for task force."
+    ],
+    "a numeric edition names position 8": [
+      designationNotes({ modern: true }).about,
+      "Writes one combined code to position 8 of the SIDC."
+    ],
+    "an APP-6A installation says why task force is off": [
+      designationNotes({ app6a: true, kind: "installation", installation: true }).reason.includes("so task force does not apply"),
+      true
+    ],
+    "another letter edition's installation also names headquarters": [
+      designationNotes({ installation: true }).reason,
+      "Installations carry the installation modifier (H in position 11), so headquarters and task force do not apply."
+    ],
+    "a tactical point names every flag it turns off": [
+      designationNotes({ app6a: true, kind: "point", tactical: true }).reason,
+      "Tactical points take no headquarters, task force or feint flag."
+    ],
+    "equipment gives task force as the reason": [
+      designationNotes({ app6a: true, kind: "equipment" }).reason,
+      "Task force applies to units only."
+    ],
+    "the location offset is explained, not excused": [
+      designationNotes({ app6a: true, kind: "equipment" }).about.startsWith("On equipment, S is the location offset indicator"),
+      true
+    ],
+    "mobility turns the staff off on a unit": [
+      designationNotes({ app6a: true, kind: "unit", mobility: true }).reason,
+      "Mobility uses positions 11–12, so headquarters is off."
+    ],
+    "mobility turns the offset off on equipment": [
+      designationNotes({ app6a: true, kind: "equipment", mobility: true }).reason,
+      "Mobility uses positions 11–12, so location offset is off. Task force applies to units only."
+    ],
+    "a profile's reason names its flag": [
+      designationNotes({ modern: true, flagReasons: { taskForce: "not on this symbol set" } }).reason,
+      "Task force: not on this symbol set."
+    ]
+  },
+  "why echelon and mobility controls are off": {
+    "nothing off, nothing said": [
+      amplifierNotes({ disabled: [], placement: "Placement." }).reason,
+      ""
+    ],
+    "placement stays out of the reason": [
+      amplifierNotes({ disabled: [], placement: "Placement." }).about,
+      "Placement."
+    ],
+    "an installation takes neither": [
+      amplifierNotes({ installation: true, disabled: ["Echelon", "Mobility"], placement: "" }).reason,
+      "This symbol takes no echelon or mobility amplifier."
+    ],
+    "a tactical point takes neither": [
+      amplifierNotes({ tactical: true, disabled: [], placement: "" }).reason,
+      "This symbol takes no echelon or mobility amplifier."
+    ],
+    "both modes off without a class rule": [
+      amplifierNotes({ disabled: ["Echelon", "Mobility"], edition: "APP-6D", placement: "" }).reason,
+      "This symbol takes no echelon or mobility amplifier."
+    ],
+    "an APP-6A unit": [
+      amplifierNotes({ app6a: true, kind: "unit", disabled: ["Mobility"], placement: "" }).reason,
+      "Units take an echelon above the frame. Mobility is for equipment."
+    ],
+    "APP-6A equipment": [
+      amplifierNotes({ app6a: true, kind: "equipment", disabled: ["Echelon"], placement: "" }).reason,
+      "Equipment takes a mobility amplifier below the frame. Echelon is for units."
+    ],
+    "an edition's profile leaves one mode out": [
+      amplifierNotes({ disabled: ["Mobility"], edition: "MIL-STD-2525C Table IV", placement: "" }).reason,
+      "MIL-STD-2525C Table IV offers no mobility amplifier for this symbol."
+    ]
+  },
+  "the country note": {
+    "says how to choose a flag": [
+      countryFlagNote({ selected: "", code: "", label: "FIPS" }),
+      "Select a country or apply a SIDC to select its flag. Included in SVG and PNG exports."
+    ],
+    "names the code a flag writes": [
+      countryFlagNote({ selected: "us", code: "US", label: "FIPS" }),
+      "FIPS code: US. Included in SVG and PNG exports."
+    ],
+    "says when a flag writes no code": [
+      countryFlagNote({ selected: "nato", code: "", label: "FIPS" }),
+      "Display-only flag: no country code is assigned for this standard. Included in SVG and PNG exports."
     ]
   }
 };

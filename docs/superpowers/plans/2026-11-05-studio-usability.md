@@ -47,3 +47,5 @@
 - Live browser: text/style/standard/coded and display-only flag restoration, custom SIDC national tails, Reset Undo, and selected secondary identity visibility verified. Delayed flag request reproduced and verified the pending-flag fix.
 - 320px and 390px viewports: no horizontal overflow; the 30-character SIDC input grows to fit.
 - Read-only reviewer found two persistence issues; both fixed and re-reviewed without further findings. `src/` is unchanged.
+
+Later the same day, the technical notes moved from native disclosures to information popovers (`studio/info-popover.js`), and the reasons for disabled controls went back on the page.

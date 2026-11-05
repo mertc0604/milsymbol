@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createDraftStore } from "../studio/draft-store.js";
+import { createDraftAutosave, createDraftStore, sameDraft } from "../studio/draft-store.js";
 import { fieldMeaning } from "../studio/profile-controls.js";
 
 const draft = () => ({
@@ -156,4 +156,66 @@ test("incomplete or wrong-family applied SIDCs are ignored while numeric nationa
   const store = createDraftStore(memoryStorage());
   assert.equal(store.save(value), true);
   assert.deepEqual(store.load(), value);
+});
+
+function autosave({ works = true } = {}) {
+  const saved = [];
+  const reports = [];
+  const current = { value: draft() };
+  const session = createDraftAutosave({
+    store: { save: (value) => (works ? saved.push(value) > 0 : false) },
+    capture: () => current.value,
+    report: (ok) => reports.push(ok),
+    delay: 1
+  });
+  return { saved, reports, current, session };
+}
+
+test("a visit that changes nothing writes no draft", () => {
+  const { saved, reports, session } = autosave();
+  session.start();
+  session.flush();
+  assert.deepEqual(saved, []);
+  assert.deepEqual(reports, []);
+});
+
+test("nothing is written before the editor has started", () => {
+  const { saved, session } = autosave();
+  session.flush();
+  assert.deepEqual(saved, []);
+});
+
+test("a change is written and reported once", () => {
+  const { saved, reports, current, session } = autosave();
+  session.start();
+  current.value = { ...draft(), controls: { uniqueDesignation: "2/5" } };
+  session.flush();
+  session.flush();
+  assert.equal(saved.length, 1);
+  assert.deepEqual(reports, [true]);
+});
+
+test("a failed write is reported and tried again", () => {
+  const { reports, current, session } = autosave({ works: false });
+  session.start();
+  current.value = { ...draft(), controls: { uniqueDesignation: "2/5" } };
+  session.flush();
+  session.flush();
+  assert.deepEqual(reports, [false, false]);
+});
+
+test("a scheduled save waits for the pause and writes once", async () => {
+  const { saved, current, session } = autosave();
+  session.start();
+  current.value = { ...draft(), controls: { uniqueDesignation: "2/5" } };
+  session.schedule();
+  session.schedule();
+  assert.equal(saved.length, 0);
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.equal(saved.length, 1);
+});
+
+test("a saved draft that matches a new editor is not news", () => {
+  assert.equal(sameDraft(draft(), draft()), true);
+  assert.equal(sameDraft(draft(), { ...draft(), controls: {} }), false);
 });

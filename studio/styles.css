@@ -1,35 +1,35 @@
 :root {
-  color-scheme: light;
-  --text: #24313d;
-  --text-soft: #3d4a57;
-  --muted: #5f6b78;
-  --placeholder: #6b7885;
-  --disabled: #8f9aa6;
-  --line: #e1e6eb;
-  --line-soft: #edf0f3;
-  --line-strong: #cfd8e1;
-  --line-stronger: #aebdcb;
-  --blue: #2868b2;
-  --blue-dark: #1d4f8a;
-  --blue-line: #b9d0ea;
-  --soft-blue: #eef5fc;
-  --tag-blue: #e3eefa;
-  --focus: #4283cb;
-  --on-accent: #fff;
-  --bg: #f4f6f9;
-  --panel: #fff;
-  --surface-faint: #fbfcfd;
-  --surface-soft: #f6f8fa;
-  --surface-muted: #eef1f4;
-  --danger: #a12a22;
-  --danger-bg: #fdecec;
-  --ok: #1f6b3a;
-  --ok-bg: #eef8f1;
-  --warn: #7a5200;
-  --warn-bg: #fff8e6;
-  --flag-line: #24313d;
+  color-scheme: light dark;
+  --text: light-dark(#24313d, #e3e8ee);
+  --text-soft: light-dark(#3d4a57, #c5ced7);
+  --muted: light-dark(#5f6b78, #a0adba);
+  --placeholder: light-dark(#6b7885, #8a97a4);
+  --disabled: light-dark(#8f9aa6, #6c7885);
+  --line: light-dark(#e1e6eb, #2f3a45);
+  --line-soft: light-dark(#edf0f3, #27313b);
+  --line-strong: light-dark(#cfd8e1, #3d4a57);
+  --line-stronger: light-dark(#aebdcb, #566575);
+  --blue: light-dark(#2868b2, #6ea6e6);
+  --blue-dark: light-dark(#1d4f8a, #a9cbf2);
+  --blue-line: light-dark(#b9d0ea, #37597f);
+  --soft-blue: light-dark(#eef5fc, #1c2f45);
+  --tag-blue: light-dark(#e3eefa, #233b57);
+  --focus: light-dark(#4283cb, #6ea6e6);
+  --on-accent: light-dark(#fff, #0f1720);
+  --bg: light-dark(#f4f6f9, #11171e);
+  --panel: light-dark(#fff, #1a222b);
+  --surface-faint: light-dark(#fbfcfd, #1d2630);
+  --surface-soft: light-dark(#f6f8fa, #212b35);
+  --surface-muted: light-dark(#eef1f4, #28333e);
+  --danger: light-dark(#a12a22, #f29a90);
+  --danger-bg: light-dark(#fdecec, #3b2020);
+  --ok: light-dark(#1f6b3a, #7fd39c);
+  --ok-bg: light-dark(#eef8f1, #1b3325);
+  --warn: light-dark(#7a5200, #e8c26f);
+  --warn-bg: light-dark(#fff8e6, #352a13);
+  --flag-line: light-dark(#24313d, #566575);
   /* Symbols draw in black for a light ground, so a dark theme puts one behind them. */
-  --symbol-ground: transparent;
+  --symbol-ground: light-dark(transparent, #e9edf1);
   --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%235f6b78' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
   --select-arrow-accent: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%231d4f8a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -45,73 +45,20 @@
   color: var(--text);
   background: var(--bg);
 }
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+/* light-dark() takes colors, not images, so the select arrows change here. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --text: #e3e8ee;
-    --text-soft: #c5ced7;
-    --muted: #a0adba;
-    --placeholder: #8a97a4;
-    --disabled: #6c7885;
-    --line: #2f3a45;
-    --line-soft: #27313b;
-    --line-strong: #3d4a57;
-    --line-stronger: #566575;
-    --blue: #6ea6e6;
-    --blue-dark: #a9cbf2;
-    --blue-line: #37597f;
-    --soft-blue: #1c2f45;
-    --tag-blue: #233b57;
-    --focus: #6ea6e6;
-    --on-accent: #0f1720;
-    --bg: #11171e;
-    --panel: #1a222b;
-    --surface-faint: #1d2630;
-    --surface-soft: #212b35;
-    --surface-muted: #28333e;
-    --danger: #f29a90;
-    --danger-bg: #3b2020;
-    --ok: #7fd39c;
-    --ok-bg: #1b3325;
-    --warn: #e8c26f;
-    --warn-bg: #352a13;
-    --flag-line: #566575;
-    --symbol-ground: #e9edf1;
     --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23a0adba' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
     --select-arrow-accent: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23a9cbf2' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
   }
 }
 :root[data-theme="dark"] {
-  color-scheme: dark;
-  --text: #e3e8ee;
-  --text-soft: #c5ced7;
-  --muted: #a0adba;
-  --placeholder: #8a97a4;
-  --disabled: #6c7885;
-  --line: #2f3a45;
-  --line-soft: #27313b;
-  --line-strong: #3d4a57;
-  --line-stronger: #566575;
-  --blue: #6ea6e6;
-  --blue-dark: #a9cbf2;
-  --blue-line: #37597f;
-  --soft-blue: #1c2f45;
-  --tag-blue: #233b57;
-  --focus: #6ea6e6;
-  --on-accent: #0f1720;
-  --bg: #11171e;
-  --panel: #1a222b;
-  --surface-faint: #1d2630;
-  --surface-soft: #212b35;
-  --surface-muted: #28333e;
-  --danger: #f29a90;
-  --danger-bg: #3b2020;
-  --ok: #7fd39c;
-  --ok-bg: #1b3325;
-  --warn: #e8c26f;
-  --warn-bg: #352a13;
-  --flag-line: #566575;
-  --symbol-ground: #e9edf1;
   --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23a0adba' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
   --select-arrow-accent: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23a9cbf2' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
 }
@@ -495,7 +442,7 @@ textarea::placeholder {
 :root[data-preview="map"] .layout-stage {
   background: #e7e3d4;
 }
-.stage.no-grid {
+:root[data-grid="off"] .stage {
   background-image: none !important;
 }
 .symbol-preview {
@@ -915,13 +862,11 @@ a.support-note {
   margin-top: 12px;
 }
 .identity-more > summary {
+  padding: 4px 0;
   cursor: pointer;
   color: var(--muted);
   font-size: 13px;
   line-height: 1.5;
-}
-.identity-more > summary {
-  padding: 4px 0;
 }
 #moreIdentitySelection {
   color: var(--blue-dark);
@@ -1008,6 +953,7 @@ a.support-note {
 .info-popover .section-meta {
   text-align: left;
 }
+.standard-info:not(:has(.standard-info-button)),
 .standard-info:not(:has(.section-meta:not(:empty), .field-note:not([hidden]):not(:empty))) {
   display: none;
 }
@@ -2640,7 +2586,7 @@ dialog p {
   }
   .editor-tabs {
     flex-wrap: nowrap;
-    overflow-x: auto;
+    overflow: auto hidden;
     padding: 0 8px;
   }
   .editor-tabs [role="tab"] {
@@ -2707,7 +2653,11 @@ dialog p {
     position: absolute;
     inset: -11px;
   }
-  .sidc-details > summary {
+  .status-chips .chip {
+    min-height: 44px;
+  }
+  .sidc-details > summary,
+  .identity-more > summary {
     padding: 13px 0;
   }
   .panel-notes a {

@@ -187,7 +187,7 @@ const data = {
 };
 
 fs.mkdirSync(path.join(output, "vendor"), { recursive: true });
-const studioAssets = ["index.html", "styles.css", "app.js", "draft-store.js", "modifier-fields.js", "sidc-editor.js", "country-flags.js", "glyph-picker.js", "country-codes.js", "country-code-data.js", "editor-helpers.js", "field-reference.js", "field-guide.js", "identities.js", "profile-controls.js", "favicon.svg"];
+const studioAssets = ["index.html", "styles.css", "app.js", "draft-store.js", "info-popover.js", "modifier-fields.js", "sidc-editor.js", "country-flags.js", "glyph-picker.js", "country-codes.js", "country-code-data.js", "editor-helpers.js", "field-reference.js", "field-guide.js", "identities.js", "profile-controls.js", "favicon.svg"];
 for (const file of studioAssets) {
   if (file === "index.html") {
     const html = fs.readFileSync(path.join(source, file), "utf8");

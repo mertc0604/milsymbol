@@ -114,3 +114,33 @@ export function createDraftStore(storage, key = "symbol-studio:draft") {
     }
   };
 }
+
+export const sameDraft = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+// Saves the editor after a pause. The state at start() needs no saving, so a visit
+// that changes nothing leaves nothing behind.
+export function createDraftAutosave({ store, capture, report, delay = 250 }) {
+  let last = null;
+  let timer;
+  const flush = () => {
+    if (last === null) return;
+    clearTimeout(timer);
+    const draft = capture();
+    const serialized = JSON.stringify(draft);
+    if (serialized === last) return;
+    const saved = store.save(draft);
+    if (saved) last = serialized;
+    report(saved);
+  };
+  return {
+    start() {
+      last = JSON.stringify(capture());
+    },
+    schedule() {
+      if (last === null) return;
+      clearTimeout(timer);
+      timer = setTimeout(flush, delay);
+    },
+    flush
+  };
+}

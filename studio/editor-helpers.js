@@ -617,3 +617,54 @@ export function problemReasons({ named, errors, generic }) {
 
 // The saved interface theme; anything else follows the system.
 export const themeChoice = (saved) => (saved === "dark" || saved === "light" ? saved : "system");
+
+// The saved preview grid choice; anything else draws the grid.
+export const gridChoice = (saved) => (saved === "off" ? "off" : "on");
+
+const flagNames = { hq: "Headquarters", taskForce: "Task force", feintDummy: "Feint / dummy" };
+
+// In both notes below, reason says why a control is off and stays on the page beside
+// it; about says what the section does and sits behind its information button.
+export function designationNotes({ app6a, modern, kind, installation, tactical, mobility, flagReasons = {} }) {
+  // APP-6A Table III S is the location offset indicator on equipment and
+  // installations, the headquarters staff on units (505.1c, 505.1e).
+  const offsetRole = app6a && (kind === "equipment" || kind === "installation");
+  const reasons = [];
+  if (installation)
+    reasons.push(app6a
+      ? "Installations carry the installation modifier H in position 11, so task force does not apply. Table III also gives installations the location offset indicator (S); this editor cannot set it, because position 11 holds the H."
+      : "Installations carry the installation modifier (H in position 11), so headquarters and task force do not apply.");
+  else if (tactical) reasons.push("Tactical points take no headquarters, task force or feint flag.");
+  else {
+    if (app6a && mobility) reasons.push(`Mobility uses positions 11–12, so ${offsetRole ? "location offset" : "headquarters"} is off.`);
+    if (app6a && kind !== "unit") reasons.push("Task force applies to units only.");
+  }
+  for (const [key, reason] of Object.entries(flagReasons)) reasons.push(`${flagNames[key]}: ${reason}.`);
+  const written = modern
+    ? "Writes one combined code to position 8 of the SIDC."
+    : "Writes one combined code to position 11, for example A for headquarters or E for task force.";
+  const offset = offsetRole && !installation && !tactical
+    ? "On equipment, S is the location offset indicator: a line down from the left side of the frame whose end marks the actual location (Table III, 505.1e). "
+    : "";
+  return { reason: reasons.join(" "), about: `${offset}${written}` };
+}
+
+// disabled names the echelon and mobility modes that are off, as their buttons read.
+export function amplifierNotes({ app6a, kind, installation, tactical, disabled = [], edition = "", placement = "" }) {
+  let reason = "";
+  if (installation || tactical || disabled.length > 1) reason = "This symbol takes no echelon or mobility amplifier.";
+  else if (app6a && kind === "unit") reason = "Units take an echelon above the frame. Mobility is for equipment.";
+  else if (app6a && kind === "equipment") reason = "Equipment takes a mobility amplifier below the frame. Echelon is for units.";
+  else if (disabled.length) reason = `${edition} offers no ${disabled[0].toLowerCase()} amplifier for this symbol.`;
+  return { reason, about: placement };
+}
+
+// The encoding is named once, on the line above this note.
+export function countryFlagNote({ selected, code, label }) {
+  const start = code
+    ? `${label} code: ${code}.`
+    : selected
+      ? "Display-only flag: no country code is assigned for this standard."
+      : "Select a country or apply a SIDC to select its flag.";
+  return `${start} Included in SVG and PNG exports.`;
+}

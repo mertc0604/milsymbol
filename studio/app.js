@@ -36,9 +36,10 @@ import {
   editorGaps
 } from "./profile-controls.js";
 
-import { exportFilename, pngOutputSize, pngScale, fieldStates, profileFieldStates, dtgForField, evaluationRating, sidcParts, pushRecent, placeholderOptions, readTextRows, fieldValueChars, fitRowWidths, layoutFieldBoxes, paletteProgress, baseBranch, entryCrumbs, groupEntries, paletteSections, matchesSearch, normalize, mobilities, mobilityModeName, amplifierChoice, amplifierPlacementNote, sharedViewBox, withViewBox, modifierColorUnused, modifierChoice, centeredGlyphs, frameShapeChoice, problemReasons, themeChoice } from "./editor-helpers.js";
+import { exportFilename, pngOutputSize, pngScale, fieldStates, profileFieldStates, dtgForField, evaluationRating, sidcParts, pushRecent, placeholderOptions, readTextRows, fieldValueChars, fitRowWidths, layoutFieldBoxes, paletteProgress, baseBranch, entryCrumbs, groupEntries, paletteSections, matchesSearch, normalize, mobilities, mobilityModeName, amplifierChoice, amplifierPlacementNote, sharedViewBox, withViewBox, modifierColorUnused, modifierChoice, centeredGlyphs, frameShapeChoice, problemReasons, themeChoice, gridChoice, designationNotes, amplifierNotes, countryFlagNote } from "./editor-helpers.js";
 import { createGlyphPicker } from "./glyph-picker.js";
-import { createDraftStore, draftStateKeys } from "./draft-store.js";
+import { createDraftAutosave, createDraftStore, draftStateKeys, sameDraft } from "./draft-store.js";
+import { setupInfoPopovers } from "./info-popover.js";
 import { fieldReference } from "./field-reference.js";
 import { fieldGuide } from "./field-guide.js";
 import { app6aIdentities, contextLabel, contextOptions, convertIdentity, decodeIdentity, identityCode, identityLabel, identityList, isUsOnlyContext, usOnlyIdentityLabel } from "./identities.js";
@@ -176,6 +177,12 @@ const dom = Object.fromEntries(
   [
     "standardSelect",
     "coverageBadge",
+    "draftStatus",
+    "undoReset",
+    "identityReason",
+    "designationReason",
+    "amplifierReason",
+    "legacyNote",
     "sidcDetails",
     "symbolSearch",
     "clearSearch",
@@ -388,9 +395,7 @@ const draftControlIds = [
 let browserStorage;
 try { browserStorage = window.localStorage; } catch {}
 const draftStore = createDraftStore(browserStorage);
-let draftReady = false;
-let draftTimer;
-let lastDraft = "";
+const draftAutosave = createDraftAutosave({ store: draftStore, capture: captureDraft, report: reportDraft });
 let resetDraft = null;
 let pendingCountryFlag = null;
 
@@ -405,21 +410,8 @@ function captureDraft() {
   }));
 }
 
-function saveDraft() {
-  if (!draftReady) return;
-  clearTimeout(draftTimer);
-  const draft = captureDraft();
-  const serialized = JSON.stringify(draft);
-  if (serialized === lastDraft) return;
-  const saved = draftStore.save(draft);
-  if (saved) lastDraft = serialized;
-  document.getElementById("draftStatus").textContent = saved ? "Saved on this device" : "Draft could not be saved on this device";
-}
-
-function scheduleDraft() {
-  if (!draftReady) return;
-  clearTimeout(draftTimer);
-  draftTimer = setTimeout(saveDraft, 250);
+function reportDraft(saved) {
+  dom.draftStatus.textContent = saved ? "Saved on this device" : "Draft could not be saved on this device";
 }
 
 function restoreDraft(draft) {
@@ -1247,7 +1239,7 @@ function syncModifiers() {
   if (offers) populateAmplifier();
   syncRuleNotes({ modern, app6a, kind, installation, tactical, prescribed: Boolean(prescribedAffiliation), flagReasons });
   syncApp6aTextFields();
-  document.getElementById("legacyNote").textContent = installation
+  dom.legacyNote.textContent = installation
     ? "Installation modifier H is applied automatically. Feint / dummy changes it to HB; unit echelon and headquarters flags do not apply."
     : tactical
       ? "Tactical point: unit echelon, mobility and headquarters flags do not apply. Choose the graphic variant from the library."
@@ -1255,7 +1247,7 @@ function syncModifiers() {
   // A letter-based edition has nothing for this card unless a symbol class needs its note.
   dom.editionSection.hidden = !modern && !installation && !tactical;
   dom.symbolModifiers.hidden = !modern;
-  document.getElementById("legacyNote").hidden = modern;
+  dom.legacyNote.hidden = modern;
   if (!modern) {
     state.modifier1 = "";
     state.modifier2 = "";
@@ -1319,6 +1311,11 @@ function populateSectorSelect(select, sector, selected) {
 
 const kindLabels = { unit: "Unit", equipment: "Equipment", installation: "Installation", point: "Tactical point", nuclear: "Nuclear point" };
 
+function showNote(element, text) {
+  element.hidden = !text;
+  element.textContent = text;
+}
+
 // Explain every rule that disables a control, next to the control.
 function syncRuleNotes({ modern, app6a, kind, installation, tactical, prescribed, flagReasons = {} }) {
   const profile = activeProfile();
@@ -1328,15 +1325,10 @@ function syncRuleNotes({ modern, app6a, kind, installation, tactical, prescribed
   }[app6a ? "0" : state.context];
   // APP-6D and APP-6E Table A-2 keep Exercise and Simulation for US use.
   const usOnly = !app6a && isUsOnlyContext(config(), state.context) && contextOptions(config()).find(([digit]) => digit === state.context)[1];
-  const identityNote = prescribed
-    ? "This symbol prescribes its identity, so the identity is fixed."
-    : [contextNote, usOnly && `${usOnly} is for US use only.`].filter(Boolean).join(" ");
-  dom.identityNote.hidden = !identityNote;
-  dom.identityNote.textContent = identityNote;
-  for (const [key, element] of [["identity", dom.identityAdjust], ["status", dom.statusAdjust], ["amplifier", dom.amplifierAdjust]]) {
-    element.hidden = !state.adjustments[key];
-    element.textContent = state.adjustments[key] || "";
-  }
+  showNote(dom.identityNote, [contextNote, usOnly && `${usOnly} is for US use only.`].filter(Boolean).join(" "));
+  showNote(dom.identityReason, prescribed ? "This symbol prescribes its identity, so the identity is fixed." : "");
+  for (const [key, element] of [["identity", dom.identityAdjust], ["status", dom.statusAdjust], ["amplifier", dom.amplifierAdjust]])
+    showNote(element, state.adjustments[key] || "");
   // The "?" placement choice applies only where the profile's identity table has one.
   const marked = app6a && app6aRules.app6aIdentities[(state.customSidc || buildSidc())[1]];
   dom.uncertaintyField.hidden = dom.uncertaintyNote.hidden = !(marked && marked.marker === "?");
@@ -1351,39 +1343,29 @@ function syncRuleNotes({ modern, app6a, kind, installation, tactical, prescribed
       ? `Only the statuses ${profileTitles[state.standardId]} allows for this symbol are listed.`
       : "";
   dom.designationMeta.textContent = modern ? "Position 8" : "Position 11";
-  const reasons = [];
   // APP-6A Table III S is the location offset indicator on equipment and
   // installations, the headquarters staff on units (505.1c, 505.1e).
   const offsetRole = app6a && (kind === "equipment" || kind === "installation");
   dom.hqLabel.textContent = offsetRole ? "Location offset" : "Headquarters";
   dom.hqStaffLabel.textContent = offsetRole ? "Offset line length" : "HQ staff length";
-  if (installation)
-    reasons.push(app6a
-      ? "Installations carry the installation modifier H in position 11, so task force does not apply. Table III also gives installations the location offset indicator (S); this editor cannot set it, because position 11 holds the H."
-      : "Installations carry the installation modifier (H in position 11), so headquarters and task force do not apply.");
-  else if (tactical) reasons.push("Tactical points take no headquarters or feint flag.");
-  else {
-    if (app6a && state.amplifierMode === "mobility") reasons.push(`Mobility uses positions 11–12, so ${offsetRole ? "location offset" : "headquarters"} is off.`);
-    if (offsetRole) reasons.push("On equipment, S is the location offset indicator: a line down from the left side of the frame whose end marks the actual location (Table III, 505.1e).");
-    if (app6a && kind !== "unit") reasons.push("Task force applies to units only.");
-  }
-  const flagNames = { hq: "Headquarters", taskForce: "Task force", feintDummy: "Feint / dummy" };
-  for (const [key, reason] of Object.entries(flagReasons)) reasons.push(`${flagNames[key]}: ${humanize(shortReason(reason))}.`);
-  dom.designationNote.textContent = reasons.join(" ") || (modern
-    ? "Writes one combined code to position 8 of the SIDC."
-    : "Writes one combined code to position 11, for example A for headquarters or E for task force.");
+  const designation = designationNotes({
+    app6a, modern, kind, installation, tactical,
+    mobility: state.amplifierMode === "mobility",
+    flagReasons: Object.fromEntries(Object.entries(flagReasons).map(([key, reason]) => [key, humanize(shortReason(reason))]))
+  });
+  showNote(dom.designationReason, designation.reason);
+  dom.designationNote.textContent = designation.about;
   dom.amplifierMeta.textContent = modern ? "Positions 9–10" : "Positions 11–12";
-  dom.amplifierNote.textContent = installation || tactical
-    ? "This symbol takes no echelon or mobility amplifier."
-    : app6a && kind === "unit"
-      ? "Units take an echelon above the frame. Mobility is for equipment."
-      : app6a && kind === "equipment"
-        ? "Equipment takes a mobility amplifier below the frame. Echelon is for units."
-        : `${amplifierPlacementNote(mobilityNameFor(profileOffers(state.customSidc || buildSidc())))}${profile && !app6a ? ` Only the values ${profileTitles[state.standardId]} allows for this symbol are listed.` : ""}`;
+  const amplifier = amplifierNotes({
+    app6a, kind, installation, tactical,
+    disabled: [...dom.amplifierMode.querySelectorAll("button:disabled")].filter((button) => button.dataset.mode !== "none").map((button) => button.textContent),
+    edition: profileTitles[state.standardId],
+    placement: `${amplifierPlacementNote(mobilityNameFor(profileOffers(state.customSidc || buildSidc())))}${profile && !app6a ? ` Only the values ${profileTitles[state.standardId]} allows for this symbol are listed.` : ""}`
+  });
+  showNote(dom.amplifierReason, amplifier.reason);
+  dom.amplifierNote.textContent = amplifier.about;
   dom.countryMeta.textContent = countrySidcField(state.standardId)?.description || "";
-  dom.editionMeta.textContent = modern
-    ? (numericSidcEdition(config().version) === "e" ? "Edition E" : "Edition D")
-    : "APP-6D / E · MIL-STD-2525D / E";
+  dom.editionMeta.textContent = modern ? (numericSidcEdition(config().version) === "e" ? "Edition E" : "Edition D") : "";
   dom.modifierNote.hidden = !modern;
   dom.symbolClass.hidden = false;
   dom.symbolClass.textContent = app6a ? kindLabels[kind] || "Symbol" : selectedIcon()?.category || "Symbol";
@@ -2520,10 +2502,7 @@ function renderAll() {
   const sidc = state.customSidc || buildSidc(icon);
   const countryCode = countryCodeForFlag(dom.countryFlag.value, state.standardId);
   const countryField = countrySidcField(state.standardId);
-  const countryEncoding = countryField?.description || "";
-  document.getElementById("countryFlagNote").textContent = dom.countryFlag.value && !countryCode
-    ? "Display-only flag: no country code is assigned for this standard. Included in SVG and PNG exports."
-    : `${countryCode ? `${countryField.label} code: ${countryCode}. ` : "Select a country or apply a SIDC to select its flag. "}${countryEncoding}. Included in SVG and PNG exports.`;
+  document.getElementById("countryFlagNote").textContent = countryFlagNote({ selected: dom.countryFlag.value, code: countryCode, label: countryField?.label });
   window.ms.setStandard(config().standard);
   try {
     currentSymbol = new window.ms.Symbol(sidc, currentOptions());
@@ -2572,7 +2551,7 @@ function renderAll() {
   dom.coverageBadge.title = config().coverageNote || "";
   renderFieldLayout();
   document.title = `${icon.name} — Military Symbol Editor`;
-  scheduleDraft();
+  draftAutosave.schedule();
 }
 
 // Where the symbol sits in the palette: its set and the groups above it, each
@@ -2732,14 +2711,14 @@ function resetControls() {
   renderAll();
   renderCatalog();
   resetDraft = previousDraft;
-  document.getElementById("undoReset").hidden = false;
-  saveDraft();
+  dom.undoReset.hidden = false;
+  draftAutosave.flush();
   toast("Modifiers reset");
 }
 
 function dismissResetUndo() {
   resetDraft = null;
-  document.getElementById("undoReset").hidden = true;
+  dom.undoReset.hidden = true;
 }
 
 function activateTab(tab) {
@@ -2789,44 +2768,17 @@ function moveCardFocus(card, step) {
 }
 
 function bindEvents() {
-  // Native popovers handle outside clicks, Escape and keyboard navigation.
-  // Position them beside their heading and keep them inside narrow viewports.
-  for (const button of document.querySelectorAll(".standard-info-button")) {
-    const popover = document.getElementById(button.getAttribute("popovertarget"));
-    const position = () => {
-      if (!popover.matches(":popover-open")) return;
-      const anchor = button.getBoundingClientRect();
-      const box = popover.getBoundingClientRect();
-      const width = document.documentElement.clientWidth;
-      const height = window.innerHeight;
-      const left = Math.max(12, Math.min(anchor.left, width - box.width - 12));
-      const below = anchor.bottom + 8;
-      const top = below + box.height <= height - 12
-        ? below
-        : Math.max(12, anchor.top - box.height - 8);
-      popover.style.left = `${left}px`;
-      popover.style.top = `${Math.max(12, Math.min(top, height - box.height - 12))}px`;
-    };
-    button.setAttribute("aria-expanded", "false");
-    popover.addEventListener("beforetoggle", (event) => {
-      button.setAttribute("aria-expanded", String(event.newState === "open"));
-      if (event.newState === "open") requestAnimationFrame(position);
-    });
-    window.addEventListener("resize", position);
-    document.addEventListener("scroll", (event) => {
-      if (popover.matches(":popover-open") && !popover.contains(event.target)) popover.hidePopover();
-    }, true);
-  }
+  setupInfoPopovers();
   for (const event of ["input", "change"]) document.addEventListener(event, dismissResetUndo, true);
-  window.addEventListener("pagehide", saveDraft);
+  window.addEventListener("pagehide", draftAutosave.flush);
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") saveDraft();
+    if (document.visibilityState === "hidden") draftAutosave.flush();
   });
-  document.getElementById("undoReset").addEventListener("click", () => {
+  dom.undoReset.addEventListener("click", () => {
     const previous = resetDraft;
     dismissResetUndo();
     if (previous && restoreDraft(previous)) {
-      saveDraft();
+      draftAutosave.flush();
       toast("Reset undone");
       dom.resetButton.focus();
     }
@@ -3105,7 +3057,7 @@ function bindEvents() {
     state.sidcDirty = true;
     state.sidcMessage = null;
     renderSidcStatus(state.customSidc || buildSidc());
-    scheduleDraft();
+    draftAutosave.schedule();
   });
   for (const id of ["colorMode", "direction", "symbolSize", "strokeWidth"])
     dom[id].addEventListener("input", () => {
@@ -3194,7 +3146,7 @@ function bindEvents() {
   );
   dom.downloadPng.addEventListener("click", downloadPng);
   // The grid is a preview aid only; exports stay transparent.
-  dom.gridToggle.addEventListener("change", () => dom.stage.classList.toggle("no-grid", !dom.gridToggle.checked));
+  dom.gridToggle.addEventListener("change", () => setEditorChoice("grid", dom.gridToggle.checked ? "on" : "off", "on"));
   dom.previewBackground.addEventListener("change", () => setEditorChoice("preview", dom.previewBackground.value, "light"));
   dom.themeSelect.addEventListener("change", () => setEditorChoice("theme", dom.themeSelect.value, "system"));
   dom.outlineToggle.addEventListener("change", () => {
@@ -3267,14 +3219,18 @@ function setEditorChoice(name, value, fallback) {
 function loadEditorChoices() {
   let theme = null;
   let preview = null;
+  let grid = null;
   try {
     theme = localStorage.getItem("symbol-studio:theme");
     preview = localStorage.getItem("symbol-studio:preview");
+    grid = localStorage.getItem("symbol-studio:grid");
   } catch {}
   dom.themeSelect.value = themeChoice(theme);
   dom.previewBackground.value = ["dark", "map"].includes(preview) ? preview : "light";
+  dom.gridToggle.checked = gridChoice(grid) === "on";
   setEditorChoice("theme", dom.themeSelect.value, "system");
   setEditorChoice("preview", dom.previewBackground.value, "light");
+  setEditorChoice("grid", gridChoice(grid), "on");
 }
 
 async function init() {
@@ -3304,15 +3260,18 @@ async function init() {
     if (savedDraft) {
       const initialDraft = captureDraft();
       try {
-        if (restoreDraft(savedDraft)) toast("Draft restored from this device");
+        if (restoreDraft(savedDraft)) {
+          reportDraft(true);
+          if (!sameDraft(savedDraft, initialDraft)) toast("Draft restored from this device");
+        }
       } catch (error) {
         restoreDraft(initialDraft);
+        draftStore.save(initialDraft);
         toast("Saved draft could not be restored");
         console.warn("Unable to restore saved draft", error);
       }
     }
-    draftReady = true;
-    saveDraft();
+    draftAutosave.start();
     loadFlags();
   } catch (error) {
     for (const button of [dom.downloadSvg, dom.downloadPng, dom.copySidc, dom.applySidc]) button.disabled = true;
