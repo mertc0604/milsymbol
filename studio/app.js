@@ -2789,6 +2789,34 @@ function moveCardFocus(card, step) {
 }
 
 function bindEvents() {
+  // Native popovers handle outside clicks, Escape and keyboard navigation.
+  // Position them beside their heading and keep them inside narrow viewports.
+  for (const button of document.querySelectorAll(".standard-info-button")) {
+    const popover = document.getElementById(button.getAttribute("popovertarget"));
+    const position = () => {
+      if (!popover.matches(":popover-open")) return;
+      const anchor = button.getBoundingClientRect();
+      const box = popover.getBoundingClientRect();
+      const width = document.documentElement.clientWidth;
+      const height = window.innerHeight;
+      const left = Math.max(12, Math.min(anchor.left, width - box.width - 12));
+      const below = anchor.bottom + 8;
+      const top = below + box.height <= height - 12
+        ? below
+        : Math.max(12, anchor.top - box.height - 8);
+      popover.style.left = `${left}px`;
+      popover.style.top = `${Math.max(12, Math.min(top, height - box.height - 12))}px`;
+    };
+    button.setAttribute("aria-expanded", "false");
+    popover.addEventListener("beforetoggle", (event) => {
+      button.setAttribute("aria-expanded", String(event.newState === "open"));
+      if (event.newState === "open") requestAnimationFrame(position);
+    });
+    window.addEventListener("resize", position);
+    document.addEventListener("scroll", (event) => {
+      if (popover.matches(":popover-open") && !popover.contains(event.target)) popover.hidePopover();
+    }, true);
+  }
   for (const event of ["input", "change"]) document.addEventListener(event, dismissResetUndo, true);
   window.addEventListener("pagehide", saveDraft);
   document.addEventListener("visibilitychange", () => {

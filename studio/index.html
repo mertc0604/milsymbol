@@ -123,7 +123,15 @@
             <div id="panel-symbol" role="tabpanel" aria-labelledby="tab-symbol">
               <section class="card-section">
                 <div class="section-head">
-                  <h3 id="identityTitle">Standard identity</h3>
+                  <div class="section-title"><h3 id="identityTitle">Standard identity</h3>
+                    <div class="standard-info">
+                      <button class="standard-info-button" type="button" popovertarget="identityInfo" aria-label="About standard identity"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 11v6" /><circle class="info-dot" cx="12" cy="7" r="1" /></svg></button>
+                      <div id="identityInfo" class="info-popover" popover="auto" role="note" aria-labelledby="identityInfoTitle">
+                        <div class="info-popover-head"><strong id="identityInfoTitle">Standard identity</strong><button class="info-close" type="button" popovertarget="identityInfo" popovertargetaction="hide" aria-label="Close standard identity information">×</button></div>
+                        <div class="info-popover-body"><p class="field-note" id="identityNote" hidden></p><p class="field-note" id="uncertaintyNote" hidden></p></div>
+                      </div>
+                    </div>
+                  </div>
                   <label id="contextField" class="inline-select"><span>Context</span><select id="context"></select></label>
                 </div>
                 <div id="identityChips" role="group" aria-labelledby="identityTitle">
@@ -134,7 +142,6 @@
                   </details>
                 </div>
                 <select id="affiliation" class="visually-hidden" tabindex="-1" aria-hidden="true"></select>
-                <details class="standard-details"><summary>Standard details</summary><div><p class="field-note" id="identityNote" hidden></p><p class="field-note" id="uncertaintyNote" hidden></p></div></details>
                 <p class="field-note warn" id="identityAdjust" role="status" hidden></p>
                 <label id="uncertaintyField" class="inline-select" hidden><span>Uncertainty mark ("?")</span><select id="uncertaintyMarker" aria-describedby="uncertaintyNote">
                   <option value="table">Publication default</option><option value="field">In field E</option><option value="frame">Inside the frame</option>
@@ -144,26 +151,48 @@
 
               <div class="card-grid">
                 <section class="card-section">
-                  <div class="section-head"><h3 id="statusTitle">Status</h3></div>
+                  <div class="section-head"><div class="section-title"><h3 id="statusTitle">Status</h3>
+                    <div class="standard-info">
+                      <button class="standard-info-button" type="button" popovertarget="statusInfo" aria-label="About status"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 11v6" /><circle class="info-dot" cx="12" cy="7" r="1" /></svg></button>
+                      <div id="statusInfo" class="info-popover" popover="auto" role="note" aria-labelledby="statusInfoTitle">
+                        <div class="info-popover-head"><strong id="statusInfoTitle">Status</strong><button class="info-close" type="button" popovertarget="statusInfo" popovertargetaction="hide" aria-label="Close status information">×</button></div>
+                        <div class="info-popover-body"><span class="section-meta" id="statusMeta"></span><p class="field-note" id="statusNote"></p></div>
+                      </div>
+                    </div>
+                  </div></div>
                   <div id="statusChips" class="chip-grid status-chips" role="group" aria-labelledby="statusTitle"></div>
                   <select id="status" class="visually-hidden" tabindex="-1" aria-hidden="true"></select>
-                  <details class="standard-details"><summary>Standard details</summary><div><span class="section-meta" id="statusMeta"></span><p class="field-note" id="statusNote"></p></div></details>
-                  <p class="field-note warn" id="statusAdjust" role="status" hidden></p>
+                    <p class="field-note warn" id="statusAdjust" role="status" hidden></p>
                 </section>
 
                 <section class="card-section">
-                  <div class="section-head"><h3>Unit designation</h3></div>
+                  <div class="section-head"><div class="section-title"><h3>Unit designation</h3>
+                    <div class="standard-info">
+                      <button class="standard-info-button" type="button" popovertarget="designationInfo" aria-label="About unit designation"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 11v6" /><circle class="info-dot" cx="12" cy="7" r="1" /></svg></button>
+                      <div id="designationInfo" class="info-popover" popover="auto" role="note" aria-labelledby="designationInfoTitle">
+                        <div class="info-popover-head"><strong id="designationInfoTitle">Unit designation</strong><button class="info-close" type="button" popovertarget="designationInfo" popovertargetaction="hide" aria-label="Close unit designation information">×</button></div>
+                        <div class="info-popover-body"><span class="section-meta" id="designationMeta"></span><p class="field-note" id="designationNote"></p></div>
+                      </div>
+                    </div>
+                  </div></div>
                   <div class="toggle-grid toggle-chips">
                     <label><input id="hq" type="checkbox" /><span id="hqLabel">Headquarters</span></label
                     ><label><input id="taskForce" type="checkbox" /><span>Task force</span></label
                     ><label><input id="feintDummy" type="checkbox" /><span>Feint / dummy</span></label>
                   </div>
                   <label class="inline-field" id="hqStaffRow" hidden title="0 draws the default length"><span><span id="hqStaffLabel">HQ staff length</span> <span class="field-code">S</span></span><span class="unit-input"><input id="hqStaffLength" type="number" min="0" max="500" value="0" placeholder="0" /><span aria-hidden="true">px</span></span></label>
-                  <details class="standard-details"><summary>Standard details</summary><div><span class="section-meta" id="designationMeta"></span><p class="field-note" id="designationNote"></p></div></details>
-                </section>
+                  </section>
 
                 <section class="card-section">
-                  <div class="section-head"><h3>Echelon / mobility</h3></div>
+                  <div class="section-head"><div class="section-title"><h3>Echelon / mobility</h3>
+                    <div class="standard-info">
+                      <button class="standard-info-button" type="button" popovertarget="amplifierInfo" aria-label="About echelon / mobility"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 11v6" /><circle class="info-dot" cx="12" cy="7" r="1" /></svg></button>
+                      <div id="amplifierInfo" class="info-popover" popover="auto" role="note" aria-labelledby="amplifierInfoTitle">
+                        <div class="info-popover-head"><strong id="amplifierInfoTitle">Echelon / mobility</strong><button class="info-close" type="button" popovertarget="amplifierInfo" popovertargetaction="hide" aria-label="Close echelon / mobility information">×</button></div>
+                        <div class="info-popover-body"><span class="section-meta" id="amplifierMeta"></span><p class="field-note" id="amplifierNote"></p></div>
+                      </div>
+                    </div>
+                  </div></div>
                   <div class="segmented" id="amplifierMode" role="group" aria-label="Amplifier type">
                     <button class="active" data-mode="echelon" type="button">Echelon</button
                     ><button data-mode="mobility" type="button">Mobility</button
@@ -177,12 +206,19 @@
                     </div>
                     <select id="amplifierValue" class="visually-hidden" tabindex="-1" aria-hidden="true"></select>
                   </div>
-                  <details class="standard-details"><summary>Standard details</summary><div><span class="section-meta" id="amplifierMeta"></span><p class="field-note" id="amplifierNote"></p></div></details>
-                  <p class="field-note warn" id="amplifierAdjust" role="status" hidden></p>
+                    <p class="field-note warn" id="amplifierAdjust" role="status" hidden></p>
                 </section>
 
                 <section class="card-section">
-                  <div class="section-head"><h3 id="countryHeading">Country / organization</h3></div>
+                  <div class="section-head"><div class="section-title"><h3 id="countryHeading">Country / organization</h3>
+                    <div class="standard-info">
+                      <button class="standard-info-button" type="button" popovertarget="countryInfo" aria-label="About country / organization"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 11v6" /><circle class="info-dot" cx="12" cy="7" r="1" /></svg></button>
+                      <div id="countryInfo" class="info-popover" popover="auto" role="note" aria-labelledby="countryInfoTitle">
+                        <div class="info-popover-head"><strong id="countryInfoTitle">Country / organization</strong><button class="info-close" type="button" popovertarget="countryInfo" popovertargetaction="hide" aria-label="Close country / organization information">×</button></div>
+                        <div class="info-popover-body"><span class="section-meta" id="countryMeta"></span><p class="field-note" id="countryFlagNote">Select a country or apply a SIDC to select its flag. Included in SVG and PNG exports.</p></div>
+                      </div>
+                    </div>
+                  </div></div>
                   <div class="glyph-picker">
                     <button id="countryButton" class="glyph-select" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="countryList" aria-labelledby="countryHeading countryButton" aria-describedby="countryFlagNote" disabled></button>
                     <div id="countryList" class="glyph-list" role="listbox" tabindex="-1" aria-labelledby="countryHeading" hidden></div>
@@ -190,12 +226,19 @@
                   <select id="countryFlag" class="visually-hidden" tabindex="-1" aria-hidden="true" disabled>
                     <option value="">Loading flags…</option>
                   </select>
-                  <details class="standard-details"><summary>Standard details</summary><div><span class="section-meta" id="countryMeta"></span><p class="field-note" id="countryFlagNote">Select a country or apply a SIDC to select its flag. Included in SVG and PNG exports.</p></div></details>
-                </section>
+                  </section>
               </div>
 
               <section class="card-section edition-section" id="editionSection">
-                <div class="section-head"><h3>Edition-specific modifiers</h3></div>
+                <div class="section-head"><div class="section-title"><h3>Edition-specific modifiers</h3>
+                    <div class="standard-info">
+                      <button class="standard-info-button" type="button" popovertarget="editionInfo" aria-label="About edition-specific modifiers"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 11v6" /><circle class="info-dot" cx="12" cy="7" r="1" /></svg></button>
+                      <div id="editionInfo" class="info-popover" popover="auto" role="note" aria-labelledby="editionInfoTitle">
+                        <div class="info-popover-head"><strong id="editionInfoTitle">Edition-specific modifiers</strong><button class="info-close" type="button" popovertarget="editionInfo" popovertargetaction="hide" aria-label="Close edition-specific modifiers information">×</button></div>
+                        <div class="info-popover-body"><span class="section-meta" id="editionMeta"></span><p class="field-note" id="modifierNote"></p><p class="field-note" id="legacyNote" hidden>In this edition, icon variants are selected directly from the symbol library.</p></div>
+                      </div>
+                    </div>
+                  </div></div>
                 <div id="symbolModifiers" class="control-group edition-grid">
                   <div class="full-field">
                     <span id="modifier1Label">Icon modifier 1</span>
@@ -224,7 +267,6 @@
                     </select>
                   </div>
                 </div>
-                <details class="standard-details"><summary>Standard details</summary><div><span class="section-meta" id="editionMeta"></span><p class="field-note" id="modifierNote"></p><p class="field-note" id="legacyNote" hidden>In this edition, icon variants are selected directly from the symbol library.</p></div></details>
 
               </section>
             </div>
