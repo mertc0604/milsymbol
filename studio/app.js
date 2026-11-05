@@ -36,7 +36,7 @@ import {
   editorGaps
 } from "./profile-controls.js";
 
-import { exportFilename, pngOutputSize, pngScale, fieldStates, profileFieldStates, dtgForField, evaluationRating, sidcParts, pushRecent, placeholderOptions, readTextRows, fieldValueChars, fitRowWidths, layoutFieldBoxes, paletteProgress, baseBranch, entryCrumbs, groupEntries, paletteSections, matchesSearch, normalize, mobilities, mobilityModeName, amplifierChoice, amplifierPlacementNote, sharedViewBox, withViewBox, modifierColorUnused, modifierChoice } from "./editor-helpers.js";
+import { exportFilename, pngOutputSize, pngScale, fieldStates, profileFieldStates, dtgForField, evaluationRating, sidcParts, pushRecent, placeholderOptions, readTextRows, fieldValueChars, fitRowWidths, layoutFieldBoxes, paletteProgress, baseBranch, entryCrumbs, groupEntries, paletteSections, matchesSearch, normalize, mobilities, mobilityModeName, amplifierChoice, amplifierPlacementNote, sharedViewBox, withViewBox, modifierColorUnused, modifierChoice, centeredGlyphs, frameShapeChoice } from "./editor-helpers.js";
 import { createGlyphPicker } from "./glyph-picker.js";
 import { fieldReference } from "./field-reference.js";
 import { fieldGuide } from "./field-guide.js";
@@ -310,6 +310,8 @@ const dom = Object.fromEntries(
     "stack",
     "frameShape",
     "frameShapeField",
+    "frameShapeButton",
+    "frameShapeList",
     "fill",
     "frame",
     "icon",
@@ -1038,6 +1040,25 @@ const iconModifierPickers = [1, 2].map((type) =>
     escapeHtml
   })
 );
+
+// The bare frame this shape gives the current symbol.
+function frameShapeSvg(value) {
+  const base = (state.customSidc || buildSidc()).padEnd(30, "0");
+  return chipSvg(`${base.slice(0, 7)}${"0".repeat(15)}${value}${base.slice(23)}`, { size: 24 });
+}
+
+const frameShapePicker = createGlyphPicker({
+  button: dom.frameShapeButton,
+  list: dom.frameShapeList,
+  select: dom.frameShape,
+  idPrefix: "frameShapeOption",
+  choices: () => [...dom.frameShape.options].map(frameShapeChoice),
+  glyphs: (rows) => {
+    const drawn = centeredGlyphs(rows.map((item) => frameShapeSvg(item.value)));
+    return (value) => drawn[rows.findIndex((item) => item.value === value)] || "";
+  },
+  escapeHtml
+});
 
 function countryChoices() {
   return [...dom.countryFlag.options].map((item) => ({
@@ -2439,7 +2460,7 @@ function renderAll() {
   amplifierSidc = sidc;
   amplifierPicker.render();
   countryPicker.render();
-  if (config().family === "modern") for (const picker of iconModifierPickers) picker.render();
+  if (config().family === "modern") for (const picker of [...iconModifierPickers, frameShapePicker]) picker.render();
   dom.modifierColorNote.hidden = !modifierColorUnused({ on: dom.modifierColorOn.checked, color: dom.modifierColor.value, svg: currentSvg });
   syncGraphicsControls();
   renderExportSize();
@@ -2802,7 +2823,7 @@ function bindEvents() {
   });
   amplifierPicker.bind();
   countryPicker.bind();
-  for (const picker of iconModifierPickers) picker.bind();
+  for (const picker of [...iconModifierPickers, frameShapePicker]) picker.bind();
   dom.modifier1.addEventListener("change", () => {
     state.modifier1 = dom.modifier1.value;
     updateSidcAndRender("modifier1");

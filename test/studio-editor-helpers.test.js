@@ -18,7 +18,9 @@ import {
   withViewBox,
   typeaheadIndex,
   modifierColorUnused,
-  modifierChoice
+  modifierChoice,
+  centeredGlyphs,
+  frameShapeChoice
 } from "../studio/editor-helpers.js";
 import { patchSidc, probeOffers } from "../studio/profile-controls.js";
 import { std2525eProfile } from "../src/modifierprofiles/std2525e.js";
@@ -34,6 +36,7 @@ import {
 const glyph = (viewBox, size = 'width="40" height="30"') =>
   `<svg xmlns="http://www.w3.org/2000/svg" version="1.2" baseProfile="tiny" ${size} viewBox="${viewBox}"><path d="M0,0" stroke-width="4"></path></svg>`;
 const glyphs = [glyph("21 46 158 108"), glyph("21 6 158 148"), glyph("1 6 198 148"), ""];
+const frames = [glyph("21 46 158 108"), glyph("41 26 118 128"), ""];
 const countries = ["Tunisia", "Turkmenistan", "Türkiye", "Tuvalu"];
 
 const app6aContext = (sidc) => ({
@@ -446,6 +449,22 @@ export default {
     ],
     "a glyph that failed to draw stays empty": [withViewBox("", sharedViewBox(glyphs)), ""],
     "no box leaves the glyph alone": [withViewBox(glyphs[0], null), glyphs[0]]
+  },
+  "frames of different shapes": {
+    "each stays in the middle of a box of one size": [
+      centeredGlyphs(frames).map((svg) => /viewBox="([^"]*)"/.exec(svg)?.[1]),
+      ["21 36 158 128", "21 26 158 128", undefined]
+    ],
+    "a frame that failed to draw stays empty": [centeredGlyphs(frames)[2], ""],
+    "a list with nothing drawn stays empty": [centeredGlyphs(["", ""]), ["", ""]],
+    "a row names the shape and its code": [
+      frameShapeChoice({ value: "A", textContent: "Sea surface" }),
+      { value: "A", name: "Sea surface", code: "A", reason: "" }
+    ],
+    "a code the list has no row for shows once": [
+      frameShapeChoice({ value: "B", textContent: "SIDC: B" }),
+      { value: "B", name: "From SIDC", code: "B", reason: "" }
+    ]
   },
   "icon modifier rows": {
     "the code goes beside the name": [

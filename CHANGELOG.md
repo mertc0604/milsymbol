@@ -15,7 +15,7 @@ publication workflow and GitHub/npm version inventory.
 ### Added
 
 - Studio: the country list shows each flag beside its name, with the code it writes in the current standard. Letters typed in the open list spell a name, with or without accents.
-- Studio: the icon modifier and sector lists of the numeric standards draw each modifier alone on the current frame, beside its name and code.
+- Studio: the icon modifier and sector lists of the numeric standards draw each modifier alone on the current frame, beside its name and code. Frame shape override draws each shape for the current identity.
 
 ### Fixed
 

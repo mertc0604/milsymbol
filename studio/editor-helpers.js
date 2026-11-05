@@ -525,6 +525,11 @@ export function modifierChoice({ value, textContent, title, disabled, parentElem
   };
 }
 
+// A row of the frame shape picker, from an option of its select.
+export function frameShapeChoice({ value, textContent }) {
+  return { value, name: textContent.startsWith("SIDC: ") ? "From SIDC" : textContent, code: value, reason: "" };
+}
+
 // The glyphs of one list share a box, so a frame has one size and one place in every
 // row. Left to itself each glyph is fitted alone, and a tall amplifier shrinks its frame.
 const viewBoxOf = (svg) => {
@@ -550,6 +555,25 @@ export function sharedViewBox(svgs, center = "") {
   const halfWidth = Math.max(middleX - left, right - middleX);
   const halfHeight = Math.max(middleY - top, bottom - middleY);
   return { x: middleX - halfWidth, y: middleY - halfHeight, width: halfWidth * 2, height: halfHeight * 2 };
+}
+
+// Frames of different shapes have no middle in common, so each keeps its own, at one
+// scale for the list. That puts every frame on the line of the text beside it.
+export function centeredGlyphs(svgs) {
+  const boxes = svgs.map(viewBoxOf);
+  const drawn = boxes.filter(Boolean);
+  const width = Math.max(...drawn.map((box) => box.width));
+  const height = Math.max(...drawn.map((box) => box.height));
+  return svgs.map((svg, index) => {
+    const box = boxes[index];
+    if (!box) return svg;
+    return withViewBox(svg, {
+      x: box.x + (box.width - width) / 2,
+      y: box.y + (box.height - height) / 2,
+      width,
+      height
+    });
+  });
 }
 
 export function withViewBox(svg, box) {
