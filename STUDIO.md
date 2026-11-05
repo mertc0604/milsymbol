@@ -1,6 +1,6 @@
 # Military Symbol Studio
 
-The repository includes an English military symbol editor in `studio/`, with a light interface, a search panel, tabbed configuration, and a persistent preview with an always-visible SIDC console.
+The repository includes an English military symbol editor in `studio/`, with system-aware light/dark themes, a search panel, tabbed configuration, and a persistent preview with a SIDC console.
 
 ## Run locally
 
@@ -14,15 +14,29 @@ Open `http://127.0.0.1:4173`.
 
 The build creates `dist/studio/`, including a normalized searchable catalog generated from the standard data packages already used by milsymbol. The site offers MIL-STD-2525C/D/E and APP-6A/B/D/E views. APP-6E uses a compatibility catalog; its codes carry version 16 (APP-06(E)(2), Table A-1). FM 1-02.2 is not offered in the editor; the underlying library is unchanged. Symbols can be exported as SVG or PNG.
 
+## Local drafts
+
+The editor automatically saves the standard, selected catalog row, applied or pending SIDC,
+text fields (including inactive values), country/organization and display settings in
+this browser's `localStorage`. Reloading restores that draft. The toolbar reports whether
+saving succeeded. Drafts are local to this site and browser; they are not uploaded or
+included when copying a SIDC. Unavailable storage does not prevent editing; malformed
+or incompatible saved records are ignored.
+
+Reset clears modifiers and immediately saves the reset draft. Undo reset restores the
+complete previous draft until the next edit or reload. Theme and preview background
+remain separate browser preferences.
+
 ## Layout
 
 - **Top bar:** standard selector, Help and the search launcher. Click it or press `/` to open the symbol search panel. The panel holds the symbol set list with counts, Recently used (the last 8 symbols per standard, stored in `localStorage`), and result tiles with mini previews. Browsing a set, the tiles sit under a closable heading for each group of the set and a subheading for each group inside it (APP-6A Ground units: COMBAT, then AIR DEFENSE, ARMOR, ...), taken from the catalogue hierarchy; All symbol sets has a heading per set. A search lists its matches as one grid. The preview heading names the symbol's set and groups in full; each opens the palette at that group. In the panel, `↑`/`↓` move between results, `Enter` selects, and `Esc` clears the search and then closes the panel. A full SIDC typed into the search finds its symbol, also in the form the publications print (`S*G*UCI---*****`); a long word such as reconnaissance stays a word search.
 - **Left column (sticky):**
   - Preview card: name, path, class badge (Unit, Equipment, Installation, Tactical point on APP-6A), the render state (Rendered, or a red "Check code / modifiers" when the symbol does not render cleanly), and the preview stage. Under it, Edit text (opens Amplifiers in Field positions) and two small download links, PNG and SVG. Exports always use the normal render.
   - The preview grid and the outline are switches in the Display tab; the grid is an editor aid only, exports have a transparent background.
-  - SIDC console: wide enough for a 30-digit code on one line (on narrow screens Apply sits under it), Copy next to the length. Apply, `Enter` to apply, `Esc` to return to the current code. Messages appear inline only when there is something to say: applied, wildcard and standard-switch notes, and errors that name the SIDC position. The code breakdown is always visible and shows each part's meaning.
+  - SIDC console: wide enough for a 30-digit code on one line (on narrow screens Apply sits under it), Copy next to the length. Apply, `Enter` to apply, `Esc` to return to the current code. Messages appear inline only when there is something to say: applied, wildcard and standard-switch notes, and errors that name the SIDC position. The collapsible Code details section shows each part's meaning.
 - **Right column:** three tabs.
   - **Symbol:** identity and status chips drawn by the renderer for the current symbol, context, unit designation (with the S staff length under Headquarters while it is on; on APP-6A equipment the flag is Location offset), echelon or mobility (a picker that draws each choice on the current frame, all at one scale with the frame on the line of the text and in the modifier color when it is on, with its SIDC code; 2525E and APP-6E dismounted individuals also take Leader individual, and the control is then named Leadership), country or organization (a picker with each flag beside its name and the code it writes in the current standard; letters typed in the open list spell a name, accents optional), and edition-specific icon modifiers (pickers that draw each modifier alone on the current frame, with the groups of the symbol set; a sector code the entity may not use is listed but cannot be chosen) and frame shape (a picker that draws each shape for the current identity). Every disabled control states its reason.
+    - Friend, Hostile, Neutral and Unknown are shown first; More identities holds the other choices and names any selected secondary identity even while closed. Standard details disclosures hold position numbers and publication explanations; adjustment warnings remain visible.
     - Identities: APP-6A offers its nine Annex B identities (including joker and faker). APP-6B and 2525C offer the seven standard identities with a Reality / Exercise context; exercise writes G, W, M, D, L, J or K into position 2. D/E editions offer the seven identities 0–6 with Reality / Exercise / Simulation in position 3, and exercise suspect and hostile are shown as Joker and Faker.
   - **Amplifiers:** two views of the same values. Field positions puts a box for each applicable field around the symbol in the order the standard places it; the boxes are spaced apart for typing, so the preview, not the boxes, shows the exact placement. A country flag keeps its place there too. The List shows only the fields that apply to the symbol in the selected edition, under the edition's own names, in fixed groups; a search (name or code) and "Filled only" hide fields without touching their values and say how many filled fields they hide. A help line at the bottom of the list, always the same height, shows the focused field's rule, format and example (edition-specific: APP-6A W DDHHMMSSZMONYY and Y latitude/longitude, 2525C W DDHHMMSSZMONYYYY and an AO without a code list, APP-6D installation AI component types). "Not available for this symbol", closed under the list, names the edition's fields that do not apply to the symbol class or identity and the graphics the standard defines that this editor cannot set (2525C AH/AI/AK and the S offset, APP-6A installation S offset, APP-6D Land Unit AC and installation Q offset line). Fields of other editions are not listed. Q (direction of movement: slider and degrees) and AJ (speed leader) are graphic amplifiers in the list, after Z (speed), shown only where the edition gives them to the symbol class (not on 2525C or APP-6D installations, where APP-6D Q is the offset location line; APP-6A has no AJ); a value set earlier is kept, unsent, and the closed list says so. Field positions lists them under "Not drawn here". W has "Now (UTC)" in the field's format; J has a reliability/credibility picker that opens on request; APP-6D AO is built from lists, with the bar colour (target, non-target, expired) under it for hostile tracks.
   - **Display:** display switches (fill, frame, icon, text labels, country flag, outline), size, stroke, palette and stack (not in APP-6A); an Editor card for what stays out of exports, kept in this browser (preview background: light, dark or map; theme: same as system, light or dark; preview grid); and, closed under "More style options", three groups: Colors (custom fill color, monochrome, modifier color for HQ staff, task force, feint/dummy, installation, echelon and mobility, with a note when the symbol has none of them, and fill opacity), Text (color, background, size) and Outline (width, color). None of the style options change the SIDC.
@@ -60,7 +74,7 @@ mode. A deliberately selected value is not silently replaced by clicking the
 same mode. Search accepts names, function codes and full SIDCs; Clear / Escape
 resets search and pagination. Section switches return the form to its top.
 On short, narrow screens, the compact symbol links to the full preview/download panel.
-The editor opens on APP-6A. Standard tabs are grouped in edition order:
+A new editor draft opens on APP-6A; a saved draft restores its standard. Standards are grouped in edition order:
 APP-6A/B/D/E, then MIL-2525C/D/E. The desktop preview receives approximately
 one third of the workspace, with a larger symbol stage.
 

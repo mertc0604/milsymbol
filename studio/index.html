@@ -86,7 +86,7 @@
               <ul id="profileIssues" class="profile-issues"></ul>
               <details id="profileNotesBox"><summary id="profileNotesSummary"></summary><ul id="profileNotesList"></ul></details>
             </div>
-            <details id="sidcDetails" class="sidc-details" open>
+            <details id="sidcDetails" class="sidc-details">
               <summary>Code details</summary>
               <div id="sidcSegments" class="sidc-segments" aria-label="Code breakdown"></div>
             </details>
@@ -105,6 +105,7 @@
         </aside>
 
         <section class="editor-panel" aria-label="Symbol configuration">
+          <div class="draft-toolbar"><span id="draftStatus" role="status">Drafts stay on this device</span><span class="draft-actions"><button id="undoReset" class="quiet-button" type="button" hidden>Undo reset</button><button id="resetButton" class="quiet-button" type="button" aria-label="Reset modifiers">Reset<span class="reset-word"> modifiers</span></button></span></div>
           <div class="editor-tabs" role="tablist" aria-label="Configuration sections">
             <button id="tab-symbol" role="tab" aria-selected="true" aria-controls="panel-symbol" data-editor-tab="symbol" type="button">Symbol</button>
             <button id="tab-text" role="tab" aria-selected="false" aria-controls="panel-text" data-editor-tab="text" tabindex="-1" type="button">
@@ -115,7 +116,6 @@
             </button>
             <span class="tab-spacer"></span>
             <span class="editor-hint">Changes update the preview automatically.</span>
-            <button id="resetButton" class="quiet-button" type="button" aria-label="Reset modifiers">Reset<span class="reset-word"> modifiers</span></button>
             <a href="#previewPanel" id="compactPreview" class="compact-preview" aria-label="Go to full preview and downloads" title="Go to full preview and downloads"></a>
           </div>
 
@@ -126,38 +126,44 @@
                   <h3 id="identityTitle">Standard identity</h3>
                   <label id="contextField" class="inline-select"><span>Context</span><select id="context"></select></label>
                 </div>
-                <div id="identityChips" class="chip-grid identity-chips" role="group" aria-labelledby="identityTitle"></div>
+                <div id="identityChips" role="group" aria-labelledby="identityTitle">
+                  <div id="primaryIdentityChips" class="chip-grid identity-chips"></div>
+                  <details id="moreIdentities" class="identity-more">
+                    <summary>More identities <span id="moreIdentitySelection"></span></summary>
+                    <div id="secondaryIdentityChips" class="chip-grid identity-chips"></div>
+                  </details>
+                </div>
                 <select id="affiliation" class="visually-hidden" tabindex="-1" aria-hidden="true"></select>
-                <p class="field-note" id="identityNote" hidden></p>
+                <details class="standard-details"><summary>Standard details</summary><div><p class="field-note" id="identityNote" hidden></p><p class="field-note" id="uncertaintyNote" hidden></p></div></details>
                 <p class="field-note warn" id="identityAdjust" role="status" hidden></p>
                 <label id="uncertaintyField" class="inline-select" hidden><span>Uncertainty mark ("?")</span><select id="uncertaintyMarker" aria-describedby="uncertaintyNote">
                   <option value="table">Publication default</option><option value="field">In field E</option><option value="frame">Inside the frame</option>
                 </select></label>
-                <p class="field-note" id="uncertaintyNote" hidden></p>
+
               </section>
 
               <div class="card-grid">
                 <section class="card-section">
-                  <div class="section-head"><h3 id="statusTitle">Status</h3><span class="section-meta" id="statusMeta"></span></div>
+                  <div class="section-head"><h3 id="statusTitle">Status</h3></div>
                   <div id="statusChips" class="chip-grid status-chips" role="group" aria-labelledby="statusTitle"></div>
                   <select id="status" class="visually-hidden" tabindex="-1" aria-hidden="true"></select>
-                  <p class="field-note" id="statusNote"></p>
+                  <details class="standard-details"><summary>Standard details</summary><div><span class="section-meta" id="statusMeta"></span><p class="field-note" id="statusNote"></p></div></details>
                   <p class="field-note warn" id="statusAdjust" role="status" hidden></p>
                 </section>
 
                 <section class="card-section">
-                  <div class="section-head"><h3>Unit designation</h3><span class="section-meta" id="designationMeta"></span></div>
+                  <div class="section-head"><h3>Unit designation</h3></div>
                   <div class="toggle-grid toggle-chips">
                     <label><input id="hq" type="checkbox" /><span id="hqLabel">Headquarters</span></label
                     ><label><input id="taskForce" type="checkbox" /><span>Task force</span></label
                     ><label><input id="feintDummy" type="checkbox" /><span>Feint / dummy</span></label>
                   </div>
                   <label class="inline-field" id="hqStaffRow" hidden title="0 draws the default length"><span><span id="hqStaffLabel">HQ staff length</span> <span class="field-code">S</span></span><span class="unit-input"><input id="hqStaffLength" type="number" min="0" max="500" value="0" placeholder="0" /><span aria-hidden="true">px</span></span></label>
-                  <p class="field-note" id="designationNote"></p>
+                  <details class="standard-details"><summary>Standard details</summary><div><span class="section-meta" id="designationMeta"></span><p class="field-note" id="designationNote"></p></div></details>
                 </section>
 
                 <section class="card-section">
-                  <div class="section-head"><h3>Echelon / mobility</h3><span class="section-meta" id="amplifierMeta"></span></div>
+                  <div class="section-head"><h3>Echelon / mobility</h3></div>
                   <div class="segmented" id="amplifierMode" role="group" aria-label="Amplifier type">
                     <button class="active" data-mode="echelon" type="button">Echelon</button
                     ><button data-mode="mobility" type="button">Mobility</button
@@ -171,12 +177,12 @@
                     </div>
                     <select id="amplifierValue" class="visually-hidden" tabindex="-1" aria-hidden="true"></select>
                   </div>
-                  <p class="field-note" id="amplifierNote"></p>
+                  <details class="standard-details"><summary>Standard details</summary><div><span class="section-meta" id="amplifierMeta"></span><p class="field-note" id="amplifierNote"></p></div></details>
                   <p class="field-note warn" id="amplifierAdjust" role="status" hidden></p>
                 </section>
 
                 <section class="card-section">
-                  <div class="section-head"><h3 id="countryHeading">Country / organization</h3><span class="section-meta" id="countryMeta"></span></div>
+                  <div class="section-head"><h3 id="countryHeading">Country / organization</h3></div>
                   <div class="glyph-picker">
                     <button id="countryButton" class="glyph-select" type="button" aria-haspopup="listbox" aria-expanded="false" aria-controls="countryList" aria-labelledby="countryHeading countryButton" aria-describedby="countryFlagNote" disabled></button>
                     <div id="countryList" class="glyph-list" role="listbox" tabindex="-1" aria-labelledby="countryHeading" hidden></div>
@@ -184,12 +190,12 @@
                   <select id="countryFlag" class="visually-hidden" tabindex="-1" aria-hidden="true" disabled>
                     <option value="">Loading flags…</option>
                   </select>
-                  <p class="field-note" id="countryFlagNote">Select a country or apply a SIDC to select its flag. Included in SVG and PNG exports.</p>
+                  <details class="standard-details"><summary>Standard details</summary><div><span class="section-meta" id="countryMeta"></span><p class="field-note" id="countryFlagNote">Select a country or apply a SIDC to select its flag. Included in SVG and PNG exports.</p></div></details>
                 </section>
               </div>
 
               <section class="card-section edition-section" id="editionSection">
-                <div class="section-head"><h3>Edition-specific modifiers</h3><span class="section-meta" id="editionMeta"></span></div>
+                <div class="section-head"><h3>Edition-specific modifiers</h3></div>
                 <div id="symbolModifiers" class="control-group edition-grid">
                   <div class="full-field">
                     <span id="modifier1Label">Icon modifier 1</span>
@@ -218,8 +224,8 @@
                     </select>
                   </div>
                 </div>
-                <p class="field-note" id="modifierNote"></p>
-                <p class="field-note" id="legacyNote" hidden>In this edition, icon variants are selected directly from the symbol library.</p>
+                <details class="standard-details"><summary>Standard details</summary><div><span class="section-meta" id="editionMeta"></span><p class="field-note" id="modifierNote"></p><p class="field-note" id="legacyNote" hidden>In this edition, icon variants are selected directly from the symbol library.</p></div></details>
+
               </section>
             </div>
 
@@ -406,6 +412,10 @@
         The List view shows the fields that apply to the symbol, with their rules and tools; the others are listed, closed,
         under it. SVG is a scalable vector file; PNG is exported with a transparent background. Copying the SIDC alone does not include text or appearance
         settings.
+      </p>
+      <p>
+        Your symbol, text and style are saved automatically on this device. Reloading restores the draft.
+        Reset clears modifiers; Undo reset restores them until your next edit. Copying a SIDC does not copy the draft.
       </p>
       <p>
         MIL-STD-2525C and APP-6A/B use letter-based codes. The later editions use numeric codes. APP-6E uses the shared 2525E

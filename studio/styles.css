@@ -41,7 +41,7 @@
     "Helvetica Neue",
     Arial,
     sans-serif;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text);
   background: var(--bg);
 }
@@ -671,9 +671,16 @@ textarea::placeholder {
   color: var(--blue-dark);
   background: var(--soft-blue);
 }
-/* The breakdown is always open on a wide screen; a phone folds it (app.js). */
+/* Technical details are available on demand at every screen width. */
 .sidc-details > summary {
-  display: none;
+  display: list-item;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 13px;
+  padding: 4px 0;
+}
+.sidc-details[open] > summary {
+  margin-bottom: 10px;
 }
 .sidc-segments {
   display: grid;
@@ -683,8 +690,7 @@ textarea::placeholder {
 /* The meaning is what people read; the code beside the label stays quiet. */
 .sidc-segments > div {
   min-width: 0;
-  border-radius: 8px;
-  background: var(--surface-soft);
+  border-left: 2px solid var(--line);
   padding: 6px 8px;
 }
 .sidc-segments p {
@@ -737,6 +743,28 @@ a.support-note {
 }
 
 /* Editor */
+.draft-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+  min-height: 38px;
+  padding: 6px 20px;
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--muted);
+  font-size: 12px;
+}
+.draft-toolbar button {
+  min-height: 28px;
+  padding: 3px 8px;
+  color: var(--blue-dark);
+}
+.draft-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 .editor-panel {
   min-width: 0;
 }
@@ -804,24 +832,27 @@ a.support-note {
 .card-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 24px;
 }
 .card-section {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   min-width: 0;
-  border: 1px solid var(--line-soft);
-  border-radius: 12px;
-  padding: 14px;
+  border: 0;
+  padding: 0;
+}
+.card-grid > .card-section,
+#panel-style > .card-section,
+.edition-section {
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
 }
 .card-section.wide {
   grid-column: 1 / -1;
 }
 .edition-section {
-  border-style: dashed;
-  border-color: var(--line-strong);
-  background: var(--surface-faint);
+  background: transparent;
 }
 .section-head {
   display: flex;
@@ -878,7 +909,38 @@ a.support-note {
   gap: 6px;
 }
 .identity-chips {
-  grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.identity-more {
+  margin-top: 12px;
+}
+.identity-more > summary,
+.standard-details > summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.identity-more > summary {
+  padding: 4px 0;
+}
+#moreIdentitySelection {
+  color: var(--blue-dark);
+  font-weight: 600;
+}
+.identity-more[open] > summary {
+  margin-bottom: 12px;
+}
+.standard-details > div {
+  display: grid;
+  gap: 6px;
+  padding: 10px 0 0 14px;
+}
+.standard-details .section-meta {
+  text-align: left;
+}
+.standard-details:not(:has(.section-meta:not(:empty), .field-note:not([hidden]):not(:empty))) {
+  display: none;
 }
 .status-chips {
   grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -900,7 +962,7 @@ a.support-note {
   border: 1.5px solid var(--line-strong);
   border-radius: 8px;
   background: var(--panel);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
   line-height: 1.2;
   text-align: center;
@@ -909,7 +971,7 @@ a.support-note {
   flex-direction: row;
   min-height: 42px;
   gap: 8px;
-  font-size: 12px;
+  font-size: 14px;
 }
 .chip[aria-pressed="true"] {
   border-color: var(--blue);
@@ -965,7 +1027,7 @@ a.support-note {
   border-radius: 8px;
   background: var(--panel);
   cursor: pointer;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
 }
 .toggle-grid label:has(input:checked) {
@@ -997,7 +1059,7 @@ a.support-note {
   border: 0;
   background: transparent;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 14px;
 }
 .segmented button.active {
   background: var(--panel);
@@ -1010,7 +1072,7 @@ a.support-note {
   flex-direction: column;
   gap: 6px;
   min-width: 0;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
 }
 .control-group label > span:first-child {
@@ -1109,7 +1171,7 @@ a.support-note {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 13px;
+  font-size: 14px;
 }
 .glyph-name small {
   margin-left: 6px;
@@ -1818,7 +1880,7 @@ a.support-note {
   justify-content: space-between;
   gap: 10px;
   margin-top: 10px;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
 }
 .inline-field > span:first-child {
@@ -1863,7 +1925,7 @@ a.support-note {
   flex-direction: column;
   gap: 6px;
   min-width: 0;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
 }
 .modifier-color-note {
@@ -1886,7 +1948,7 @@ a.support-note {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
 }
 .range-field > span {
@@ -2426,6 +2488,42 @@ dialog p {
   }
 }
 @media (max-width: 760px) {
+  .brand {
+    font-size: 14px;
+    gap: 6px;
+    white-space: normal;
+    line-height: 1.2;
+  }
+  .brand svg {
+    flex: none;
+  }
+  .status-chips {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  #secondaryIdentityChips {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .draft-toolbar {
+    padding-inline: 12px;
+  }
+  .preview-toolbar {
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr);
+    gap: 4px;
+  }
+  .preview-toolbar .downloads {
+    justify-self: end;
+    margin: 0;
+  }
+  .preview-toolbar .download-link {
+    padding-inline: 4px;
+  }
+  .preview-toolbar .download-link.compact-copy {
+    margin-left: 0;
+  }
+  .sidc-input-row #sidcInput {
+    flex: none;
+  }
   .stage {
     height: 104px;
   }

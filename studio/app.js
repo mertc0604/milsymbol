@@ -38,6 +38,7 @@ import {
 
 import { exportFilename, pngOutputSize, pngScale, fieldStates, profileFieldStates, dtgForField, evaluationRating, sidcParts, pushRecent, placeholderOptions, readTextRows, fieldValueChars, fitRowWidths, layoutFieldBoxes, paletteProgress, baseBranch, entryCrumbs, groupEntries, paletteSections, matchesSearch, normalize, mobilities, mobilityModeName, amplifierChoice, amplifierPlacementNote, sharedViewBox, withViewBox, modifierColorUnused, modifierChoice, centeredGlyphs, frameShapeChoice, problemReasons, themeChoice } from "./editor-helpers.js";
 import { createGlyphPicker } from "./glyph-picker.js";
+import { createDraftStore, draftStateKeys } from "./draft-store.js";
 import { fieldReference } from "./field-reference.js";
 import { fieldGuide } from "./field-guide.js";
 import { app6aIdentities, contextLabel, contextOptions, convertIdentity, decodeIdentity, identityCode, identityLabel, identityList, isUsOnlyContext, usOnlyIdentityLabel } from "./identities.js";
@@ -375,6 +376,83 @@ let flagArtwork = new Map();
 let currentSymbol;
 let currentSvg = "";
 let toastTimer;
+
+const draftControlIds = [
+  "sidcInput", "hq", "taskForce", "feintDummy", "hqStaffLength", "uncertaintyMarker",
+  "frameShape", "countryFlag", "fill", "frame", "icon", "infoFields", "showFlag",
+  "outlineToggle", "symbolSize", "strokeWidth", "colorMode", "direction", "speedLeader", "stack",
+  "fillColorOn", "monoColorOn", "modifierColorOn", "infoColorOn", "infoBackgroundOn",
+  "fillColor", "monoColor", "modifierColor", "infoColor", "infoBackground",
+  "fillOpacity", "infoSize", "outlineWidth", "outlineColor", ...textModifiers.map(field => field.id)
+];
+let browserStorage;
+try { browserStorage = window.localStorage; } catch {}
+const draftStore = createDraftStore(browserStorage);
+let draftReady = false;
+let draftTimer;
+let lastDraft = "";
+let resetDraft = null;
+let pendingCountryFlag = null;
+
+function captureDraft() {
+  const controls = Object.fromEntries(draftControlIds.map(id => {
+    const input = document.getElementById(id);
+    return [id, input.type === "checkbox" ? input.checked : input.value];
+  }));
+  if (pendingCountryFlag !== null) controls.countryFlag = pendingCountryFlag;
+  return JSON.parse(JSON.stringify({
+    state: Object.fromEntries(draftStateKeys.map(key => [key, state[key]])), controls
+  }));
+}
+
+function saveDraft() {
+  if (!draftReady) return;
+  clearTimeout(draftTimer);
+  const draft = captureDraft();
+  const serialized = JSON.stringify(draft);
+  if (serialized === lastDraft) return;
+  const saved = draftStore.save(draft);
+  if (saved) lastDraft = serialized;
+  document.getElementById("draftStatus").textContent = saved ? "Saved on this device" : "Draft could not be saved on this device";
+}
+
+function scheduleDraft() {
+  if (!draftReady) return;
+  clearTimeout(draftTimer);
+  draftTimer = setTimeout(saveDraft, 250);
+}
+
+function restoreDraft(draft) {
+  if (!standards.some(standard => standard.id === draft.state.standardId)) return false;
+  const entries = catalog.standards[catalog.aliases?.[draft.state.standardId] || draft.state.standardId].icons;
+  if (!draft.state.customSidc && !entries.some(icon => icon.id === draft.state.selectedId)) return false;
+  Object.assign(state, draft.state);
+  state.sidcMessage = null;
+  state.importedIcon = state.customSidc
+    ? decodeEditorSidc(state.customSidc, { ...config(), icons: entries }).icon : null;
+  if (state.importedIcon) state.importedIcon = entries.find(icon => icon.id === state.selectedId) || state.importedIcon;
+  state.category = "all";
+  loadRecent();
+  renderStandardSelect();
+  populateCategories();
+  const restoreControls = () => {
+    for (const id of draftControlIds) {
+      const value = draft.controls[id];
+      const input = document.getElementById(id);
+      if (value === undefined) continue;
+      if (input.type === "checkbox") input.checked = value;
+      else if (id === "countryFlag" && input.disabled) pendingCountryFlag = value;
+      else if (input.tagName === "SELECT") selectImportedValue(input, value);
+      else input.value = value;
+    }
+  };
+  restoreControls();
+  syncStandardControls();
+  restoreControls();
+  renderAll();
+  renderCatalog();
+  return true;
+}
 
 const config = () =>
   standards.find((standard) => standard.id === state.standardId);
@@ -1967,13 +2045,23 @@ function renderChips(sidc) {
   const focusedValue = focusedGroup && focused.dataset.value;
   const importedIdentityReason = (value) =>
     state.standardId === "app6a" ? app6aRules.app6aIdentity(value.replace(/^code:/, ""), sidc[2]).reason : "";
-  dom.identityChips.innerHTML = [...dom.affiliation.options].map((item) => {
+  const primary = [];
+  const secondary = [];
+  let secondarySelection = "";
+  for (const item of dom.affiliation.options) {
     const entry = identities.find((candidate) => candidate.value === item.value);
     const flag = offerFlag(dom.affiliation, "identity", item.value, importedIdentityReason(item.value));
-    if (flag === null) return "";
+    if (flag === null) continue;
     const code = entry ? identityCode(entry, standard, state.context) : item.value.replace(/^code:/, "");
-    return chip(dom.affiliation, item.value, entry ? identityLabelFor(entry) : item.textContent, code, modern ? 3 : 1, flag);
-  }).join("");
+    const label = entry ? identityLabelFor(entry) : item.textContent;
+    const common = ["friend", "hostile", "neutral", "unknown"].includes(item.value);
+    (common ? primary : secondary).push(chip(dom.affiliation, item.value, label, code, modern ? 3 : 1, flag));
+    if (!common && item.value === dom.affiliation.value) secondarySelection = `· ${label}${flag ? " — not valid here" : ""}`;
+  }
+  document.getElementById("primaryIdentityChips").innerHTML = primary.join("");
+  document.getElementById("secondaryIdentityChips").innerHTML = secondary.join("");
+  document.getElementById("moreIdentities").hidden = !secondary.length;
+  document.getElementById("moreIdentitySelection").textContent = secondarySelection;
   dom.statusChips.innerHTML = [...dom.status.options].map((item) => {
     const entry = statuses.find((candidate) => candidate.value === item.value);
     const flag = offerFlag(dom.status, "status", item.value);
@@ -2484,6 +2572,7 @@ function renderAll() {
   dom.coverageBadge.title = config().coverageNote || "";
   renderFieldLayout();
   document.title = `${icon.name} — Military Symbol Editor`;
+  scheduleDraft();
 }
 
 // Where the symbol sits in the palette: its set and the groups above it, each
@@ -2508,6 +2597,7 @@ function updateSidcAndRender(field, { rerenderCatalog = false } = {}) {
 }
 
 function selectSymbol(id) {
+  dismissResetUndo();
   state.selectedId = id;
   state.adjustments = {};
   rememberRecent(id);
@@ -2592,6 +2682,7 @@ function downloadPng() {
 }
 
 function resetControls() {
+  const previousDraft = captureDraft();
   for (const input of document.querySelectorAll("[data-modifier-field]")) input.value = "";
   Object.assign(state, {
     affiliation: "friend",
@@ -2623,6 +2714,7 @@ function resetControls() {
   dom.outlineWidth.value = 7;
   dom.outlineColor.value = "#ffffff";
   dom.countryFlag.value = "";
+  pendingCountryFlag = null;
   dom.colorMode.value = "Light";
   for (const id of ["hq", "taskForce", "feintDummy"]) dom[id].checked = false;
   for (const id of ["speedLeader", "hqStaffLength", "stack", "frameShape"]) dom[id].value = "0";
@@ -2639,7 +2731,15 @@ function resetControls() {
   syncStandardControls();
   renderAll();
   renderCatalog();
+  resetDraft = previousDraft;
+  document.getElementById("undoReset").hidden = false;
+  saveDraft();
   toast("Modifiers reset");
+}
+
+function dismissResetUndo() {
+  resetDraft = null;
+  document.getElementById("undoReset").hidden = true;
 }
 
 function activateTab(tab) {
@@ -2689,13 +2789,20 @@ function moveCardFocus(card, step) {
 }
 
 function bindEvents() {
-  // A phone starts with the code breakdown folded; a wide screen always shows it.
-  const narrow = window.matchMedia("(max-width: 760px)");
-  const syncCodeDetails = () => {
-    dom.sidcDetails.open = !narrow.matches;
-  };
-  narrow.addEventListener("change", syncCodeDetails);
-  syncCodeDetails();
+  for (const event of ["input", "change"]) document.addEventListener(event, dismissResetUndo, true);
+  window.addEventListener("pagehide", saveDraft);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") saveDraft();
+  });
+  document.getElementById("undoReset").addEventListener("click", () => {
+    const previous = resetDraft;
+    dismissResetUndo();
+    if (previous && restoreDraft(previous)) {
+      saveDraft();
+      toast("Reset undone");
+      dom.resetButton.focus();
+    }
+  });
   const editorTabs = [...document.querySelectorAll("[data-editor-tab]")];
   editorTabs.forEach((tab, index) => {
     tab.addEventListener("click", () => activateTab(tab));
@@ -2825,6 +2932,7 @@ function bindEvents() {
   dom.amplifierMode.addEventListener("click", (event) => {
     const button = event.target.closest("[data-mode]");
     if (!button || button.disabled || button.dataset.mode === state.amplifierMode) return;
+    dismissResetUndo();
     delete state.adjustments.amplifier;
     state.amplifierMode = button.dataset.mode;
     state.amplifierValue = "";
@@ -2896,6 +3004,7 @@ function bindEvents() {
     dom.fieldFilter.focus();
   });
   dom.clearText.addEventListener("click", () => {
+    dismissResetUndo();
     state.textOrigins = {};
     state.droppedChoices = {};
     for (const input of document.querySelectorAll("[data-modifier-field]")) input.value = "";
@@ -2968,6 +3077,7 @@ function bindEvents() {
     state.sidcDirty = true;
     state.sidcMessage = null;
     renderSidcStatus(state.customSidc || buildSidc());
+    scheduleDraft();
   });
   for (const id of ["colorMode", "direction", "symbolSize", "strokeWidth"])
     dom[id].addEventListener("input", () => {
@@ -3014,7 +3124,9 @@ function bindEvents() {
     applyImportedSidc(value);
     // A newly applied SIDC is authoritative, including empty/unknown country
     // fields. Never leave the previously selected country's flag on a new code.
-    dom.countryFlag.value = countryFlagFromSidc(value, state.standardId);
+    const importedFlag = countryFlagFromSidc(value, state.standardId);
+    pendingCountryFlag = dom.countryFlag.disabled ? importedFlag : null;
+    dom.countryFlag.value = importedFlag;
     state.sidcDirty = false;
     state.sidcMessage = null;
     renderAll();
@@ -3100,7 +3212,10 @@ async function loadFlags() {
     ).join("");
     dom.countryFlag.disabled = false;
     // A code applied while the list was loading names its country in the SIDC.
-    if (state.customSidc) dom.countryFlag.value = countryFlagFromSidc(state.customSidc, state.standardId);
+    if (pendingCountryFlag !== null) {
+      dom.countryFlag.value = pendingCountryFlag;
+      pendingCountryFlag = null;
+    } else if (state.customSidc) dom.countryFlag.value = countryFlagFromSidc(state.customSidc, state.standardId);
     renderAll();
   } catch (error) {
     dom.countryFlag.innerHTML = option("", "Flags unavailable — reload to retry");
@@ -3157,6 +3272,19 @@ async function init() {
     syncStandardControls();
     renderCatalog();
     renderAll();
+    const savedDraft = draftStore.load();
+    if (savedDraft) {
+      const initialDraft = captureDraft();
+      try {
+        if (restoreDraft(savedDraft)) toast("Draft restored from this device");
+      } catch (error) {
+        restoreDraft(initialDraft);
+        toast("Saved draft could not be restored");
+        console.warn("Unable to restore saved draft", error);
+      }
+    }
+    draftReady = true;
+    saveDraft();
     loadFlags();
   } catch (error) {
     for (const button of [dom.downloadSvg, dom.downloadPng, dom.copySidc, dom.applySidc]) button.disabled = true;
