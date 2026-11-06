@@ -7,6 +7,13 @@ export function popoverPosition({ anchor, box, width, height, gap = 8, margin = 
   return { left, top: Math.max(margin, Math.min(top, height - box.height - margin)) };
 }
 
+function anchorTo(popover, button) {
+  popover.addEventListener("beforetoggle", (event) => {
+    button.setAttribute("aria-expanded", String(event.newState === "open"));
+    if (event.newState === "open") requestAnimationFrame(() => place(popover, button));
+  });
+}
+
 function place(popover, button) {
   const { left, top } = popoverPosition({
     anchor: button.getBoundingClientRect(),
@@ -42,10 +49,7 @@ export function setupInfoPopovers() {
     close.setAttribute("aria-label", `Close ${title.toLowerCase()} information`);
     parts.querySelector(".info-popover-body").append(...holder.childNodes);
     holder.append(parts);
-    popover.addEventListener("beforetoggle", (event) => {
-      button.setAttribute("aria-expanded", String(event.newState === "open"));
-      if (event.newState === "open") requestAnimationFrame(() => place(popover, button));
-    });
+    anchorTo(popover, button);
   }
   const openBox = () => document.querySelector(".info-popover:popover-open");
   window.addEventListener("resize", () => {
@@ -56,4 +60,10 @@ export function setupInfoPopovers() {
     const popover = openBox();
     if (popover && !popover.contains(event.target)) popover.hidePopover();
   }, true);
+}
+
+// A menu with its own .info-popover box right after its button, such as the
+// settings in the top bar. The handlers above move or close it like the others.
+export function setupMenuPopover(button, popover) {
+  anchorTo(popover, button);
 }

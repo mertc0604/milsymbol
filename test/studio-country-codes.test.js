@@ -1,5 +1,11 @@
 import { countryCodeForFlag, countryFlagFromSidc, withCountryFlag } from "../studio/country-codes.js";
-import { countryCodes } from "../studio/country-code-data.js";
+import { countryCodes, nonIsoCodes } from "../studio/country-code-data.js";
+import fs from "node:fs";
+
+const flagIcons = JSON.parse(fs.readFileSync(new URL("../node_modules/flag-icons/country.json", import.meta.url), "utf8")).map(({ code }) => code);
+const standards = ["app6a", "app6b", "2525c", "app6d", "app6e", "2525d", "2525e"];
+const codesFor = (flag) => standards.map((standard) => countryCodeForFlag(flag, standard));
+const uncoded = (standard) => [...flagIcons, "nato"].filter((flag) => !countryCodeForFlag(flag, standard)).sort();
 
 const legacy = "SFGPUCI-----";
 const modern = "10031000001211000000";
@@ -9,7 +15,7 @@ const dExtended = modern + "7921234276";
 export default {
   "Studio SIDC country codes": {
     "every encodable country round-trips without changing identity": [
-      countryCodes.every(([flag]) => ["app6a", "app6b", "2525c", "app6d", "app6e", "2525d", "2525e"]
+      [...countryCodes, ...nonIsoCodes].every(([flag]) => standards
         .every((standard) => !countryCodeForFlag(flag, standard) ||
           countryFlagFromSidc(withCountryFlag(standard === "2525c" || standard === "app6a" || standard === "app6b"
             ? legacy + "---" : modern, flag, standard), standard) === flag)),
@@ -54,7 +60,7 @@ export default {
         withCountryFlag(legacy + "TUG", "", "app6a")],
       [extended.slice(0, 27) + "000", legacy + "--G"]
     ],
-    "unsupported display-only flag clears stale country": [
+    "a flag with no code clears a stale country": [
       withCountryFlag(dExtended, "eu", "app6d"), modern + "0001234276"
     ],
     "APP6B and all numeric editions use the appropriate mapping": [
@@ -76,6 +82,37 @@ export default {
     ],
     "last three D edition digits are never a fallback country": [
       countryFlagFromSidc(modern + "0000000792", "app6d"), ""
+    ],
+    "codes outside ISO 3166-1 follow FIPS 10-4 and GENC only": [
+      // app6a, app6b, 2525c, app6d, app6e, 2525d, 2525e
+      [codesFor("xk"), codesFor("cp"), codesFor("dg"), codesFor("xx")],
+      [["KV", "KV", "", "", "901", "", "901"],
+        ["IP", "IP", "", "", "905", "", "905"],
+        ["", "", "", "", "908", "", "908"],
+        ["", "", "", "", "932", "", "932"]]
+    ],
+    "GENC codes are read back only in edition E": [
+      [countryFlagFromSidc(legacy + "KV-", "app6a"), countryFlagFromSidc(legacy + "XK-", "2525c"),
+        countryFlagFromSidc(modern + "9010000000", "app6d"), countryFlagFromSidc(extended.slice(0, 27) + "901", "2525e")],
+      ["xk", "", "", "xk"]
+    ],
+    "composite ISO entries have no FIPS code and their parts no flag": [
+      [codesFor("ps"), codesFor("sj"), codesFor("um"),
+        ["GZ", "WE", "SV", "JN"].map((code) => countryFlagFromSidc(legacy + code + "-", "app6a"))],
+      [["", "", "PS", "275", "", "275", ""],
+        ["", "", "SJ", "744", "", "744", ""],
+        ["", "", "UM", "581", "", "581", ""],
+        ["", "", "", ""]]
+    ],
+    "Åland has an ISO code but none in FIPS or GENC": [
+      codesFor("ax"), ["", "", "AX", "248", "", "248", ""]
+    ],
+    "flags with no code in each list": [
+      ["app6a", "2525c", "app6d", "2525e"].map(uncoded),
+      [["arab", "asean", "ax", "bq", "cefta", "dg", "eac", "es-ct", "es-ga", "es-pv", "eu", "gb-eng", "gb-nir", "gb-sct", "gb-wls", "ic", "nato", "pc", "ps", "sh-ac", "sh-hl", "sh-ta", "sj", "um", "un", "xx"],
+        ["arab", "asean", "cefta", "cp", "dg", "eac", "es-ct", "es-ga", "es-pv", "eu", "gb-eng", "gb-nir", "gb-sct", "gb-wls", "ic", "nato", "pc", "sh-ac", "sh-hl", "sh-ta", "un", "xk", "xx"],
+        ["arab", "asean", "cefta", "cp", "dg", "eac", "es-ct", "es-ga", "es-pv", "eu", "gb-eng", "gb-nir", "gb-sct", "gb-wls", "ic", "nato", "pc", "sh-ac", "sh-hl", "sh-ta", "un", "xk", "xx"],
+        ["arab", "asean", "ax", "cefta", "eac", "es-ct", "es-ga", "es-pv", "eu", "gb-eng", "gb-nir", "gb-sct", "gb-wls", "ic", "nato", "pc", "ps", "sh-ac", "sh-hl", "sh-ta", "sj", "um", "un"]]
     ],
     "invalid inputs are preserved rather than rewritten": [
       withCountryFlag("not-a-sidc", "tr", "app6d"), "not-a-sidc"

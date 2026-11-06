@@ -40,6 +40,26 @@
           </label>
           <a href="https://github.com/omcoskun/milsymbol" target="_blank" rel="noreferrer">Source code ↗</a>
           <button id="helpButton" class="quiet-button" type="button">Help</button>
+          <button id="settingsButton" class="settings-button" type="button" popovertarget="settingsMenu" aria-haspopup="dialog" aria-expanded="false" aria-label="Settings" title="Settings">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h9M19 7h1M4 17h3M13 17h7" /><circle cx="16" cy="7" r="2.5" /><circle cx="10" cy="17" r="2.5" /></svg>
+          </button>
+          <div class="info-popover settings-menu" id="settingsMenu" popover="auto" role="dialog" aria-labelledby="settingsTitle">
+            <div class="info-popover-head"><strong id="settingsTitle">Settings</strong><button class="info-close" type="button" popovertarget="settingsMenu" popovertargetaction="hide" aria-label="Close settings">×</button></div>
+            <div class="settings-body">
+              <div class="settings-row">
+                <span class="settings-label" id="themeLabel">Theme</span>
+                <div class="segmented" id="themeChoice" role="group" aria-labelledby="themeLabel">
+                  <button class="active" data-value="system" type="button" aria-pressed="true">System</button
+                  ><button data-value="light" type="button" aria-pressed="false">Light</button
+                  ><button data-value="dark" type="button" aria-pressed="false">Dark</button>
+                </div>
+              </div>
+              <div class="settings-row">
+                <span class="settings-label">Contact</span>
+                <a href="mailto:mertc0604@gmail.com">mertc0604@gmail.com</a>
+              </div>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -315,7 +335,6 @@
                 <div class="section-head"><h3>Editor</h3></div>
                 <div class="editor-grid">
                   <label class="select-field"><span>Preview background</span><select id="previewBackground"><option value="light">Light</option><option value="dark">Dark</option><option value="map">Map</option></select></label>
-                  <label class="select-field"><span>Theme</span><select id="themeSelect"><option value="system">Same as system</option><option value="light">Light</option><option value="dark">Dark</option></select></label>
                   <div class="check-row"><label><input id="gridToggle" type="checkbox" checked />Preview grid</label></div>
                 </div>
                 <p class="field-note">These change the editor only, not the symbol or its exports.</p>

@@ -676,7 +676,7 @@ export default {
     ],
     "says when a flag writes no code": [
       countryFlagNote({ selected: "nato", code: "", label: "FIPS" }),
-      "Display-only flag: no country code is assigned for this standard. Included in SVG and PNG exports."
+      "Display-only flag: this standard has no country code for it, so the SIDC carries none. Included in SVG and PNG exports."
     ]
   }
 };

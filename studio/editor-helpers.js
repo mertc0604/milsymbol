@@ -664,7 +664,7 @@ export function countryFlagNote({ selected, code, label }) {
   const start = code
     ? `${label} code: ${code}.`
     : selected
-      ? "Display-only flag: no country code is assigned for this standard."
+      ? "Display-only flag: this standard has no country code for it, so the SIDC carries none."
       : "Select a country or apply a SIDC to select its flag.";
   return `${start} Included in SVG and PNG exports.`;
 }

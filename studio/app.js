@@ -39,7 +39,7 @@ import {
 import { exportFilename, pngOutputSize, pngScale, fieldStates, profileFieldStates, dtgForField, evaluationRating, sidcParts, pushRecent, placeholderOptions, readTextRows, fieldValueChars, fitRowWidths, layoutFieldBoxes, paletteProgress, baseBranch, entryCrumbs, groupEntries, paletteSections, matchesSearch, normalize, mobilities, mobilityModeName, amplifierChoice, amplifierPlacementNote, sharedViewBox, withViewBox, modifierColorUnused, modifierChoice, centeredGlyphs, frameShapeChoice, problemReasons, themeChoice, gridChoice, designationNotes, amplifierNotes, countryFlagNote } from "./editor-helpers.js";
 import { createGlyphPicker } from "./glyph-picker.js";
 import { createDraftAutosave, createDraftStore, draftStateKeys, sameDraft } from "./draft-store.js";
-import { setupInfoPopovers } from "./info-popover.js";
+import { setupInfoPopovers, setupMenuPopover } from "./info-popover.js";
 import { fieldReference } from "./field-reference.js";
 import { fieldGuide } from "./field-guide.js";
 import { app6aIdentities, contextLabel, contextOptions, convertIdentity, decodeIdentity, identityCode, identityLabel, identityList, isUsOnlyContext, usOnlyIdentityLabel } from "./identities.js";
@@ -238,7 +238,9 @@ const dom = Object.fromEntries(
     "compactCopy",
     "editionSection",
     "previewBackground",
-    "themeSelect",
+    "themeChoice",
+    "settingsButton",
+    "settingsMenu",
     "editionMeta",
     "textSummary",
     "carryNotes",
@@ -434,6 +436,7 @@ function restoreDraft(draft) {
       if (value === undefined) continue;
       if (input.type === "checkbox") input.checked = value;
       else if (id === "countryFlag" && input.disabled) pendingCountryFlag = value;
+      else if (id === "countryFlag") setCountryFlag(value);
       else if (input.tagName === "SELECT") selectImportedValue(input, value);
       else input.value = value;
     }
@@ -1135,13 +1138,36 @@ const frameShapePicker = createGlyphPicker({
   escapeHtml
 });
 
+// Flags the standard's country list codes come first. Organizations, regions and
+// entities the list does not code follow under their own heading: they draw the
+// flag but write no country into the SIDC.
+function renderCountryOptions() {
+  if (dom.countryFlag.disabled) return;
+  const current = dom.countryFlag.value;
+  const flags = [...flagNames];
+  const coded = flags.filter(([code]) => countryCodeForFlag(code, state.standardId));
+  const uncoded = flags.filter(([code]) => !countryCodeForFlag(code, state.standardId));
+  dom.countryFlag.innerHTML = option("", "No flag") + [...coded, ...uncoded]
+    .map(([code, name]) => option(code, name))
+    .join("");
+  setCountryFlag(current);
+}
+
+function setCountryFlag(value) {
+  dom.countryFlag.value = flagNames.has(value) ? value : "";
+}
+
 function countryChoices() {
-  return [...dom.countryFlag.options].map((item) => ({
-    value: item.value,
-    name: item.textContent,
-    code: countryCodeForFlag(item.value, state.standardId),
-    reason: ""
-  }));
+  return [...dom.countryFlag.options].map((item) => {
+    const code = countryCodeForFlag(item.value, state.standardId);
+    return {
+      value: item.value,
+      name: item.textContent,
+      code,
+      group: item.value && !code ? "No code in this standard · display only" : "",
+      reason: ""
+    };
+  });
 }
 
 // Each flag is its own image: flag drawings reuse ids, which would clash inline.
@@ -1922,6 +1948,7 @@ function syncStandardControls() {
   if (contexts.length) selectImportedValue(dom.context, state.context);
   populateAmplifier();
   syncModifiers();
+  renderCountryOptions();
 }
 
 const schemeNames = { S: "Warfighting", G: "Tactical graphic", W: "Weather", I: "Intelligence", O: "Stability operations", E: "Emergency management" };
@@ -2769,6 +2796,7 @@ function moveCardFocus(card, step) {
 
 function bindEvents() {
   setupInfoPopovers();
+  setupMenuPopover(dom.settingsButton, dom.settingsMenu);
   for (const event of ["input", "change"]) document.addEventListener(event, dismissResetUndo, true);
   window.addEventListener("pagehide", draftAutosave.flush);
   document.addEventListener("visibilitychange", () => {
@@ -3148,7 +3176,12 @@ function bindEvents() {
   // The grid is a preview aid only; exports stay transparent.
   dom.gridToggle.addEventListener("change", () => setEditorChoice("grid", dom.gridToggle.checked ? "on" : "off", "on"));
   dom.previewBackground.addEventListener("change", () => setEditorChoice("preview", dom.previewBackground.value, "light"));
-  dom.themeSelect.addEventListener("change", () => setEditorChoice("theme", dom.themeSelect.value, "system"));
+  dom.themeChoice.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-value]");
+    if (!button) return;
+    showThemeChoice(button.dataset.value);
+    setEditorChoice("theme", button.dataset.value, "system");
+  });
   dom.outlineToggle.addEventListener("change", () => {
     state.outline = dom.outlineToggle.checked;
     renderAll();
@@ -3187,13 +3220,11 @@ async function loadFlags() {
     flagArtwork = new Map(flags.map((flag) => [flag.code, flag.svg]));
     flagNames = new Map(flags.map((flag) => [flag.code, flag.name]));
     window.ms.addSymbolPart(createCountryFlagPart(flags));
-    dom.countryFlag.innerHTML = option("", "No flag") + flags.map(flag =>
-      option(flag.code, flag.name)
-    ).join("");
     dom.countryFlag.disabled = false;
+    renderCountryOptions();
     // A code applied while the list was loading names its country in the SIDC.
     if (pendingCountryFlag !== null) {
-      dom.countryFlag.value = pendingCountryFlag;
+      setCountryFlag(pendingCountryFlag);
       pendingCountryFlag = null;
     } else if (state.customSidc) dom.countryFlag.value = countryFlagFromSidc(state.customSidc, state.standardId);
     renderAll();
@@ -3216,6 +3247,14 @@ function setEditorChoice(name, value, fallback) {
   } catch {}
 }
 
+// The theme sits in the settings menu of the top bar, apart from the symbol's style.
+function showThemeChoice(value) {
+  for (const button of dom.themeChoice.querySelectorAll("button")) {
+    button.classList.toggle("active", button.dataset.value === value);
+    button.setAttribute("aria-pressed", String(button.dataset.value === value));
+  }
+}
+
 function loadEditorChoices() {
   let theme = null;
   let preview = null;
@@ -3225,10 +3264,10 @@ function loadEditorChoices() {
     preview = localStorage.getItem("symbol-studio:preview");
     grid = localStorage.getItem("symbol-studio:grid");
   } catch {}
-  dom.themeSelect.value = themeChoice(theme);
+  showThemeChoice(themeChoice(theme));
   dom.previewBackground.value = ["dark", "map"].includes(preview) ? preview : "light";
   dom.gridToggle.checked = gridChoice(grid) === "on";
-  setEditorChoice("theme", dom.themeSelect.value, "system");
+  setEditorChoice("theme", themeChoice(theme), "system");
   setEditorChoice("preview", dom.previewBackground.value, "light");
   setEditorChoice("grid", gridChoice(grid), "on");
 }

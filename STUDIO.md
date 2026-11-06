@@ -30,17 +30,17 @@ preview grid remain separate browser preferences.
 
 ## Layout
 
-- **Top bar:** standard selector, Help and the search launcher. Click it or press `/` to open the symbol search panel. The panel holds the symbol set list with counts, Recently used (the last 8 symbols per standard, stored in `localStorage`), and result tiles with mini previews. Browsing a set, the tiles sit under a closable heading for each group of the set and a subheading for each group inside it (APP-6A Ground units: COMBAT, then AIR DEFENSE, ARMOR, ...), taken from the catalogue hierarchy; All symbol sets has a heading per set. A search lists its matches as one grid. The preview heading names the symbol's set and groups in full; each opens the palette at that group. In the panel, `↑`/`↓` move between results, `Enter` selects, and `Esc` clears the search and then closes the panel. A full SIDC typed into the search finds its symbol, also in the form the publications print (`S*G*UCI---*****`); a long word such as reconnaissance stays a word search.
+- **Top bar:** standard selector, Help, a Settings button and the search launcher. Settings opens a small box with the theme (System, Light or Dark) and a contact address; it closes on Escape or a click outside. Click it or press `/` to open the symbol search panel. The panel holds the symbol set list with counts, Recently used (the last 8 symbols per standard, stored in `localStorage`), and result tiles with mini previews. Browsing a set, the tiles sit under a closable heading for each group of the set and a subheading for each group inside it (APP-6A Ground units: COMBAT, then AIR DEFENSE, ARMOR, ...), taken from the catalogue hierarchy; All symbol sets has a heading per set. A search lists its matches as one grid. The preview heading names the symbol's set and groups in full; each opens the palette at that group. In the panel, `↑`/`↓` move between results, `Enter` selects, and `Esc` clears the search and then closes the panel. A full SIDC typed into the search finds its symbol, also in the form the publications print (`S*G*UCI---*****`); a long word such as reconnaissance stays a word search.
 - **Left column (sticky):**
   - Preview card: name, path, class badge (Unit, Equipment, Installation, Tactical point on APP-6A), the render state (Rendered, or a red "Check code / modifiers" when the symbol does not render cleanly), and the preview stage. Under it, Edit text (opens Amplifiers in Field positions) and two small download links, PNG and SVG. Exports always use the normal render.
   - The preview grid and the outline are switches in the Display tab; the grid is an editor aid only, exports have a transparent background.
   - SIDC console: wide enough for a 30-digit code on one line (on narrow screens Apply sits under it), Copy next to the length. Apply, `Enter` to apply, `Esc` to return to the current code. Messages appear inline only when there is something to say: applied, wildcard and standard-switch notes, and errors that name the SIDC position. The collapsible Code details section shows each part's meaning.
 - **Right column:** three tabs.
-  - **Symbol:** identity and status chips drawn by the renderer for the current symbol, context, unit designation (with the S staff length under Headquarters while it is on; on APP-6A equipment the flag is Location offset), echelon or mobility (a picker that draws each choice on the current frame, all at one scale with the frame on the line of the text and in the modifier color when it is on, with its SIDC code; 2525E and APP-6E dismounted individuals also take Leader individual, and the control is then named Leadership), country or organization (a picker with each flag beside its name and the code it writes in the current standard; letters typed in the open list spell a name, accents optional), and edition-specific icon modifiers (pickers that draw each modifier alone on the current frame, with the groups of the symbol set; a sector code the entity may not use is listed but cannot be chosen) and frame shape (a picker that draws each shape for the current identity). Every disabled control states its reason.
+  - **Symbol:** identity and status chips drawn by the renderer for the current symbol, context, unit designation (with the S staff length under Headquarters while it is on; on APP-6A equipment the flag is Location offset), echelon or mobility (a picker that draws each choice on the current frame, all at one scale with the frame on the line of the text and in the modifier color when it is on, with its SIDC code; 2525E and APP-6E dismounted individuals also take Leader individual, and the control is then named Leadership), country or organization (a picker with each flag beside its name and the code it writes in the current standard; flags the standard does not code, such as NATO, the EU or England, follow under their own heading as display only; letters typed in the open list spell a name, accents optional), and edition-specific icon modifiers (pickers that draw each modifier alone on the current frame, with the groups of the symbol set; a sector code the entity may not use is listed but cannot be chosen) and frame shape (a picker that draws each shape for the current identity). Every disabled control states its reason.
     - Friend, Hostile, Neutral and Unknown are shown first; More identities holds the other choices and names any selected secondary identity even while closed. Information buttons beside section headings open dismissible boxes with position numbers and publication explanations, without shifting the form. Click outside, press Escape or use Close to dismiss. Adjustment warnings and the reason a control is off stay on the page, next to the control.
     - Identities: APP-6A offers its nine Annex B identities (including joker and faker). APP-6B and 2525C offer the seven standard identities with a Reality / Exercise context; exercise writes G, W, M, D, L, J or K into position 2. D/E editions offer the seven identities 0–6 with Reality / Exercise / Simulation in position 3, and exercise suspect and hostile are shown as Joker and Faker.
   - **Amplifiers:** two views of the same values. Field positions puts a box for each applicable field around the symbol in the order the standard places it; the boxes are spaced apart for typing, so the preview, not the boxes, shows the exact placement. A country flag keeps its place there too. The List shows only the fields that apply to the symbol in the selected edition, under the edition's own names, in fixed groups; a search (name or code) and "Filled only" hide fields without touching their values and say how many filled fields they hide. A help line at the bottom of the list, always the same height, shows the focused field's rule, format and example (edition-specific: APP-6A W DDHHMMSSZMONYY and Y latitude/longitude, 2525C W DDHHMMSSZMONYYYY and an AO without a code list, APP-6D installation AI component types). "Not available for this symbol", closed under the list, names the edition's fields that do not apply to the symbol class or identity and the graphics the standard defines that this editor cannot set (2525C AH/AI/AK and the S offset, APP-6A installation S offset, APP-6D Land Unit AC and installation Q offset line). Fields of other editions are not listed. Q (direction of movement: slider and degrees) and AJ (speed leader) are graphic amplifiers in the list, after Z (speed), shown only where the edition gives them to the symbol class (not on 2525C or APP-6D installations, where APP-6D Q is the offset location line; APP-6A has no AJ); a value set earlier is kept, unsent, and the closed list says so. Field positions lists them under "Not drawn here". W has "Now (UTC)" in the field's format; J has a reliability/credibility picker that opens on request; APP-6D AO is built from lists, with the bar colour (target, non-target, expired) under it for hostile tracks.
-  - **Display:** display switches (fill, frame, icon, text labels, country flag, outline), size, stroke, palette and stack (not in APP-6A); an Editor card for what stays out of exports, kept in this browser (preview background: light, dark or map; theme: same as system, light or dark; preview grid); and, closed under "More style options", three groups: Colors (custom fill color, monochrome, modifier color for HQ staff, task force, feint/dummy, installation, echelon and mobility, with a note when the symbol has none of them, and fill opacity), Text (color, background, size) and Outline (width, color). None of the style options change the SIDC.
+  - **Display:** display switches (fill, frame, icon, text labels, country flag, outline), size, stroke, palette and stack (not in APP-6A); an Editor card for what stays out of exports, kept in this browser (preview background: light, dark or map; preview grid); and, closed under "More style options", three groups: Colors (custom fill color, monochrome, modifier color for HQ staff, task force, feint/dummy, installation, echelon and mobility, with a note when the symbol has none of them, and fill opacity), Text (color, background, size) and Outline (width, color). None of the style options change the SIDC.
 
 Below 900 px the two columns stack: the preview shrinks and stays on top while the settings scroll, with the SIDC and Copy in its card, the code console comes after the settings with its breakdown folded into Code details, and the notes come last. The preview shrinks further while a text amplifier field has the cursor. On short screens the card does not stay, and the compact symbol in the tab bar links to it. Touch screens get 44-pixel targets.
 
@@ -177,7 +177,7 @@ software's MIT license. PDF/crop redistribution rights have not been established
 keep them local unless separately authorized. These packaging measures are not
 a legal certification of every possible use of the standard.
 
-Country / organization flags are available under Appearance for every edition.
+Country and organization flags are available in the Symbol tab for every edition.
 The Studio uses a separate SVG extension and MIT-licensed flag-icons artwork,
 plus a public-domain NATO flag (provenance in `studio/flags/NOTICE.txt`),
 not the proprietary country-flag extension from Spatial Illusions. The selected
@@ -189,14 +189,17 @@ bundled locally and require no external service.
 
 Country selection and SIDC entry are linked in both directions:
 
-- APP-6A / APP-6B: FIPS country code at positions 13–14 (`TU` for Türkiye).
-- MIL-STD-2525C: ISO alpha-2 at positions 13–14 (`TR` for Türkiye).
-- APP-6D / MIL-STD-2525D: ISO numeric at positions 21–23 (`792` for Türkiye).
+- APP-6A / APP-6B: FIPS 10-4 country code at positions 13–14 (`TU` for Türkiye);
+  both name the FIPS Pub 10 series (APP-6A B.4.1.5).
+- MIL-STD-2525C: ISO 3166-1 alpha-2 at positions 13–14 (`TR` for Türkiye).
+- APP-6D / MIL-STD-2525D: ISO 3166-1 numeric at positions 21–23 (`792` for Türkiye).
   This is the **symbology originator** of national extensions, not a separate
   nationality field. APP-6D Annex A, Figure A-1, A.12 and Table A-9 define it;
   MIL-STD-2525D A.5.5 uses the same arrangement. The Studio uses that originator
   country for the flag. Positions 24–30 remain the originator's symbol set/data.
-- MIL-STD-2525E: nationality/country code at positions 28–30 (`792` for Türkiye).
+- MIL-STD-2525E: GENC numeric nationality/country code at positions 28–30
+  (`792` for Türkiye; A.5.5.4 says the US shall use GENC). GENC adds numbers
+  from 900 for entities ISO 3166-1 does not list, such as Kosovo (901).
   Positions 21–22 remain common modifier identifiers, and 23 remains frame shape.
 - The Studio's APP-6E compatibility view shares the 2525E catalog and encoding;
   it does not claim a separately verified APP-6E catalog or SIDC layout.
@@ -207,9 +210,12 @@ an edition D national-originator code cannot change the core symbol's modifiers.
 Applying a SIDC selects its country automatically. Empty, incomplete or unknown
 country fields clear any previous flag; there is no fallback between FIPS and
 ISO. Selecting another country preserves the rest of a custom SIDC, including
-order of battle. Switching standard preserves the selected country and encodes
-it for the new edition. Flags with no assigned code (for example organizations)
-remain display-only and explicitly say so; their selection clears any previous
-country code. The Country (AC) free-text amplifier remains independent. Reset
+order of battle. The flag list puts the flags the standard's code list codes
+first. Organizations (NATO, EU, UN), regions (England, Catalonia, the Canary
+Islands) and entities a list splits or folds into another (Åland in FIPS and
+GENC, Palestine in FIPS) follow under "No code in this standard · display only":
+they draw the flag, say so, and clear any previous country code. Switching
+standard keeps the selected flag and encodes it for the new edition when that
+edition codes it. The Country (AC) free-text amplifier remains independent. Reset
 clears the flag. Historical dissolved countries are not silently mapped to
 modern successors. Mapping provenance is recorded in `studio/country-code-data.js`.

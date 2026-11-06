@@ -1,11 +1,21 @@
-// ISO alpha-2 : FIPS 10-4 : ISO numeric. Snapshot retrieved 2026-10-29.
-// Code facts: https://github.com/datasets/country-codes (ISO/FIPS columns only).
-// FIPS AU/AS/TU/UK checked against the USGS country-code lookup:
-// https://www.pwrc.usgs.gov/BBL/Bander_Portal/login/country_codes.php
-// Composite source cells are resolved explicitly: RI=Serbia, GZ=Gaza,
-// SV=Svalbard. Kosovo is not Serbia; no automatic mapping for unassigned codes.
-// Historical dissolved countries are intentionally not mapped to modern flags.
-// BQ has no distinct FIPS code: the source's NL would collide with Netherlands.
+// One row per ISO 3166-1 entry: ISO alpha-2 (the flag code) : FIPS 10-4 : ISO
+// numeric. "-" means the list gives the entry no code of its own.
+// Snapshot retrieved 2026-10-29 from https://github.com/datasets/country-codes
+// (ISO/FIPS columns only). Checked again on 2026-11-06:
+// - ISO alpha-2 and numeric: all 249 entries against Debian iso-codes
+//   (data/iso_3166-1.json).
+// - FIPS: names against the FIPS 10-4 history up to Change Notice 14 of
+//   2008-07-31, the last before NIST withdrew the standard on 2008-09-02
+//   (http://efele.net/maps/fips-10/data/fips-tabular.txt). UC Curaçao,
+//   NN Sint Maarten and OD South Sudan came later, in the NGA's continuation of
+//   the same list. That history drops IM Isle of Man after Change Notice 5,
+//   but the published FIPS 10-4 list keeps it.
+// FIPS has no code for these entries: AX (part of Finland), BQ (part of the
+// Netherlands Antilles, dissolved in 2010), and the composites PS (GZ Gaza
+// Strip and WE West Bank), SJ (SV Svalbard and JN Jan Mayen) and UM (nine
+// island codes). The source's composite Serbia cell RIKV is Serbia RI; Kosovo
+// KV is in nonIsoCodes below. Historical dissolved countries are intentionally
+// not mapped to modern flags.
 export const countryCodes = `
 ad:AN:020
 ae:AE:784
@@ -189,7 +199,7 @@ pl:PL:616
 pm:SB:666
 pn:PC:612
 pr:RQ:630
-ps:GZ:275
+ps:-:275
 pt:PO:620
 pw:PS:585
 py:PA:600
@@ -207,7 +217,7 @@ se:SW:752
 sg:SN:702
 sh:SH:654
 si:SI:705
-sj:SV:744
+sj:-:744
 sk:LO:703
 sl:SL:694
 sm:SM:674
@@ -257,3 +267,21 @@ za:SF:710
 zm:ZA:894
 zw:ZI:716
 `.trim().split("\n").map((row) => row.split(":"));
+
+// Flags outside ISO 3166-1 that a standard's list does code: flag : FIPS 10-4 :
+// GENC numeric. FIPS 10-4 IP is Clipperton Island; Change Notice 14 (2008-07-31)
+// added KV Kosovo. GENC numbers entities that ISO 3166-1 does not list from 900
+// (GENC 3.0.11, as copied in Debian's liblocale-codes-perl internal/genc-3.0.11):
+// 901 Kosovo, 905 Clipperton Island, 908 Diego Garcia, 932 Unknown. ISO 3166-1
+// itself assigns none of these: XK is user-assigned, CP and DG only reserved.
+export const nonIsoCodes = `
+cp:IP:905
+dg:-:908
+xk:KV:901
+xx:-:932
+`.trim().split("\n").map((row) => row.split(":"));
+
+// ISO 3166-1 entries GENC 3.0.11 does not list. GENC counts Åland under
+// Finland and codes the parts of the others: 916 Gaza Strip and 934 West Bank,
+// 930 Svalbard and 920 Jan Mayen, and the United States islands one by one.
+export const notInGenc = ["ax", "ps", "sj", "um"];

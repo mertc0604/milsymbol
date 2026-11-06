@@ -274,6 +274,54 @@ textarea::placeholder {
 .top-actions > a {
   white-space: nowrap;
 }
+.settings-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+.settings-button:hover,
+.settings-button[aria-expanded="true"] {
+  border-color: transparent;
+  background: var(--soft-blue);
+  color: var(--blue-dark);
+}
+.settings-button svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+.info-popover.settings-menu {
+  width: min(300px, calc(100vw - 24px));
+}
+.settings-body {
+  display: grid;
+  gap: 14px;
+}
+.settings-row {
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+}
+.settings-label {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+@media (pointer: coarse) {
+  .settings-button {
+    width: 44px;
+    height: 44px;
+  }
+}
 .standard-switcher {
   display: flex;
   align-items: center;
